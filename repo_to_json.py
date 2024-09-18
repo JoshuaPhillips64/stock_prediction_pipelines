@@ -11,24 +11,27 @@ def create_repo_text(root_path):
     repo_structure = []
 
     for root, dirs, files in os.walk(root_path):
-        # Skip 'config' folders
+        # Exclude specific directories from being traversed
         if 'config' in dirs:
             dirs.remove('config')
-
         if '.venv' in dirs:
             dirs.remove('.venv')
+        if '.idea' in dirs:
+            dirs.remove('.idea')
+        if '.git' in dirs:
+            dirs.remove('.git')
 
         # Generate relative path from the root path
         relative_path = os.path.relpath(root, root_path)
         repo_structure.append(f"Directory: {relative_path}" if relative_path != '.' else "Root Directory:")
 
         for file in files:
-            # Skip config files, .yaml, .cfg, and .md files
-            if file != 'config' and not file.endswith(('.yaml', '.cfg', '.md')):
+            # Skip certain file types (.yaml, .cfg, .md)
+            if not file.endswith(('.yaml', '.cfg', '.md','.xml','.json','.lock')):
                 file_path = os.path.join(root, file)
                 file_content = get_file_content(file_path)
                 repo_structure.append(f"  File: {file}")
-                repo_structure.append(f"    Content:\n{file_content}\n")
+                repo_structure.append(f"  Content:\n{file_content}\n")
 
     # Save the plain text file in the root folder
     output_file = os.path.join(root_path, 'repo_structure.txt')
