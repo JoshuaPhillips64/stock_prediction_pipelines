@@ -1,0 +1,51 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Poetry files
+poetry.lock
+
+# Virtual environments
+.env/
+.venv/
+venv/
+env/
+
+# AWS credential files
+*.pem
+
+# Terraform state files
+terraform.tfstate
+terraform.tfstate.backup
+*.tfvars
+
+# Logs
+logs/
+*.log
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.cache
+.pytest_cache/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# Mac OS files
+.DS_Store
+
+# Temporary files
+*.swp
+*.tmp
+
+# Airflow logs and SQLite database
+airflow_dags/airflow.db
+airflow_dags/logs/
+/.env
+/src/airflow_dags/config/airflow.cfg
+/config/settings.yaml
+/repo_structure.txt
+/.idea

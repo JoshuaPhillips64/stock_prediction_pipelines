@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "ingest-s3"
+version = "0.1.0"
+description = "Lambda function to ingest data from S3 into PostgreSQL"
+authors = ["Your Name <you@example.com>"]
+packages = [{ include = "ingest_s3" }]
+
+[tool.poetry.dependencies]
+python = "^3.12" # Updated Python version
+boto3 = "^1.26.0"
+psycopg2-binary = "^2.9.3"
+
+[tool.poetry.dev-dependencies]
+pytest = "^7.1.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

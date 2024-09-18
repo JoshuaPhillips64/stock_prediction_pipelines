@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "ingest-alpha-vantage"
+version = "0.1.0"
+description = "Lambda function to ingest data from Alpha Vantage API into PostgreSQL"
+authors = ["Josh Phillips <you@example.com>"]
+packages = [{ include = "ingest_alpha_vantage" }]
+
+[tool.poetry.dependencies]
+python = "^3.12" # Updated Python version
+requests = "^2.28.1"
+psycopg2-binary = "^2.9.3"
+boto3 = "^1.26.0"
+
+[tool.poetry.dev-dependencies]
+pytest = "^7.1.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
