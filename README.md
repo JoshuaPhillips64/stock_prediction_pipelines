@@ -17,7 +17,7 @@ This repository contains a Python-based ETL pipeline that runs on AWS, utilizing
 - [Setup Guide](docs/setup_guide.md)
 - [Deployment Guide](docs/deployment_guide.md)
 
-## Project Structure
+## Project Structuree
 
 Refer to the [architecture documentation](docs/architecture.md) for detailed information about the project structure.
 
