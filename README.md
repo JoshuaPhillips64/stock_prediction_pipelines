@@ -1,8 +1,8 @@
-# Python ETL Codebase on AWS with Terraform
+# Stock Predictions on AWS with Terraform
 
 ## Overview
 
-This repository contains a Python-based ETL pipeline that runs on AWS, utilizing Terraform for infrastructure as code. The pipeline is designed to handle multiple AWS Lambda functions with different layers, support large PySpark jobs on EMR, and orchestrate workflows using Apache Airflow. It also integrates OpenLineage and Marquez for data lineage tracking.
+This repository contains a Python-based ETL pipelines that runs on AWS, utilizing Terraform for infrastructure as code. The pipeline is designed to handle multiple AWS Lambda functions with different layers, support large PySpark jobs on EMR, and orchestrate workflows using Apache Airflow. It also integrates OpenLineage and Marquez for data lineage tracking.
 
 ## Features
 
