@@ -17,7 +17,13 @@ logger = logging.getLogger(__name__)
 
 # Environment variables
 ALPHA_VANTAGE_API_KEY = os.environ['ALPHA_VANTAGE_API_KEY']
-DATABASE_URL = os.environ['DATABASE_URL']
+# Environment variables
+DB_HOST = os.getenv('DB_HOST')
+DB_PORT = os.getenv('DB_PORT')
+DB_NAME = os.getenv('DB_NAME')
+DB_USER = os.getenv('DB_USER')
+DB_PASSWORD = os.getenv('DB_PASSWORD')
+DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 # SQLAlchemy setup
 engine = create_engine(DATABASE_URL)
