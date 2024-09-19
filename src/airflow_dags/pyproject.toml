@@ -3,12 +3,11 @@ name = "airflow-dags"
 version = "0.1.0"
 description = "Airflow DAGs for ETL orchestration"
 authors = ["Josh Phillips <you@example.com>"]
-packages = [{ include = "dags" }]
 
 [tool.poetry.dependencies]
-python = "^3.12" # Updated Python version
-apache-airflow = "^2.7.0"
-apache-airflow-providers-openlineage = "1.11.0"
+python = "3.12.5"
+apache-airflow = "2.10.1"
+#apache-airflow-providers-openlineage = "1.11.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.2"

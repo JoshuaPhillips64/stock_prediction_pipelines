@@ -13,16 +13,19 @@ COPY common_layer/ /var/task/common_layer/
 # Copy all lambdas and install their dependencies
 COPY ingest_alpha_vantage/ /var/task/ingest_alpha_vantage/
 RUN cd /var/task/ingest_alpha_vantage && \
+    rm -f poetry.lock && \
     poetry config virtualenvs.create false && \
     poetry install
 
 COPY ingest_postgresql/ /var/task/ingest_postgresql/
 RUN cd /var/task/ingest_postgresql && \
+    rm -f poetry.lock && \
     poetry config virtualenvs.create false && \
-    poetry install --no-dev
+    poetry install
 
 COPY ingest_s3/ /var/task/ingest_s3/
 RUN cd /var/task/ingest_s3 && \
+    rm -f poetry.lock && \
     poetry config virtualenvs.create false && \
     poetry install
 

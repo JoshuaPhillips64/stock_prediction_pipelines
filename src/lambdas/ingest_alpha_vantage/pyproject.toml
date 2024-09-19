@@ -3,7 +3,6 @@ name = "ingest-alpha-vantage"
 version = "0.1.0"
 description = "Lambda function to ingest data from Alpha Vantage API into PostgreSQL"
 authors = ["Josh Phillips <you@example.com>"]
-packages = [{ include = "ingest_alpha_vantage" }]
 
 [tool.poetry.dependencies]
 python = "^3.12" # Updated Python version

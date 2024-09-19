@@ -3,7 +3,6 @@ name = "ingest-postgresql"
 version = "0.1.0"
 description = "Lambda function to ingest data from PostgreSQL source into PostgreSQL target"
 authors = ["Your Name <you@example.com>"]
-packages = [{ include = "ingest_postgresql" }]
 
 [tool.poetry.dependencies]
 python = "^3.12" # Updated Python version

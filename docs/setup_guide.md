@@ -12,6 +12,6 @@
 
 1. Clone the repository.
 2. Set up the .env file with your environment variables.
-3. Run scripts/deploy.sh to deploy the infrastructure.
+3. Develop locally after running docker-compose up.
 4. Upload the EMR scripts to your S3 bucket.
 5. Access the Airflow UI to monitor workflows.

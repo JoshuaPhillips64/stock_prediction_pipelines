@@ -3,7 +3,6 @@ name = "ingest-s3"
 version = "0.1.0"
 description = "Lambda function to ingest data from S3 into PostgreSQL"
 authors = ["Your Name <you@example.com>"]
-packages = [{ include = "ingest_s3" }]
 
 [tool.poetry.dependencies]
 python = "^3.12" # Updated Python version

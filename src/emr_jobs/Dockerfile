@@ -38,14 +38,11 @@ RUN pip install pyspark==3.5.2
 # Set working directory
 WORKDIR /app
 
-# Copy only requirements files first to leverage Docker cache
-COPY pyproject.toml ./
+# Copy all files to make sure the emr_jobs directory exists
+COPY . ./
 
 # Install dependencies with retry mechanism
-RUN bash -c "until poetry config virtualenvs.create false && poetry install; do sleep 10; done"
-
-# Copy application code
-COPY predictive_model.py ./
+RUN poetry config virtualenvs.create false && poetry install
 
 # Set the entrypoint
 ENTRYPOINT ["spark-submit", "--master", "local[*]", "predictive_model.py"]
