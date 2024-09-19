@@ -70,7 +70,7 @@ jobs:
       matrix:
         path:
           - src/lambdas/ingest_alpha_vantage
-          - src/lambdas/ingest_postgresql
+          - src/lambdas/enrich_stock_data
           - src/lambdas/ingest_s3
           - src/emr_jobs
           - src/airflow_dags
