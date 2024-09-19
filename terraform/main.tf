@@ -58,10 +58,6 @@ resource "aws_s3_bucket" "logs_bucket" {
   }
 }
 
-resource "aws_s3_bucket_acl" "logs_bucket_acl" {
-  bucket = aws_s3_bucket.logs_bucket.id
-}
-
 resource "aws_s3_bucket" "bootstrap_scripts_bucket" {
   bucket = var.bootstrap_scripts_bucket
 
@@ -71,10 +67,6 @@ resource "aws_s3_bucket" "bootstrap_scripts_bucket" {
   }
 }
 
-resource "aws_s3_bucket_acl" "bootstrap_scripts_bucket_acl" {
-  bucket = aws_s3_bucket.bootstrap_scripts_bucket.id
-  acl    = "private"
-}
 
 module "emr_cluster" {
   source                            = "./modules/emr"

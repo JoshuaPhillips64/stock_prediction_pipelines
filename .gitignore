@@ -49,3 +49,11 @@ airflow_dags/logs/
 /config/settings.yaml
 /repo_structure.txt
 /.idea
+/terraform/.terraform/providers/registry.terraform.io/hashicorp/archive/2.6.0/windows_amd64/LICENSE.txt
+/terraform/.terraform/providers/registry.terraform.io/hashicorp/aws/5.67.0/windows_amd64/LICENSE.txt
+/terraform/.terraform/modules/emr_cluster.emr_cluster/
+/terraform/.terraform.lock.hcl
+/terraform/modules/lambda/ingest_alpha_vantage.zip
+/terraform/.terraform/modules/modules.json
+/terraform/.terraform/providers/registry.terraform.io/hashicorp/archive/2.6.0/windows_amd64/terraform-provider-archive_v2.6.0_x5.exe
+/terraform/.terraform/providers/registry.terraform.io/hashicorp/aws/5.67.0/windows_amd64/terraform-provider-aws_v5.67.0_x5.exe
