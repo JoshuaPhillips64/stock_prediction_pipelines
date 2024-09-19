@@ -1,4 +1,4 @@
-# Stock Predictions on AWS with Terraform
+# Stock Prediction Pipelines on AWS with Terraform
 
 ## Overview
 
