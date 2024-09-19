@@ -10,12 +10,12 @@ module "emr_cluster" {
 
   # Master and Core instance groups
   master_instance_group = {
-    instance_type  = "m5.large"  # Smallest instance
+    instance_type  = "m5.xlarge"  # Smallest instance
     instance_count = 1
   }
 
   core_instance_group = {
-    instance_type  = "m5.large"
+    instance_type  = "m5.xlarge"
     instance_count = 1
   }
 
