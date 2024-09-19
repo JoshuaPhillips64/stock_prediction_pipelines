@@ -12,14 +12,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 USER airflow
 
 # Copy the pyproject.toml and poetry.lock files
-COPY pyproject.toml poetry.lock ./
+COPY pyproject.toml ./
 
 # Install Poetry
-RUN pip install --no-cache-dir poetry==1.6.0
+RUN pip install poetry
 
 # Install dependencies
 RUN poetry config virtualenvs.create false && \
-    poetry install --no-dev
+    poetry install
 
 # Copy your DAGs
 COPY dags/ /opt/airflow/dags/

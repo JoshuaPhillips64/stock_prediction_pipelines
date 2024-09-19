@@ -1,30 +1,30 @@
-# Use Amazon's AWS Lambda base image for Python 3.12
-FROM amazon/aws-lambda-python:3.12
+# Use a Debian-based image that supports Python 3.12
+FROM python:3.12-slim
 
-# Install system dependencies
-RUN yum install -y gcc python3-devel
+# Install wget and other necessary packages
+RUN apt-get update && apt-get install -y wget gcc python3-dev && apt-get clean
 
 # Install Poetry
-RUN pip install --no-cache-dir poetry==1.6.0
+RUN pip install poetry
 
 # Copy the common layer
-COPY common_layer/ ${LAMBDA_TASK_ROOT}/common_layer/
+COPY common_layer/ /var/task/common_layer/
 
 # Copy all lambdas and install their dependencies
-COPY ingest_alpha_vantage/ ${LAMBDA_TASK_ROOT}/ingest_alpha_vantage/
-RUN cd ${LAMBDA_TASK_ROOT}/ingest_alpha_vantage && \
+COPY ingest_alpha_vantage/ /var/task/ingest_alpha_vantage/
+RUN cd /var/task/ingest_alpha_vantage && \
+    poetry config virtualenvs.create false && \
+    poetry install
+
+COPY ingest_postgresql/ /var/task/ingest_postgresql/
+RUN cd /var/task/ingest_postgresql && \
     poetry config virtualenvs.create false && \
     poetry install --no-dev
 
-COPY ingest_postgresql/ ${LAMBDA_TASK_ROOT}/ingest_postgresql/
-RUN cd ${LAMBDA_TASK_ROOT}/ingest_postgresql && \
+COPY ingest_s3/ /var/task/ingest_s3/
+RUN cd /var/task/ingest_s3 && \
     poetry config virtualenvs.create false && \
-    poetry install --no-dev
-
-COPY ingest_s3/ ${LAMBDA_TASK_ROOT}/ingest_s3/
-RUN cd ${LAMBDA_TASK_ROOT}/ingest_s3 && \
-    poetry config virtualenvs.create false && \
-    poetry install --no-dev
+    poetry install
 
 # Copy the AWS Lambda Runtime Interface Emulator (RIE) for local testing
 ADD https://github.com/aws/aws-lambda-runtime-interface-emulator/releases/latest/download/aws-lambda-rie /usr/local/bin/aws-lambda-rie

@@ -1,9 +1,11 @@
 # Deployment Guide
 
-## Deploying to AWS
+## Deploying to Local Environment
 
-- Use the deploy.sh script to deploy resources.
-- Use the destroy.sh script to tear down resources.
+- Set the following environment variables in your local environment
+  envionment = local
+- Run the docker containers ``docker-compose up``
+- 
 
 ## CI/CD Pipeline
 
