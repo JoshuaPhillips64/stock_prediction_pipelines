@@ -16,12 +16,15 @@ RUN apt-get update && \
         curl \
         gnupg \
         libpq-dev \
+        python3-distutils \
         build-essential \
         ca-certificates \
         gcc \
         python3-dev && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* \
+
+RUN apt-get update && apt-get install -y python3-distutils
 
 # Install Spark
 RUN wget -q https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz && \
