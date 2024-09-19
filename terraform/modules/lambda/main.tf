@@ -1,11 +1,15 @@
+data "archive_file" "ingest_alpha_vantage_zip" {
+  type        = "zip"
+  source_dir  = "../../src/lamdas/ingest_alpha_vantage"  # Ensure this path exists
+  output_path = "${path.module}/ingest_alpha_vantage.zip"
+}
+
 resource "aws_lambda_function" "ingest_alpha_vantage" {
   filename      = data.archive_file.ingest_alpha_vantage_zip.output_path
   function_name = "${var.environment}-ingest-alpha-vantage"
   role          = aws_iam_role.lambda_role.arn
   handler       = "handler.lambda_handler"
   runtime       = "python3.12"
-
-  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
 
   vpc_config {
     subnet_ids         = var.subnet_ids
@@ -24,11 +28,7 @@ resource "aws_lambda_function" "ingest_alpha_vantage" {
   }
 }
 
-data "archive_file" "lambda_zip" {
-  type        = "zip"
-  source_dir  = "${path.module}/ingest_alpha_vantage"
-  output_path = "${path.module}/ingest_alpha_vantage.zip"
-}
+
 
 resource "aws_iam_role" "lambda_role" {
   name = "${var.environment}-lambda-role"

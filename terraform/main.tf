@@ -61,16 +61,18 @@ module "emr_cluster" {
   instance_profile = module.network.emr_instance_profile
   emr_release_label                 = "emr-6.4.0"  # Replace with the desired release label
   applications                      = ["Hadoop", "Spark"]  # Example list of applications
+  service_role                      = module.network.emr_service_role
+  ec2_key_name                      = "emr-key-pair"
 }
 
 module "airflow" {
   source      = "./modules/airflow"
   environment = var.environment
-  vpc_id      = module.network.vpc_id
   subnet_ids  = module.network.private_subnets
   db_host     = module.rds.db_endpoint
   db_port     = module.rds.db_port
   db_name     = module.rds.db_name
   db_username = var.db_username
   db_password = var.db_password
+  dag_bucket = "ussa-data-processing-code-repository"
 }
