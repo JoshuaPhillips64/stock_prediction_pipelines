@@ -1,0 +1,38 @@
+FROM python:3.12-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openjdk-11-jdk \
+    wget \
+    curl \
+    gnupg \
+    libpq-dev \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Spark
+ENV SPARK_VERSION=3.2.1
+ENV HADOOP_VERSION=3.2
+
+RUN wget https://downloads.apache.org/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz && \
+    tar xvf spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz && \
+    mv spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION} /opt/spark && \
+    rm spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz
+
+ENV SPARK_HOME=/opt/spark
+ENV PATH=$PATH:$SPARK_HOME/bin
+
+# Install Poetry
+RUN pip install --no-cache-dir poetry==1.6.0
+
+# Copy application code
+COPY predictive_model.py /app/
+COPY pyproject.toml poetry.lock /app/
+
+# Install dependencies
+WORKDIR /app
+RUN poetry config virtualenvs.create false && \
+    poetry install --no-dev
+
+# Set the entrypoint
+ENTRYPOINT ["spark-submit", "predictive_model.py"]

@@ -1,0 +1,172 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:13.4
+    environment:
+      POSTGRES_USER: ${DB_USER:-dbuser}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dbpassword}
+      POSTGRES_DB: ${DB_NAME:-stock_data}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  airflow:
+    build:
+      context: ./src/airflow_dags
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      - AIRFLOW__CORE__FERNET_KEY=${FERNET_KEY}
+      - AIRFLOW__WEBSERVER__SECRET_KEY=${SECRET_KEY}
+      - ENVIRONMENT=${ENVIRONMENT}
+    depends_on:
+      - db
+    ports:
+      - "8080:8080"
+    networks:
+      - app-network
+    command: "webserver"
+
+  airflow_scheduler:
+    build:
+      context: ./src/airflow_dags
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      - AIRFLOW__CORE__FERNET_KEY=${FERNET_KEY}
+      - AIRFLOW__WEBSERVER__SECRET_KEY=${SECRET_KEY}
+      - ENVIRONMENT=${ENVIRONMENT}
+    depends_on:
+      - db
+    networks:
+      - app-network
+    command: "scheduler"
+
+  ingest_alpha_vantage:
+    build:
+      context: ./src/lambdas
+    environment:
+      - LAMBDA_HANDLER=ingest_alpha_vantage.handler.lambda_handler
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - ALPHA_VANTAGE_API_KEY=${ALPHA_VANTAGE_API_KEY}
+    depends_on:
+      - db
+    networks:
+      - app-network
+    ports:
+      - "9001:9000"
+
+  ingest_postgresql:
+    build:
+      context: ./src/lambdas
+    environment:
+      - LAMBDA_HANDLER=ingest_postgresql.handler.lambda_handler
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      - db
+    networks:
+      - app-network
+    ports:
+      - "9002:9000"
+
+  ingest_s3:
+    build:
+      context: ./src/lambdas
+    environment:
+      - LAMBDA_HANDLER=ingest_s3.handler.lambda_handler
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+      - S3_KEY=${S3_KEY}
+    depends_on:
+      - db
+    networks:
+      - app-network
+    ports:
+      - "9003:9000"
+
+  emr_simulator:
+    build:
+      context: ./src/emr_jobs
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      - db
+    networks:
+      - app-network
+
+  marquez-db:
+    image: postgres:14
+    container_name: marquez-db
+    environment:
+      - POSTGRES_DB=${MARQUEZ_DB_NAME:-marquez}
+      - POSTGRES_USER=${MARQUEZ_DB_USER:-marquez}
+      - POSTGRES_PASSWORD=${MARQUEZ_DB_PASSWORD:-marquez}
+    volumes:
+      - marquez_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${MARQUEZ_DB_USER:-marquez}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  marquez-api:
+    image: "marquezproject/marquez:0.47.0"
+    container_name: marquez-api
+    environment:
+      - MARQUEZ_PORT=${MARQUEZ_PORT:-5000}
+      - MARQUEZ_ADMIN_PORT=${MARQUEZ_ADMIN_PORT:-5001}
+      - MARQUEZ_DB_HOST=marquez-db
+      - MARQUEZ_DB_PORT=5432
+      - MARQUEZ_DB_NAME=${MARQUEZ_DB_NAME:-marquez}
+      - MARQUEZ_DB_USER=${MARQUEZ_DB_USER:-marquez}
+      - MARQUEZ_DB_PASSWORD=${MARQUEZ_DB_PASSWORD:-marquez}
+    ports:
+      - "${MARQUEZ_PORT:-5000}:${MARQUEZ_PORT:-5000}"
+      - "${MARQUEZ_ADMIN_PORT:-5001}:${MARQUEZ_ADMIN_PORT:-5001}"
+    depends_on:
+      marquez-db:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  marquez-web:
+    image: "marquezproject/marquez-web:0.46.0"
+    container_name: marquez-web
+    environment:
+      - MARQUEZ_HOST=marquez-api
+      - MARQUEZ_PORT=${MARQUEZ_PORT:-5000}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - marquez-api
+    networks:
+      - app-network
+
+volumes:
+  db_data:
+  marquez_postgres_data:
+
+networks:
+  app-network:

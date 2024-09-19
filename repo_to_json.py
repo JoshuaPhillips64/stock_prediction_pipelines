@@ -30,7 +30,7 @@ def create_repo_text(root_path):
 
         for file in files:
             # Skip certain file types (.yaml, .cfg, .md)
-            if not file.endswith(('.yaml', '.cfg', '.md','.xml','.json','.lock','LICENSE','.terraform.lock.hcl')):
+            if not file.endswith(('.cfg', '.md','.xml','.json','.lock','LICENSE','.terraform.lock.hcl')):
                 file_path = os.path.join(root, file)
                 file_content = get_file_content(file_path)
                 repo_structure.append(f"  File: {file}")

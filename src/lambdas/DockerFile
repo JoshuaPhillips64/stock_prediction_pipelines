@@ -1,0 +1,39 @@
+# Use Amazon's AWS Lambda base image for Python 3.12
+FROM amazon/aws-lambda-python:3.12
+
+# Install system dependencies
+RUN yum install -y gcc python3-devel
+
+# Install Poetry
+RUN pip install --no-cache-dir poetry==1.6.0
+
+# Copy the common layer
+COPY common_layer/ ${LAMBDA_TASK_ROOT}/common_layer/
+
+# Copy all lambdas and install their dependencies
+COPY ingest_alpha_vantage/ ${LAMBDA_TASK_ROOT}/ingest_alpha_vantage/
+RUN cd ${LAMBDA_TASK_ROOT}/ingest_alpha_vantage && \
+    poetry config virtualenvs.create false && \
+    poetry install --no-dev
+
+COPY ingest_postgresql/ ${LAMBDA_TASK_ROOT}/ingest_postgresql/
+RUN cd ${LAMBDA_TASK_ROOT}/ingest_postgresql && \
+    poetry config virtualenvs.create false && \
+    poetry install --no-dev
+
+COPY ingest_s3/ ${LAMBDA_TASK_ROOT}/ingest_s3/
+RUN cd ${LAMBDA_TASK_ROOT}/ingest_s3 && \
+    poetry config virtualenvs.create false && \
+    poetry install --no-dev
+
+# Copy the AWS Lambda Runtime Interface Emulator (RIE) for local testing
+ADD https://github.com/aws/aws-lambda-runtime-interface-emulator/releases/latest/download/aws-lambda-rie /usr/local/bin/aws-lambda-rie
+RUN chmod +x /usr/local/bin/aws-lambda-rie
+
+# Set the entrypoint to use RIE
+ENTRYPOINT [ "/usr/local/bin/aws-lambda-rie", "python", "-m", "awslambdaric" ]
+
+# Set the default handler (can be overridden)
+ENV LAMBDA_HANDLER="ingest_alpha_vantage.handler.lambda_handler"
+
+CMD [ "${LAMBDA_HANDLER}" ]
