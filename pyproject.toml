@@ -15,6 +15,7 @@ psycopg2-binary = "^2.9.3"
 boto3 = "^1.26.0"
 scikit-learn = "^1.0.2"
 apache-airflow = "2.10.1"
+pyspark = "^3.2.1"
 #apache-airflow-providers-openlineage = "1.11.0"
 
 [tool.poetry.dev-dependencies]

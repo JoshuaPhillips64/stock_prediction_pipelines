@@ -39,9 +39,11 @@ variable "alpha_vantage_api_key" {
 variable "logs_bucket" {
   description = "S3 bucket for EMR logs"
   type        = string
+  default     = ""
 }
 
 variable "bootstrap_scripts_bucket" {
   description = "S3 bucket for EMR bootstrap scripts"
   type        = string
+  default     = ""
 }

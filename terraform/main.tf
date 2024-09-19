@@ -49,12 +49,40 @@ module "lambda" {
   alpha_vantage_api_key = var.alpha_vantage_api_key
 }
 
+resource "aws_s3_bucket" "logs_bucket" {
+  bucket = var.logs_bucket
+
+  tags = {
+    Name        = "${var.environment}-logs-bucket"
+    Environment = var.environment
+  }
+}
+
+resource "aws_s3_bucket_acl" "logs_bucket_acl" {
+  bucket = aws_s3_bucket.logs_bucket.id
+  acl    = "private"
+}
+
+resource "aws_s3_bucket" "bootstrap_scripts_bucket" {
+  bucket = var.bootstrap_scripts_bucket
+
+  tags = {
+    Name        = "${var.environment}-bootstrap-scripts-bucket"
+    Environment = var.environment
+  }
+}
+
+resource "aws_s3_bucket_acl" "bootstrap_scripts_bucket_acl" {
+  bucket = aws_s3_bucket.bootstrap_scripts_bucket.id
+  acl    = "private"
+}
+
 module "emr_cluster" {
   source                            = "./modules/emr"
   environment                       = var.environment
   subnet_id                         = module.network.private_subnets[0]
-  logs_bucket                       = var.logs_bucket
-  bootstrap_scripts_bucket          = var.bootstrap_scripts_bucket
+  logs_bucket                       = aws_s3_bucket.logs_bucket.bucket
+  bootstrap_scripts_bucket          = aws_s3_bucket.bootstrap_scripts_bucket.bucket
   vpc_id                            = module.network.vpc_id
   emr_managed_master_security_group = module.network.emr_master_sg_id
   emr_managed_slave_security_group  = module.network.emr_slave_sg_id
@@ -76,3 +104,4 @@ module "airflow" {
   db_password = var.db_password
   dag_bucket = "ussa-data-processing-code-repository"
 }
+
