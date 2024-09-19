@@ -8,9 +8,9 @@ ENV PATH=$PATH:$SPARK_HOME/bin
 ENV DEBIAN_FRONTEND=noninteractive
 ENV POETRY_HTTP_TIMEOUT=600
 
-# Update and install system dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
+# Install system dependencies
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
         default-jdk \
         wget \
         curl \
@@ -20,17 +20,15 @@ RUN apt-get update && \
         build-essential \
         ca-certificates \
         gcc \
-        python3-dev && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* \
+        python3-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN apt-get update && apt-get install -y python3-distutils
-
-# Install Spark
-RUN wget -q https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz && \
-    tar xzf spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz && \
-    mv spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION} /opt/spark && \
-    rm spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz
+# Download Spark
+RUN wget -q "https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz" \
+    && tar xzf "spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz" \
+    && mv "spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}" /opt/spark \
+    && rm "spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz"
 
 # Install Poetry
 RUN pip install poetry
@@ -41,10 +39,10 @@ RUN pip install pyspark==3.5.2
 # Set working directory
 WORKDIR /app
 
-# Copy all files to make sure the emr_jobs directory exists
+# Copy all files to ensure the emr_jobs directory exists
 COPY . ./
 
-# Install dependencies with retry mechanism
+# Install dependencies using Poetry
 RUN poetry config virtualenvs.create false && poetry install
 
 # Set the entrypoint

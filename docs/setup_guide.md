@@ -42,6 +42,8 @@ Build and start services:
 
 ```bash
 docker-compose up --build
+
+docker-compose exec airflow airflow db init
 ```
 
 This will:

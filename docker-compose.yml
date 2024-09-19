@@ -19,12 +19,14 @@ services:
       context: ./src/airflow_dags
     environment:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
-      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
       - AIRFLOW__CORE__FERNET_KEY=${FERNET_KEY}
       - AIRFLOW__WEBSERVER__SECRET_KEY=${SECRET_KEY}
       - ENVIRONMENT=${ENVIRONMENT}
     depends_on:
       - db
+    volumes:
+      - ./src/airflow_dags:/opt/airflow/dags
     ports:
       - "8080:8080"
     networks:
@@ -61,6 +63,8 @@ services:
       - db
     networks:
       - app-network
+    volumes:
+      - ./src/lambdas:/var/task/lambdas
     ports:
       - "9001:9000"
 
