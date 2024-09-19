@@ -10,7 +10,7 @@ curl -sSL https://install.python-poetry.org | python3 -
 export PATH="$HOME/.local/bin:$PATH"
 
 # Navigate to the EMR jobs directory
-cd /path/to/emr_jobs  # You will need to ensure this path is correct on EMR
+cd src/emr_jobs  # You will need to ensure this path is correct on EMR
 
 # Install dependencies using Poetry
 poetry install

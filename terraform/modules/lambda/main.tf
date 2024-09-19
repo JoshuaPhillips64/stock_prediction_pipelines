@@ -1,6 +1,6 @@
 data "archive_file" "ingest_alpha_vantage_zip" {
   type        = "zip"
-  source_dir  = "../../src/lambdas/ingest_alpha_vantage"  # Corrected the path to "lambdas"
+  source_dir  = "../src/lambdas/ingest_alpha_vantage"
   output_path = "${path.module}/ingest_alpha_vantage.zip"
 }
 

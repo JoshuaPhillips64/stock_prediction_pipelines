@@ -49,12 +49,6 @@ jobs:
         working-directory: terraform/
         run: terraform apply -auto-approve tfplan
 
-      - name: Deploy Lambda Functions
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: |
-          chmod +x src/scripts/deploy.sh # Make the script executable
-          src/scripts/deploy.sh
-
   destroy:
     runs-on: ubuntu-latest
     # Only trigger destroy manually or on a specific branch
