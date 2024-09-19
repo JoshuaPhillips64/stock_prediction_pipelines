@@ -20,6 +20,9 @@ def create_repo_text(root_path):
             dirs.remove('.idea')
         if '.git' in dirs:
             dirs.remove('.git')
+        # Special handling for 'terraform/.terraform' directory
+        if 'terraform' in root and '.terraform' in dirs:
+            dirs.remove('.terraform')
 
         # Generate relative path from the root path
         relative_path = os.path.relpath(root, root_path)
@@ -27,7 +30,7 @@ def create_repo_text(root_path):
 
         for file in files:
             # Skip certain file types (.yaml, .cfg, .md)
-            if not file.endswith(('.yaml', '.cfg', '.md','.xml','.json','.lock')):
+            if not file.endswith(('.yaml', '.cfg', '.md','.xml','.json','.lock','LICENSE','.terraform.lock.hcl')):
                 file_path = os.path.join(root, file)
                 file_content = get_file_content(file_path)
                 repo_structure.append(f"  File: {file}")

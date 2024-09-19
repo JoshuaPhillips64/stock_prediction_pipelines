@@ -1,8 +1,8 @@
 # Outputs for Lambda module
 # ...
 output "lambda_function_arns" {
-  description = "ARN of the deployed Lambda function"
-  value       = aws_lambda_function.test_lambda.arn
+  description = "ARNs of the deployed Lambda functions."
+  value       = aws_lambda_function.ingest_alpha_vantage.arn
 }
 
 output "lambda_security_group_id" {
