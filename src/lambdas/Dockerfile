@@ -15,10 +15,10 @@ COPY ingest_alpha_vantage/ /var/task/ingest_alpha_vantage/
 RUN cd /var/task/ingest_alpha_vantage && \
     rm -f poetry.lock && \
     poetry config virtualenvs.create false && \
-    poetry install
+    poetry install \
 
-COPY ingest_postgresql/ /var/task/ingest_postgresql/
-RUN cd /var/task/ingest_postgresql && \
+COPY enrich_stock_data/ /var/task/enrich_stock_data/
+RUN cd /var/task/enrich_stock_data && \
     rm -f poetry.lock && \
     poetry config virtualenvs.create false && \
     poetry install

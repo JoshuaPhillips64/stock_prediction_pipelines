@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "ingest-alpha-vantage"
+name = "enrich_stock_data"
 version = "0.1.0"
-description = "Lambda function to ingest data from Alpha Vantage API into PostgreSQL"
+description = "Lambda function to enrich stock data with technical indicators"
 authors = ["Josh Phillips <you@example.com>"]
 
 [tool.poetry.dependencies]
@@ -13,6 +13,8 @@ yfinance = "^0.2.43"
 pandas = "^2.1.1"
 scipy = "^1.11.3"
 SQLAlchemy = ">=1.4.36,<2.0"
+fredapi = "^0.4.3"  # Added this for the Fred API used in the code
+numpy = "^1.26.0"  # Added for numpy functions used in technical indicator calculations
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.2"

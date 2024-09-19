@@ -38,10 +38,12 @@ Before setting up the project, make sure you have the following installed:
 
 ## Docker Compose Setup
 
-Build and start services:
+Build and start services. Reminder the EMR simulator is massive and will take a while to build. 
 
 ```bash
-docker-compose up --build
+
+```bash
+docker-compose up --build --progress=plain
 
 docker-compose exec airflow airflow db init
 ```
