@@ -5,7 +5,7 @@ output "vpc_id" {
 
 output "lambda_function_arns" {
   description = "ARNs of the deployed Lambda functions."
-  value       = module.lambda_functions.lambda_function_arns
+  value       = module.lambda.lambda_function_arns
 }
 
 output "emr_cluster_id" {

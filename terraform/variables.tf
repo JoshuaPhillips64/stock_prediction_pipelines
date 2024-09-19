@@ -19,16 +19,29 @@ variable "vpc_cidr" {
 variable "db_username" {
   description = "Username for the RDS database"
   type        = string
+  default     = ""
 }
 
 variable "db_password" {
   description = "Password for the RDS database"
   type        = string
   sensitive   = true
+  default     = ""
 }
 
 variable "alpha_vantage_api_key" {
   description = "API key for Alpha Vantage"
   type        = string
   sensitive   = true
+  default     = ""
+}
+
+variable "logs_bucket" {
+  description = "S3 bucket for EMR logs"
+  type        = string
+}
+
+variable "bootstrap_scripts_bucket" {
+  description = "S3 bucket for EMR bootstrap scripts"
+  type        = string
 }

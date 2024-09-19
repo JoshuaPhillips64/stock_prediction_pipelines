@@ -3,46 +3,49 @@ resource "aws_emr_cluster" "emr_cluster" {
   release_label = var.emr_release_label
   applications  = var.applications
 
-  # Define Instance Groups based on your requirements (adjust instance types and counts)
+  # Instance Groups
   instance_group {
-    instance_role = "MASTER"
-    instance_type = var.master_instance_type
+    instance_role  = "MASTER"
+    instance_type  = var.master_instance_type
     instance_count = 1
 
     ebs_config {
-      ebs_optimized = true
-      volume_size   = 50
-      volume_type   = "gp2"
+      size          = 50
+      type          = "gp2"
+      volumes_per_instance = 1
     }
   }
 
   instance_group {
-    instance_role = "CORE"
-    instance_type = var.core_instance_type
+    instance_role  = "CORE"
+    instance_type  = var.core_instance_type
     instance_count = 2
 
     ebs_config {
-      ebs_optimized = true
-      volume_size   = 50
-      volume_type   = "gp2"
+      size          = 50
+      type          = "gp2"
+      volumes_per_instance = 1
     }
   }
 
-  # Additional configuration (like LogUri, SecurityConfiguration)
-  log_uri                  = "s3://${var.logs_bucket}/emr-logs/"
-  security_configuration   = aws_emr_security_configuration.emr_security_configuration.id
+  # Additional configuration
+  log_uri = "s3://${var.logs_bucket}/emr-logs/"
+  security_configuration = aws_emr_security_configuration.emr_security_configuration.name
   termination_protection = false
   keep_job_flow_alive_when_no_steps = false
 
   # Network configuration
   ec2_attributes {
-    subnet_id = var.subnet_id
+    subnet_id                         = var.subnet_id
+    emr_managed_master_security_group = var.emr_managed_master_security_group
+    emr_managed_slave_security_group  = var.emr_managed_slave_security_group
+    instance_profile                  = var.instance_profile
   }
 
   bootstrap_action {
     name = "Install Dependencies"
     script_bootstrap_action {
-      path = "s3://${var.bootstrap_scripts_bucket}/install_dependencies.sh" # Replace with your bootstrap script path
+      path = "s3://${var.bootstrap_scripts_bucket}/install_dependencies.sh"
     }
   }
 
@@ -55,7 +58,7 @@ resource "aws_emr_cluster" "emr_cluster" {
 # Configure EMR Security Configuration (optional but recommended)
 resource "aws_emr_security_configuration" "emr_security_configuration" {
   name = "emr-security-configuration-${var.environment}"
-  security_configuration = <<EOF
+  configuration = <<EOF
 {
   "EncryptionConfiguration": {
     "AtRestEncryptionConfiguration": {

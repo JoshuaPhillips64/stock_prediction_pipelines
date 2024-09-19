@@ -97,3 +97,47 @@ resource "aws_security_group" "emr_sg" {
 
 data "aws_availability_zones" "available" {
   state = "available"
+}
+
+resource "aws_security_group" "emr_master" {
+  name        = "${var.environment}-emr-master-sg"
+  description = "Security group for EMR master node"
+  vpc_id      = module.network.vpc_id
+
+  # Define ingress and egress rules
+  # ...
+}
+
+resource "aws_security_group" "emr_slave" {
+  name        = "${var.environment}-emr-slave-sg"
+  description = "Security group for EMR slave nodes"
+  vpc_id      = module.network.vpc_id
+
+  # Define ingress and egress rules
+  # ...
+}
+
+resource "aws_iam_role" "emr_service_role" {
+  name = "${var.environment}-EMR_DefaultRole"
+
+  assume_role_policy = jsonencode({
+    "Version": "2012-10-17",
+    "Statement": [{
+      "Action": "sts:AssumeRole",
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "elasticmapreduce.amazonaws.com"
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "emr_service_role_policy" {
+  role       = aws_iam_role.emr_service_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonElasticMapReduceRole"
+}
+
+resource "aws_iam_instance_profile" "emr_instance_profile" {
+  name = "${var.environment}-EMR_EC2_DefaultRole"
+  role = aws_iam_role.emr_service_role.name
+}
