@@ -18,11 +18,6 @@ output "emr_slave_sg_id" {
   value       = aws_security_group.emr_slave.id
 }
 
-output "emr_service_role" {
-  description = "Security Group ID for EMR slave nodes."
-  value       = aws_iam_role.emr_service_role.name
-}
-
 output "emr_instance_profile" {
   description = "Security Group ID for EMR slave nodes."
   value       = aws_iam_instance_profile.emr_instance_profile.name
@@ -31,4 +26,9 @@ output "emr_instance_profile" {
 output "emr_service_role_policy" {
   description = "Security Group ID for EMR slave nodes."
   value       = aws_iam_role_policy_attachment.emr_service_role_policy.policy_arn
+}
+
+output "emr_service_role" {
+  description = "EMR Service Role"
+  value       = aws_iam_role.emr_service_role.name
 }

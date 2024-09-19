@@ -24,10 +24,10 @@ resource "aws_lambda_function" "ingest_alpha_vantage" {
   }
 }
 
-data "archive_file" "ingest_alpha_vantage_zip" {
-  type = "zip"
-  source_dir = "../.."  # Adjust if necessary (this assumes your zip is one level up)
-  output_path = "ingest_alpha_vantage.zip"
+data "archive_file" "lambda_zip" {
+  type        = "zip"
+  source_dir  = "${path.module}/ingest_alpha_vantage"
+  output_path = "${path.module}/ingest_alpha_vantage.zip"
 }
 
 resource "aws_iam_role" "lambda_role" {

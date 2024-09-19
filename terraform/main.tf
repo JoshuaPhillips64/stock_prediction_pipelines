@@ -58,7 +58,9 @@ module "emr_cluster" {
   vpc_id                            = module.network.vpc_id
   emr_managed_master_security_group = module.network.emr_master_sg_id
   emr_managed_slave_security_group  = module.network.emr_slave_sg_id
-  instance_profile = aws_iam_instance_profile.emr_instance_profile.name
+  instance_profile = module.network.emr_instance_profile
+  emr_release_label                 = "emr-6.4.0"  # Replace with the desired release label
+  applications                      = ["Hadoop", "Spark"]  # Example list of applications
 }
 
 module "airflow" {

@@ -9,6 +9,5 @@ output "db_port" {
 }
 
 output "db_name" {
-  description = "The name of the database."
-  value       = aws_db_instance.postgres.name
+  value = aws_db_instance.postgres.identifier
 }

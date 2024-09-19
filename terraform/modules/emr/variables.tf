@@ -29,3 +29,13 @@ variable "emr_managed_slave_security_group" {
 variable "instance_profile" {
   type = string
 }
+
+variable "emr_release_label" {
+  description = "The release label of the EMR cluster (e.g., emr-6.4.0)"
+  type        = string
+}
+
+variable "applications" {
+  description = "List of applications to be installed on the EMR cluster"
+  type        = list(string)
+}

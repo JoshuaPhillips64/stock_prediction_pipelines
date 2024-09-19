@@ -143,3 +143,20 @@ resource "aws_iam_instance_profile" "emr_instance_profile" {
   name = "${var.environment}-emr-instance-profile"
   role = aws_iam_role.emr_role.name
 }
+
+resource "aws_iam_role" "emr_service_role" {
+  name = "${var.environment}-emr-service-role"
+
+  assume_role_policy = jsonencode({
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Principal": {
+          "Service": "elasticmapreduce.amazonaws.com"
+        },
+        "Action": "sts:AssumeRole"
+      }
+    ]
+  })
+}
