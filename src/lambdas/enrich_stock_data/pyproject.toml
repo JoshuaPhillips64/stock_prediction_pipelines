@@ -13,8 +13,9 @@ yfinance = "^0.2.43"
 pandas = "^2.1.1"
 scipy = "^1.11.3"
 SQLAlchemy = ">=1.4.36,<2.0"
-fredapi = "^0.4.3"  # Added this for the Fred API used in the code
-numpy = "^1.26.0"  # Added for numpy functions used in technical indicator calculations
+fredapi = "^0.4.3"
+numpy = "^1.26.0"
+python-dotenv = "^0.19.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.2"

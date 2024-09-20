@@ -3,33 +3,40 @@ import json
 import logging
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import requests
+
 import pandas as pd
-import numpy as np
-from sqlalchemy import create_engine, Table, MetaData, Column, String, Date, Float, Integer, select, insert
-from sqlalchemy.dialects.postgresql import insert as pg_insert
+import requests
+from sqlalchemy import (
+    create_engine,
+    Table,
+    MetaData,
+    Column,
+    String,
+    Date,
+    Float,
+    Numeric,
+)
+from sqlalchemy.dialects.postgresql import insert as pg_insert, JSON
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.exc import SQLAlchemyError
-import yfinance as yf
-from fredapi import Fred
-from functools import lru_cache
-from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util.retry import Retry
+from sqlalchemy import select
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Environment variables
-DB_HOST = os.getenv('DB_HOST')
-DB_PORT = os.getenv('DB_PORT')
-DB_NAME = os.getenv('DB_NAME')
-DB_USER = os.getenv('DB_USER')
-DB_PASSWORD = os.getenv('DB_PASSWORD')
+ALPHA_VANTAGE_API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY")
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT")
+DB_NAME = os.getenv("DB_NAME")
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+
 DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-ALPHA_VANTAGE_API_KEY = os.environ['ALPHA_VANTAGE_API_KEY']
-NEWSAPI_API_KEY = os.environ['NEWSAPI_API_KEY']
-FRED_API_KEY = os.environ['FRED_API_KEY']
 
 # SQLAlchemy setup
 engine = create_engine(DATABASE_URL)
@@ -37,63 +44,79 @@ Session = sessionmaker(bind=engine)
 metadata = MetaData()
 
 # Define tables
-stock_prices = Table('stock_prices', metadata, autoload_with=engine)
-enriched_stock_data = Table('enriched_stock_data', metadata,
-                            Column('symbol', String, primary_key=True),
-                            Column('date', Date, primary_key=True),
-                            Column('open', Float),
-                            Column('high', Float),
-                            Column('low', Float),
-                            Column('close', Float),
-                            Column('volume', Float),
-                            Column('upper_band', Float),
-                            Column('lower_band', Float),
-                            Column('adx', Float),
-                            Column('sector_performance', Float),
-                            Column('sp500_return', Float),
-                            Column('nasdaq_return', Float),
-                            Column('sentiment_score', Float),
-                            Column('gdp_growth', Float),
-                            Column('inflation_rate', Float),
-                            Column('unemployment_rate', Float),
-                            Column('put_call_ratio', Float),
-                            Column('implied_volatility', Float),
-                            Column('rsi', Float),
-                            Column('macd', Float),
-                            Column('macd_signal', Float),
-                            Column('macd_hist', Float)
-                            )
+stock_prices = Table("stock_prices", metadata, autoload_with=engine)
+company_overview = Table(
+    "company_overview",
+    metadata,
+    Column("symbol", String, primary_key=True),
+    Column("last_updated", Date, primary_key=True),
+    Column("data", JSON),
+)
+enriched_stock_data = Table(
+    "enriched_stock_data",
+    metadata,
+    Column("symbol", String, primary_key=True),
+    Column("date", Date, primary_key=True),
+    Column("open", Float),
+    Column("high", Float),
+    Column("low", Float),
+    Column("close", Float),
+    Column("volume", Float),
+    Column("sector_performance", Float),
+    Column("sp500_return", Float),
+    Column("nasdaq_return", Float),
+    Column("sentiment_score", Float),
+    Column("gdp_growth", Float),
+    Column("inflation_rate", Float),
+    Column("unemployment_rate", Float),
+    Column("market_capitalization", Numeric),
+    Column("pe_ratio", Float),
+    Column("dividend_yield", Float),
+    Column("beta", Float),
+)
 
-# Create the new table if it doesn't exist
+# Create the tables if they don't exist
 metadata.create_all(engine)
 
-# Setup retry strategy for API calls
-retry_strategy = Retry(
-    total=3,
-    status_forcelist=[429, 500, 502, 503, 504],
-    allowed_methods=["HEAD", "GET", "OPTIONS"],
-    backoff_factor=1
-)
-adapter = HTTPAdapter(max_retries=retry_strategy)
-http = requests.Session()
-http.mount("https://", adapter)
-http.mount("http://", adapter)
+# Alpha Vantage API base URL
+ALPHA_VANTAGE_BASE_URL = "https://www.alphavantage.co/query"
 
 
-@lru_cache(maxsize=1)
+def fetch_data_from_alpha_vantage(function, symbol=None, **kwargs):
+    """
+    Fetches data from Alpha Vantage API.
+
+    Args:
+        function (str): The API function to call.
+        symbol (str, optional): The stock symbol. Required for some functions.
+        **kwargs: Additional parameters for the API call.
+
+    Returns:
+        dict: The JSON response from the API.
+    """
+    params = {"function": function, "apikey": ALPHA_VANTAGE_API_KEY, **kwargs}
+    if symbol:
+        params["symbol"] = symbol
+    response = requests.get(ALPHA_VANTAGE_BASE_URL, params=params)
+    response.raise_for_status()  # Raise an exception for bad status codes
+    return response.json()
+
+
 def get_symbols():
     """Fetch all unique symbols from the stock_prices table."""
     with engine.connect() as conn:
-        distinct_symbols = conn.execute(select(stock_prices.c.symbol).distinct()).fetchall()
+        distinct_symbols = conn.execute(
+            select(stock_prices.c.symbol).distinct()
+        ).fetchall()
     return [symbol[0] for symbol in distinct_symbols]
 
 
 def fetch_stock_data(symbols, start_date, end_date):
     """Fetch stock data for given symbols and date range."""
     query = select(stock_prices).where(
-        (stock_prices.c.symbol.in_(symbols)) &
-        (stock_prices.c.date >= start_date) &
-        (stock_prices.c.date <= end_date)
+        (stock_prices.c.symbol.in_(symbols))
+        & (stock_prices.c.date >= start_date)
+        & (stock_prices.c.date <= end_date)
     )
     with engine.connect() as conn:
         result = conn.execute(query)
@@ -101,178 +124,365 @@ def fetch_stock_data(symbols, start_date, end_date):
     return df
 
 
-def calculate_technical_indicators(df):
-    """Calculate Bollinger Bands and ADX for the given dataframe."""
-    # Bollinger Bands
-    df['middle_band'] = df.groupby('symbol')['close'].transform(lambda x: x.rolling(window=20).mean())
-    df['std_dev'] = df.groupby('symbol')['close'].transform(lambda x: x.rolling(window=20).std())
-    df['upper_band'] = df['middle_band'] + (df['std_dev'] * 2)
-    df['lower_band'] = df['middle_band'] - (df['std_dev'] * 2)
+def get_company_overview_data(symbol):
+    """
+    Fetches and caches company overview data from Alpha Vantage API.
+    """
+    try:
+        with Session() as session:
+            # Check if data for today already exists in the database
+            existing_data = session.execute(
+                select(company_overview.c.data).where(
+                    (company_overview.c.symbol == symbol)
+                    & (company_overview.c.last_updated == datetime.now().date())
+                )
+            ).fetchone()
 
-    # ADX
-    high_low = df['high'] - df['low']
-    high_close = np.abs(df['high'] - df['close'].shift())
-    low_close = np.abs(df['low'] - df['close'].shift())
-    ranges = pd.concat([high_low, high_close, low_close], axis=1)
-    true_range = np.max(ranges, axis=1)
-    df['plus_dm'] = np.where((df['high'] - df['high'].shift()) > (df['low'].shift() - df['low']),
-                             df['high'] - df['high'].shift(), 0)
-    df['minus_dm'] = np.where((df['low'].shift() - df['low']) > (df['high'] - df['high'].shift()),
-                              df['low'].shift() - df['low'], 0)
-    df['tr'] = df.groupby('symbol')[true_range].transform(lambda x: x.rolling(window=14).sum())
-    df['plus_di'] = 100 * df.groupby('symbol')['plus_dm'].transform(lambda x: x.rolling(window=14).sum()) / df['tr']
-    df['minus_di'] = 100 * df.groupby('symbol')['minus_dm'].transform(lambda x: x.rolling(window=14).sum()) / df['tr']
-    df['dx'] = 100 * np.abs((df['plus_di'] - df['minus_di']) / (df['plus_di'] + df['minus_di']))
-    df['adx'] = df.groupby('symbol')['dx'].transform(lambda x: x.rolling(window=14).mean())
+            if existing_data:
+                logger.info(
+                    f"Using cached company overview data for {symbol}"
+                )
+                return existing_data[0]
 
-    return df
+            # Fetch data from API if not cached
+            logger.info(
+                f"Fetching company overview data for {symbol} from API"
+            )
+            data = fetch_data_from_alpha_vantage("OVERVIEW", symbol)
+            # Store the data in the database
+            stmt = pg_insert(company_overview).values(
+                symbol=symbol, last_updated=datetime.now().date(), data=data
+            )
+            session.execute(stmt)
+            session.commit()
+            return data
+    except Exception as e:
+        logger.error(
+            f"Error fetching or caching company overview data for {symbol}: {e}"
+        )
+        return {}
 
 
-@lru_cache(maxsize=1000)
-def get_sector_performance(symbol, date):
+def get_sector_performance(symbol, date, company_overview_data):
     """Get sector performance for a given symbol and date."""
-    stock = yf.Ticker(symbol)
-    sector = stock.info.get('sector', None)
+    sector = company_overview_data.get("Sector")
     if sector:
-        sector_etf = {
-            'Information Technology': 'XLK',
-            'Health Care': 'XLV',
-            'Financials': 'XLF',
-            'Consumer Discretionary': 'XLY',
-            'Communication Services': 'XLC',
-            'Industrials': 'XLI',
-            'Consumer Staples': 'XLP',
-            'Energy': 'XLE',
-            'Utilities': 'XLU',
-            'Real Estate': 'XLRE',
-            'Materials': 'XLB'
-        }.get(sector)
-
+        sector_etf_mapping = {
+            "Information Technology": "XLK",
+            "Health Care": "XLV",
+            "Financials": "XLF",
+            "Consumer Discretionary": "XLY",
+            "Communication Services": "XLC",
+            "Industrials": "XLI",
+            "Consumer Staples": "XLP",
+            "Energy": "XLE",
+            "Utilities": "XLU",
+            "Real Estate": "XLRE",
+            "Materials": "XLB",
+        }
+        sector_etf = sector_etf_mapping.get(sector)
         if sector_etf:
-            etf_data = yf.download(sector_etf, start=date, end=date + timedelta(days=1))
-            if not etf_data.empty:
-                return etf_data['Close'].pct_change().iloc[-1] * 100
+            try:
+                data = fetch_data_from_alpha_vantage(
+                    "TIME_SERIES_DAILY",
+                    symbol=sector_etf,
+                    outputsize="compact",
+                )
+                daily_data = data["Time Series (Daily)"]
+                date_str = date.strftime("%Y-%m-%d")
+                previous_date_str = (date - timedelta(days=1)).strftime(
+                    "%Y-%m-%d"
+                )
+                if (
+                    date_str in daily_data
+                    and previous_date_str in daily_data
+                ):
+                    close_price = float(daily_data[date_str]["4. close"])
+                    previous_close_price = float(
+                        daily_data[previous_date_str]["4. close"]
+                    )
+                    return (
+                        (close_price - previous_close_price)
+                        / previous_close_price
+                    ) * 100
+            except Exception as e:
+                logger.error(
+                    f"Error fetching sector performance for {symbol} on {date}: {e}"
+                )
     return None
 
 
-@lru_cache(maxsize=1000)
 def get_market_index_performance(date):
     """Get market index performance for a given date."""
-    indices = yf.download(['^GSPC', '^IXIC'], start=date, end=date + timedelta(days=1))
+    indices = ["^GSPC", "^IXIC"]  # S&P 500 and Nasdaq
+    results = {}
+    for index in indices:
+        try:
+            data = fetch_data_from_alpha_vantage(
+                "TIME_SERIES_DAILY", symbol=index, outputsize="compact"
+            )
+            daily_data = data["Time Series (Daily)"]
+            date_str = date.strftime("%Y-%m-%d")
+            previous_date_str = (date - timedelta(days=1)).strftime(
+                "%Y-%m-%d"
+            )
+            if date_str in daily_data and previous_date_str in daily_data:
+                close_price = float(daily_data[date_str]["4. close"])
+                previous_close_price = float(
+                    daily_data[previous_date_str]["4. close"]
+                )
+                results[
+                    index
+                ] = ((close_price - previous_close_price) / previous_close_price) * 100
+            else:
+                results[index] = None
+        except Exception as e:
+            logger.error(
+                f"Error fetching market index performance for {index} on {date}: {e}"
+            )
+            results[index] = None
+
     return {
-        'sp500_return': indices['Close']['^GSPC'].pct_change().iloc[-1] * 100 if not indices.empty else None,
-        'nasdaq_return': indices['Close']['^IXIC'].pct_change().iloc[-1] * 100 if not indices.empty else None
+        "sp500_return": results.get("^GSPC"),
+        "nasdaq_return": results.get("^IXIC"),
     }
 
 
-@lru_cache(maxsize=1000)
 def get_sentiment_score(symbol, date):
-    """Get sentiment score for a given symbol and date."""
-    end_date = date.strftime('%Y-%m-%d')
-    start_date = (date - timedelta(days=7)).strftime('%Y-%m-%d')  # Look back 7 days for news
-    url = f"https://newsapi.org/v2/everything?q={symbol}&from={start_date}&to={end_date}&apiKey={NEWSAPI_API_KEY}&language=en&sortBy=publishedAt&pageSize=100"
-    response = http.get(url)
-    if response.status_code == 200:
-        news = response.json()
-        if news['totalResults'] > 0:
-            titles = [article['title'] for article in news['articles']]
-            return analyze_sentiment(titles)
+    """
+    Get sentiment score from recent news for a given symbol and date.
+    """
+    end_date = date.strftime("%Y%m%d")
+    start_date = (date - timedelta(days=7)).strftime("%Y%m%d")
+    try:
+        data = fetch_data_from_alpha_vantage(
+            "NEWS_SENTIMENT",
+            tickers=symbol,
+            time_from=start_date,
+            time_to=end_date,
+            limit=100,
+        )
+        if data.get("items", 0) > 0:
+            sentiment_sum = sum(
+                float(item["ticker_sentiment_score"])
+                for item in data["feed"]
+                if "ticker_sentiment_score" in item
+            )
+            return sentiment_sum / data["items"]
+    except Exception as e:
+        logger.error(
+            f"Error fetching sentiment score for {symbol} on {date}: {e}"
+        )
     return None
 
 
-def analyze_sentiment(texts):
-    """Analyze sentiment of given texts."""
-    positive_words = set(['upgrade', 'buy', 'bullish', 'outperform', 'strong', 'positive'])
-    negative_words = set(['downgrade', 'sell', 'bearish', 'underperform', 'weak', 'negative'])
+def get_economic_indicators(date):
+    """Get economic indicators for a given date."""
+    results = {}
 
-    sentiment_score = sum(len(set(text.lower().split()) & positive_words) -
-                          len(set(text.lower().split()) & negative_words)
-                          for text in texts)
+    try:
+        gdp_data = fetch_data_from_alpha_vantage("REAL_GDP", interval="quarterly")
+        gdp_date_str = f"{date.year}-Q{(date.month - 1) // 3 + 1}"
+        if gdp_date_str in gdp_data["data"]:
+            results["gdp_growth"] = float(gdp_data["data"][gdp_date_str]["value"])
+        else:
+            results["gdp_growth"] = None
+    except Exception as e:
+        logger.error(f"Error fetching GDP growth: {e}")
+        results["gdp_growth"] = None
 
-    return sentiment_score / len(texts) if texts else 0
+    try:
+        inflation_data = fetch_data_from_alpha_vantage("INFLATION")
+        inflation_year_str = str(date.year)
+        if inflation_year_str in inflation_data["data"]:
+            results["inflation_rate"] = float(inflation_data["data"][inflation_year_str]["value"])
+        else:
+            results["inflation_rate"] = None
+    except Exception as e:
+        logger.error(f"Error fetching inflation rate: {e}")
+        results["inflation_rate"] = None
 
-
-@lru_cache(maxsize=100)
-def get_economic_indicators(year, month):
-    """Get economic indicators for a given year and month using FRED API."""
-    fred = Fred(api_key=FRED_API_KEY)
-
-    date = datetime(year, month, 1)
-    end_date = date.replace(day=28) + timedelta(days=4)  # This will get us the last day of the month
-    end_date = end_date - timedelta(days=end_date.day)
-
-    # GDP growth (quarterly)
-    gdp_growth = fred.get_series('GDP', observation_start=date - timedelta(days=90), observation_end=end_date)
-    gdp_growth = gdp_growth.pct_change().iloc[-1] * 100 if not gdp_growth.empty else None
-
-    # Inflation rate (monthly)
-    inflation_rate = fred.get_series('CPIAUCSL', observation_start=date, observation_end=end_date)
-    inflation_rate = inflation_rate.pct_change().iloc[-1] * 100 if not inflation_rate.empty else None
-
-    # Unemployment rate (monthly)
-    unemployment_rate = fred.get_series('UNRATE', observation_start=date, observation_end=end_date)
-    unemployment_rate = unemployment_rate.iloc[-1] if not unemployment_rate.empty else None
-
-    return {
-        'gdp_growth': gdp_growth,
-        'inflation_rate': inflation_rate,
-        'unemployment_rate': unemployment_rate
-    }
+    try:
+        unemployment_data = fetch_data_from_alpha_vantage("UNEMPLOYMENT")
+        unemployment_date_str = date.strftime("%Y-%m")
+        if unemployment_date_str in unemployment_data["data"]:
+            results["unemployment_rate"] = float(unemployment_data["data"][unemployment_date_str]["value"])
+        else:
+            results["unemployment_rate"] = None
+    except Exception as e:
+        logger.error(f"Error fetching unemployment rate: {e}")
+        results["unemployment_rate"] = None
+    return results
 
 
 def enrich_stock_data(df):
     """Enrich stock data with additional features."""
-    df = calculate_technical_indicators(df)
+    unique_dates = df["date"].unique()
 
-    unique_dates = df['date'].unique()
-
-    # Fetch market index performance and economic indicators for all unique dates
     with ThreadPoolExecutor(max_workers=10) as executor:
-        market_performance_futures = {executor.submit(get_market_index_performance, date): date for date in
-                                      unique_dates}
+        # Fetch market index performance and economic indicators for all unique dates
+        market_performance_futures = {
+            executor.submit(get_market_index_performance, date): date
+            for date in unique_dates
+        }
         economic_indicators_futures = {
-            executor.submit(get_economic_indicators, date.year, date.month): (date.year, date.month) for date in
-            unique_dates}
+            executor.submit(get_economic_indicators, date): date
+            for date in unique_dates
+        }
 
-        market_performance = {date: future.result() for future, date in market_performance_futures.items()}
-        economic_indicators = {(year, month): future.result() for future, (year, month) in
-                               economic_indicators_futures.items()}
+        market_performance_results = {}
+        for future in as_completed(market_performance_futures):
+            date = market_performance_futures[future]
+            try:
+                market_performance_results[date] = future.result()
+            except Exception as e:
+                logger.error(
+                    f"Error fetching market performance for {date}: {e}"
+                )
+                market_performance_results[
+                    date
+                ] = {"sp500_return": None, "nasdaq_return": None}
 
-    for symbol in df['symbol'].unique():
-        symbol_df = df[df['symbol'] == symbol]
+        economic_indicators_results = {}
+        for future in as_completed(economic_indicators_futures):
+            date = economic_indicators_futures[future]
+            try:
+                economic_indicators_results[date] = future.result()
+            except Exception as e:
+                logger.error(
+                    f"Error fetching economic indicators for {date}: {e}"
+                )
+                economic_indicators_results[date] = {
+                    "gdp_growth": None,
+                    "inflation_rate": None,
+                    "unemployment_rate": None,
+                }
 
-        # Fetch sector performance and sentiment scores for all dates for this symbol
+    for symbol in df["symbol"].unique():
+        # Fetch company overview data for current symbol
+        company_overview_data = get_company_overview_data(symbol)
+        symbol_df = df[df["symbol"] == symbol]
         with ThreadPoolExecutor(max_workers=10) as executor:
-            sector_performance_futures = {executor.submit(get_sector_performance, symbol, date): date for date in
-                                          symbol_df['date']}
-            sentiment_score_futures = {executor.submit(get_sentiment_score, symbol, date): date for date in
-                                       symbol_df['date']}
+            # Fetch sector performance and sentiment scores for all dates for this symbol
+            sector_performance_futures = {
+                executor.submit(
+                    get_sector_performance, symbol, date, company_overview_data
+                ): date
+                for date in symbol_df["date"]
+            }
+            sentiment_score_futures = {
+                executor.submit(get_sentiment_score, symbol, date): date
+                for date in symbol_df["date"]
+            }
+            sector_performance_results = {}
+            for future in as_completed(sector_performance_futures):
+                date = sector_performance_futures[future]
+                try:
+                    sector_performance_results[date] = future.result()
+                except Exception as e:
+                    logger.error(
+                        f"Error fetching sector performance for {symbol} on {date}: {e}"
+                    )
+                    sector_performance_results[date] = None
 
-            sector_performance = {date: future.result() for future, date in sector_performance_futures.items()}
-            sentiment_scores = {date: future.result() for future, date in sentiment_score_futures.items()}
+            sentiment_scores_results = {}
+            for future in as_completed(sentiment_score_futures):
+                date = sentiment_score_futures[future]
+                try:
+                    sentiment_scores_results[date] = future.result()
+                except Exception as e:
+                    logger.error(
+                        f"Error fetching sentiment score for {symbol} on {date}: {e}"
+                    )
+                    sentiment_scores_results[date] = None
 
         # Update the dataframe with the fetched data
         for index, row in symbol_df.iterrows():
-            date = row['date']
-            df.at[index, 'sector_performance'] = sector_performance[date]
-            df.at[index, 'sp500_return'] = market_performance[date]['sp500_return']
-            df.at[index, 'nasdaq_return'] = market_performance[date]['nasdaq_return']
-            df.at[index, 'sentiment_score'] = sentiment_scores[date]
-
-            econ_indicators = economic_indicators[(date.year, date.month)]
-            df.at[index, 'gdp_growth'] = econ_indicators['gdp_growth']
-            df.at[index, 'inflation_rate'] = econ_indicators['inflation_rate']
-            df.at[index, 'unemployment_rate'] = econ_indicators['unemployment_rate']
+            date = row["date"]
+            df.at[index, "sector_performance"] = (
+                sector_performance_results.get(date)
+            )
+            market_performance = market_performance_results.get(
+                date, {"sp500_return": None, "nasdaq_return": None}
+            )
+            # Check for "None" before converting to float
+            df.at[index, "sp500_return"] = (
+                float(market_performance["sp500_return"])
+                if market_performance["sp500_return"] != "None"
+                else None
+            )
+            df.at[index, "nasdaq_return"] = (
+                float(market_performance["nasdaq_return"])
+                if market_performance["nasdaq_return"] != "None"
+                else None
+            )
+            df.at[index, "sentiment_score"] = sentiment_scores_results.get(
+                date
+            )
+            econ_indicators = economic_indicators_results.get(
+                date,
+                {
+                    "gdp_growth": None,
+                    "inflation_rate": None,
+                    "unemployment_rate": None,
+                },
+            )
+            # Check for "None" before converting to float
+            df.at[index, "gdp_growth"] = (
+                float(econ_indicators["gdp_growth"])
+                if econ_indicators["gdp_growth"] != "None"
+                else None
+            )
+            df.at[index, "inflation_rate"] = (
+                float(econ_indicators["inflation_rate"])
+                if econ_indicators["inflation_rate"] != "None"
+                else None
+            )
+            df.at[index, "unemployment_rate"] = (
+                float(econ_indicators["unemployment_rate"])
+                if econ_indicators["unemployment_rate"] != "None"
+                else None
+            )
+            # Check for "None" before converting to float
+            df.at[index, "market_capitalization"] = (
+                float(company_overview_data.get("MarketCapitalization", 0))
+                if company_overview_data.get("MarketCapitalization", "None") != "None"
+                else None
+            )
+            df.at[index, "pe_ratio"] = (
+                float(company_overview_data.get("PERatio", 0))
+                if company_overview_data.get("PERatio", "None") != "None"
+                else None
+            )
+            df.at[index, "dividend_yield"] = (
+                float(company_overview_data.get("DividendYield", 0))
+                if company_overview_data.get("DividendYield", "None") != "None"
+                else None
+            )
+            df.at[index, "beta"] = (
+                float(company_overview_data.get("Beta", 0))
+                if company_overview_data.get("Beta", "None") != "None"
+                else None
+            )
 
     return df
 
 
 def update_enriched_data(df):
     """Update the enriched_stock_data table with new data using upsert."""
-    insert_stmt = pg_insert(enriched_stock_data).values(df.to_dict('records'))
+    # Convert datetime.date to datetime.datetime for SQLAlchemy
+    df["date"] = pd.to_datetime(df["date"])
+    # Build insert statement
+    insert_stmt = pg_insert(enriched_stock_data).values(
+        df.to_dict(orient="records")
+    )
     upsert_stmt = insert_stmt.on_conflict_do_update(
-        index_elements=['symbol', 'date'],
-        set_={c.name: c for c in insert_stmt.excluded if c.name not in ['symbol', 'date']}
+        index_elements=["symbol", "date"],
+        set_={
+            c.name: c
+            for c in insert_stmt.excluded
+            if c.name not in ["symbol", "date"]
+        },
     )
 
     with engine.begin() as conn:
@@ -281,41 +491,30 @@ def update_enriched_data(df):
 
 def lambda_handler(event, context):
     """Main Lambda function handler."""
-    try:
-        symbols = get_symbols()
-        end_date = datetime.now().date()
-        start_date = end_date - timedelta(days=int(event.get('days_to_process', 30)))
 
-        # Process symbols in batches
-        batch_size = 50  # Increased batch size
-        for i in range(0, len(symbols), batch_size):
-            symbol_batch = symbols[i:i + batch_size]
-            logger.info(f"Processing symbols: {symbol_batch}")
+    symbols = get_symbols()
+    end_date = datetime.now().date()
+    days_to_process = 5
+    start_date = end_date - timedelta(days=days_to_process)
 
-            df = fetch_stock_data(symbol_batch, start_date, end_date)
-            if not df.empty:
-                enriched_df = enrich_stock_data(df)
-                update_enriched_data(enriched_df)
-            else:
-                logger.warning(f"No data found for symbols: {symbol_batch}")
+    # Process symbols in batches
+    batch_size = 50
+    for i in range(0, len(symbols), batch_size):
+        symbol_batch = symbols[i : i + batch_size]
+        logger.info(f"Processing symbols: {symbol_batch}")
 
-        logger.info("Data enrichment complete for all symbols")
-        return {
-            'statusCode': 200,
-            'body': json.dumps({'message': 'Data enrichment complete'})
-        }
-    except SQLAlchemyError as e:
-        logger.error(f"Database error: {str(e)}")
-        return {
-            'statusCode': 500,
-            'body': json.dumps({'message': 'Database error occurred'})
-        }
-    except Exception as e:
-        logger.error(f"Error processing data: {str(e)}")
-        return {
-            'statusCode': 500,
-            'body': json.dumps({'message': 'Error processing data'})
-        }
+        df = fetch_stock_data(symbol_batch, start_date, end_date)
+        if not df.empty:
+            enriched_df = enrich_stock_data(df)
+            update_enriched_data(enriched_df)
+        else:
+            logger.warning(f"No data found for symbols: {symbol_batch}")
+
+    logger.info("Data enrichment complete for all symbols")
+    return {
+        "statusCode": 200,
+        "body": json.dumps({"message": "Data enrichment complete"}),
+    }
 
 
 if __name__ == "__main__":

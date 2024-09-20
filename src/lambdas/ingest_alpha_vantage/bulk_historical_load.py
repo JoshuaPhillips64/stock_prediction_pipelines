@@ -4,6 +4,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import List, Tuple
 import time
+
 import requests
 import yfinance as yf
 import pandas as pd
@@ -58,10 +59,7 @@ def get_symbols() -> List[str]:
     return ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META']
 
 
-def fetch_historical_data(symbols: List[str], days: int) -> pd.DataFrame:
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=days)
-
+def fetch_historical_data(symbols: List[str], start_date: datetime, end_date: datetime) -> pd.DataFrame:
     all_data = []
     for symbol in symbols:
         stock = yf.Ticker(symbol)
@@ -95,7 +93,7 @@ def get_alpha_vantage_data(symbol: str, function: str, additional_params: dict =
             return data
         elif response.status_code == 429:
             logger.warning("Rate limit hit. Retrying after 15 seconds...")
-            time.sleep(5)
+            time.sleep(15)
         else:
             logger.error(f"Failed to fetch data for {symbol}. HTTP Status: {response.status_code}")
             return {}
@@ -112,15 +110,13 @@ def get_options_data(symbol: str, date: str) -> pd.DataFrame:
         return pd.DataFrame()
 
     additional_params = {'date': date}
-
-    # Assuming get_alpha_vantage_data handles the API call and returns the parsed JSON response
     data = get_alpha_vantage_data(symbol, "HISTORICAL_OPTIONS", additional_params)
 
     if not data or 'data' not in data or not data['data']:
         logger.warning(f"Options data not available for {symbol} on date {date}")
         return pd.DataFrame()
 
-    options_data = data['data']  # Correctly access the 'data' field
+    options_data = data['data']
 
     # Separate calls and puts
     calls = [option for option in options_data if option['type'] == 'call']
@@ -250,7 +246,6 @@ def bulk_upsert(session, df: pd.DataFrame):
     df = df[[col for col in df.columns if col in expected_columns]]
 
     table = StockPrice.__table__
-
     data = df.to_dict(orient='records')
     stmt = insert(table).values(data)
     stmt = stmt.on_conflict_do_update(
@@ -263,35 +258,45 @@ def bulk_upsert(session, df: pd.DataFrame):
 
 def lambda_handler(event, context):
     symbols = get_symbols()
-    days_to_fetch = 90
+    total_days = 365 * 3  # 3 years
+    batch_size = 90  # days
 
-    logger.info(f"Fetching data for symbols: {symbols}")
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=total_days)
 
-    try:
-        df = fetch_historical_data(symbols, days_to_fetch)
-        df = enrich_data_with_alpha_vantage(df, symbols)
-        df = validate_data(df)
+    current_date = start_date
+    while current_date <= end_date:
+        batch_end = min(current_date + timedelta(days=batch_size), end_date)
+        logger.info(
+            f"Fetching data for period: {current_date.strftime('%Y-%m-%d')} - {batch_end.strftime('%Y-%m-%d')}")
 
-        df = df.rename(columns={
-            'Date': 'date',
-            'Open': 'open',
-            'High': 'high',
-            'Low': 'low',
-            'Close': 'close',
-            'Volume': 'volume'
-        })
+        try:
+            df = fetch_historical_data(symbols, current_date, batch_end)
+            df = enrich_data_with_alpha_vantage(df, symbols)
+            df = validate_data(df)
 
-        with Session() as session:
-            bulk_upsert(session, df)
+            df = df.rename(columns={
+                'Date': 'date',
+                'Open': 'open',
+                'High': 'high',
+                'Low': 'low',
+                'Close': 'close',
+                'Volume': 'volume'
+            })
 
-        logger.info("Data ingestion complete for all symbols")
-    except Exception as e:
-        logger.error(f"Error processing data: {str(e)}")
-        raise
+            with Session() as session:
+                bulk_upsert(session, df)
+
+            logger.info("Data ingestion complete for current batch")
+        except Exception as e:
+            logger.error(f"Error processing data: {str(e)}")
+            raise  # Re-raise the exception to trigger Lambda retry behavior
+
+        current_date = batch_end + timedelta(days=1)
 
     return {
         'statusCode': 200,
-        'body': json.dumps({'message': 'Data ingestion complete'})
+        'body': json.dumps({'message': 'Data ingestion complete for all periods'})
     }
 
 

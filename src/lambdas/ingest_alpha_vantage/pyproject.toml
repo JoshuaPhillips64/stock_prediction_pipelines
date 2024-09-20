@@ -13,6 +13,7 @@ yfinance = "^0.2.43"
 pandas = "^2.1.1"
 scipy = "^1.11.3"
 SQLAlchemy = ">=1.4.36,<2.0"
+python-dotenv = "^0.19.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.2"
