@@ -18,12 +18,14 @@ yfinance = "^0.2.43"
 pandas = "^2.1.1"
 scipy = "^1.11.3"
 SQLAlchemy = ">=1.4.36,<2.0"
-fredapi = "^0.4.3"  # Added this for the Fred API used in the code
 numpy = "^1.26.0"
 scikit-learn = "^1.0.2"
 apache-airflow = "2.10.1"
 pyspark = "^3.2.1"
-#apache-airflow-providers-openlineage = "1.11.0"
+# The second file doesn't specify a version for flask so using the first file's version
+flask = "^2.0.1"
+flask-sqlalchemy = "^2.5.1"
+flask-migrate = "^3.1.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.2"
