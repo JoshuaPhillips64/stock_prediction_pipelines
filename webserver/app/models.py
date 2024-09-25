@@ -1,6 +1,8 @@
 from sqlalchemy import String, Date, Float, Numeric, MetaData
-from app import db
+from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.dialects.postgresql import JSON
+
+db = SQLAlchemy()
 
 # Define the metadata object
 metadata = db.MetaData()
