@@ -1,11 +1,11 @@
 from app import create_app, db
-from app.models import Stock, ModelStatistics
+from app.models import EnrichedStockData
 
 app = create_app()
 
 @app.shell_context_processor
 def make_shell_context():
-    return {'db': db, 'Stock': Stock, 'ModelStatistics': ModelStatistics}
+    return {'db': db, 'EnrichedStockData': EnrichedStockData}
 
 if __name__ == '__main__':
     app.run(debug=True)

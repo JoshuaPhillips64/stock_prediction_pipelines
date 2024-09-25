@@ -1,21 +1,73 @@
+from sqlalchemy import String, Date, Float, Numeric, MetaData
 from app import db
 from sqlalchemy.dialects.postgresql import JSON
 
-class Stock(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    symbol = db.Column(db.String(10), unique=True, nullable=False)
-    current_price = db.Column(db.Float)
-    prediction = db.Column(db.Float)
-    historical_data = db.Column(JSON)
+# Define the metadata object
+metadata = db.MetaData()
+
+# Define company_overview as a class-based model
+class CompanyOverview(db.Model):
+    __tablename__ = 'company_overview'
+
+    symbol = db.Column(db.String, primary_key=True)
+    last_updated = db.Column(db.Date, primary_key=True)
+    data = db.Column(JSON)
 
     def __repr__(self):
-        return f'<Stock {self.symbol}>'
+        return f"<CompanyOverview {self.symbol}, Last Updated: {self.last_updated}>"
 
-class ModelStatistics(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    metric = db.Column(db.String(50), nullable=False)
-    value = db.Column(db.Float, nullable=False)
-    stock = db.Column(db.String(10))
+class StockPrice(db.Model):
+    __tablename__ = 'stock_prices'
+
+    symbol = db.Column(db.String, primary_key=True)
+    date = db.Column(db.Date, primary_key=True)
+    open = db.Column(db.Float)
+    high = db.Column(db.Float)
+    low = db.Column(db.Float)
+    close = db.Column(db.Float)
+    volume = db.Column(db.Float)
+    put_call_ratio = db.Column(db.Float)
+    implied_volatility = db.Column(db.Float)
+    rsi = db.Column(db.Float)
+    macd = db.Column(db.Float)
+    macd_signal = db.Column(db.Float)
+    macd_hist = db.Column(db.Float)
 
     def __repr__(self):
-        return f'<ModelStatistics {self.metric} for {self.stock}>'
+        return f"<StockPrice {self.symbol} {self.date}>"
+
+class EnrichedStockData(db.Model):
+    __tablename__ = 'enriched_stock_data'
+
+    symbol = db.Column(db.String, primary_key=True)
+    date = db.Column(db.Date, primary_key=True)
+    open = db.Column(db.Float)
+    high = db.Column(db.Float)
+    low = db.Column(db.Float)
+    close = db.Column(db.Float)
+    volume = db.Column(db.Float)
+    sector_performance = db.Column(db.Float)
+    sp500_return = db.Column(db.Float)
+    nasdaq_return = db.Column(db.Float)
+    sentiment_score = db.Column(db.Float)
+    gdp_growth = db.Column(db.Float)
+    inflation_rate = db.Column(db.Float)
+    unemployment_rate = db.Column(db.Float)
+    market_capitalization = db.Column(db.Numeric)
+    pe_ratio = db.Column(db.Float)
+    dividend_yield = db.Column(db.Float)
+    beta = db.Column(db.Float)
+
+    # Restoring removed columns
+    put_call_ratio = db.Column(db.Float)
+    macd_hist = db.Column(db.Float)
+    adx = db.Column(db.Float)
+    implied_volatility = db.Column(db.Float)
+    macd = db.Column(db.Float)
+    rsi = db.Column(db.Float)
+    upper_band = db.Column(db.Float)
+    lower_band = db.Column(db.Float)
+    macd_signal = db.Column(db.Float)
+
+    def __repr__(self):
+        return f"<EnrichedStockData {self.symbol} {self.date}>"

@@ -34,3 +34,8 @@ This project is licensed under the MIT License.
 If getting python 3.9 error then run after installing python to C drive
 
 ``poetry env use C:/Python312/python.exe``
+
+Flask Commands to run to get db going after making model changes
+
+``flask --app run.py db migrate -m "comment about migration"
+``

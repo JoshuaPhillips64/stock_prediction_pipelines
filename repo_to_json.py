@@ -24,6 +24,10 @@ def create_repo_text(root_path):
         if 'terraform' in root and '.terraform' in dirs:
             dirs.remove('.terraform')
 
+        # Special handling for 'terraform/.terraform' directory
+        if 'webserver' in root and 'migrations' in dirs:
+            dirs.remove('migrations')
+
         # Generate relative path from the root path
         relative_path = os.path.relpath(root, root_path)
         repo_structure.append(f"Directory: {relative_path}" if relative_path != '.' else "Root Directory:")
