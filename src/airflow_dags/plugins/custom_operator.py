@@ -11,5 +11,5 @@ class MyCustomOperator(BaseOperator):
         self.my_operator_param = my_operator_param
 
     def execute(self, context):
-        # Implement your custom logic here
+
         print(f"MyCustomOperator executed with param: {self.my_operator_param}")

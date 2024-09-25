@@ -8,8 +8,8 @@ terraform {
     }
   }
   backend "s3" {
-    bucket  = "ussa-data-processing-code-repository"
-    key     = "test-code/terraform.tfstate"
+    bucket  = "terraform-setup-josh"
+    key     = "terraform.tfstate"
     region  = "us-east-1"
     encrypt = true
   }
