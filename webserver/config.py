@@ -17,7 +17,7 @@ class Config:
     SQLALCHEMY_DATABASE_URI = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     ALPHA_VANTAGE_API_KEY = os.environ.get('ALPHA_VANTAGE_API_KEY')
-    STOCKS = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'META']
+    STOCKS = ['PG']
 
 #%% Print the contents of the above class
 #print(Config.__dict__)

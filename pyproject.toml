@@ -22,6 +22,7 @@ numpy = "^1.26.0"
 scikit-learn = "^1.0.2"
 apache-airflow = "2.10.1"
 pyspark = "^3.2.1"
+openlineage-python = "1.18.0"
 # The second file doesn't specify a version for flask so using the first file's version
 flask = "^2.0.1"
 flask-sqlalchemy = "^2.5.1"

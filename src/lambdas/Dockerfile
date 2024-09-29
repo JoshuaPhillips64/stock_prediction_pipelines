@@ -1,42 +1,46 @@
-# Use a Debian-based image that supports Python 3.12
-FROM python:3.12-slim
+# Start from Amazon Linux 2
+FROM amazon/aws-lambda-python:3.12
 
-# Install wget and other necessary packages
-RUN apt-get update && apt-get install -y wget gcc python3-dev && apt-get clean
+WORKDIR /var/task
+
+# Install necessary tools
+RUN yum update -y && \
+    yum groupinstall -y "Development Tools" && \
+    yum install -y python3-pip python3 python3-setuptools unzip gzip yum-utils tar wget \
+    gcc openssl-devel bzip2-devel libffi-devel postgresql-devel && \
+    yum clean all
+
+RUN python --version
+
+# Install Pip
+RUN curl -O https://bootstrap.pypa.io/get-pip.py && \
+    python3.12 get-pip.py
 
 # Install Poetry
-RUN pip install poetry
+RUN pip3 install poetry
 
-# Copy the common layer
-COPY common_layer/ /var/task/common_layer/
+RUN yum install -y atk cups-libs gtk3 libXcomposite alsa-lib \
+    libXcursor libXdamage libXext libXi libXrandr libXScrnSaver \
+    libXtst pango at-spi2-atk libXt xorg-x11-server-Xvfb \
+    xorg-x11-xauth dbus-glib dbus-glib-devel nss mesa-libgbm jq unzip
 
-# Copy all lambdas and install their dependencies
-COPY ingest_alpha_vantage/ /var/task/ingest_alpha_vantage/
-RUN cd /var/task/ingest_alpha_vantage && \
-    rm -f poetry.lock && \
-    poetry config virtualenvs.create false && \
-    poetry install \
+# Copy your pyproject.tol into the Docker container
+COPY pyproject.toml ./
 
-COPY enrich_stock_data/ /var/task/enrich_stock_data/
-RUN cd /var/task/enrich_stock_data && \
-    rm -f poetry.lock && \
+# Install and zip dependencies - > output is layer.zip
+RUN python3 -m venv /var/task/venv && \
+    . /var/task/venv/bin/activate && \
     poetry config virtualenvs.create false && \
     poetry install
 
-COPY ingest_s3/ /var/task/ingest_s3/
-RUN cd /var/task/ingest_s3 && \
-    rm -f poetry.lock && \
-    poetry config virtualenvs.create false && \
-    poetry install
+# Set the Python path to include the site-packages
+ENV PYTHONPATH="/var/task:/var/task/venv/lib/python3.12/site-packages:${PYTHONPATH}"
 
-# Copy the AWS Lambda Runtime Interface Emulator (RIE) for local testing
-ADD https://github.com/aws/aws-lambda-runtime-interface-emulator/releases/latest/download/aws-lambda-rie /usr/local/bin/aws-lambda-rie
-RUN chmod +x /usr/local/bin/aws-lambda-rie
+# Copy the lambda application code
+COPY ingest_alpha_vantage/handler.py ./
 
-# Set the entrypoint to use RIE
-ENTRYPOINT [ "/usr/local/bin/aws-lambda-rie", "python", "-m", "awslambdaric" ]
+# Copy the rest of the application functions
+COPY *.py ./
 
-# Set the default handler (can be overridden)
-ENV LAMBDA_HANDLER="ingest_alpha_vantage.handler.lambda_handler"
-
-CMD [ "${LAMBDA_HANDLER}" ]
+# Command to run the Lambda function
+CMD ["handler.main" ]

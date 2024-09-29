@@ -28,7 +28,7 @@ API_KEY = Config.ALPHA_VANTAGE_API_KEY
 
 # Initialize variables for rate limiting
 LAST_API_CALL = 0
-API_CALL_INTERVAL = 1  # Approximately one request every second (70 requests per minute)
+API_CALL_INTERVAL = 0  # Approximately one request every second (70 requests per minute)
 
 def get_alpha_vantage_data(symbol: str, function: str, additional_params: Dict[str, Any] = None) -> Dict[str, Any]:
     """
@@ -267,7 +267,7 @@ def get_economic_indicators_cached(date: datetime, cache: Dict[str, Any]) -> Dic
 
 def get_options_data(symbol: str, date_str: str, trading_dates: set) -> Dict[str, Any]:
     """
-    Fetches options data to calculate put/call ratio and implied volatility.
+    Fetches options data to calculate put/call ratio and implied volatility. Looks only at expiration dates between 20-40 days out
 
     Args:
         symbol (str): The stock symbol.
@@ -288,8 +288,11 @@ def get_options_data(symbol: str, date_str: str, trading_dates: set) -> Dict[str
         logger.warning(f"Requested future date {date_str} for {symbol}. Skipping options data.")
         return {'put_call_ratio': None, 'implied_volatility': None}
 
-    additional_params = {'date': date_str}
+    # Calculate the range of expiration dates (25 to 35 days out)
+    expiration_min = requested_date + timedelta(days=20)
+    expiration_max = requested_date + timedelta(days=40)
 
+    additional_params = {'date': date_str}
     data = get_alpha_vantage_data(symbol, "HISTORICAL_OPTIONS", additional_params)
 
     if not data or 'data' not in data or not data['data']:
@@ -298,9 +301,19 @@ def get_options_data(symbol: str, date_str: str, trading_dates: set) -> Dict[str
 
     options_data = data['data']
 
+    # Filter options expiring between 25 and 35 days out
+    options_in_range = [
+        option for option in options_data
+        if expiration_min <= datetime.strptime(option.get('expiration'), '%Y-%m-%d').date() <= expiration_max
+    ]
+
+    if not options_in_range:
+        logger.warning(f"No options expiring between 25 and 35 days out for {symbol} on date {date_str}")
+        return {'put_call_ratio': None, 'implied_volatility': None}
+
     # Separate calls and puts
-    calls = [option for option in options_data if option['type'] == 'call']
-    puts = [option for option in options_data if option['type'] == 'put']
+    calls = [option for option in options_in_range if option['type'] == 'call']
+    puts = [option for option in options_in_range if option['type'] == 'put']
 
     # Calculate volumes
     call_volume = sum(float(option.get('volume', 0) or 0) for option in calls)
@@ -311,7 +324,7 @@ def get_options_data(symbol: str, date_str: str, trading_dates: set) -> Dict[str
 
     # Calculate implied volatilities
     implied_volatilities = [
-        float(option['implied_volatility']) for option in options_data
+        float(option['implied_volatility']) for option in options_in_range
         if option.get('implied_volatility') and option['implied_volatility'] != 'None'
     ]
     avg_implied_volatility = sum(implied_volatilities) / len(implied_volatilities) if implied_volatilities else None
@@ -362,7 +375,9 @@ def get_sector_performance(sector: str, date: datetime, sector_etf_data_cache: D
         'TELECOMMUNICATION SERVICES': 'XLC',
         'UTILITIES': 'XLU',
         'TRADE & SERVICES': 'XLY',  # Mapped to Consumer Discretionary
-        'MANUFACTURING': 'XLI'  # Mapped to Industrials
+        'MANUFACTURING': 'XLI',  # Mapped to Industrials
+        'LIFE SCIENCES': 'XLP',  # Mapped to Consumer Staples for PG
+
     }
 
     etf_symbol = sector_etf_mapping.get(sector)
@@ -422,16 +437,17 @@ def generate_enriched_stock_data(days_back_to_fetch=5) -> List[Dict[str, Any]]:
     # Cache for sector ETF data
     sector_etf_mapping = {
         'Communication Services': 'XLC',
-        'Consumer Discretionary': 'XLY',
-        'Consumer Staples': 'XLP',
+        'CONSUMER DISCRETIONARY': 'XLY',
+        'CONSUMER STAPLES': 'XLP',
         'Energy': 'XLE',
         'Financials': 'XLF',
-        'Health Care': 'XLV',
+        'HEALTH CARE': 'XLV',
         'Industrials': 'XLI',
         'TECHNOLOGY': 'XLK',
-        'Materials': 'XLB',
+        'MATERIALS': 'XLB',
         'Real Estate': 'XLRE',
-        'Utilities': 'XLU'
+        'UTILITIES': 'XLU',
+        'LIFE SCIENCES': 'XLP',  # Mapped to Consumer Staples for PG
     }
 
     sector_etf_data_cache = {}
@@ -583,8 +599,8 @@ def bulk_upsert_to_db(data: List[Dict[str, Any]], batch_size: int = 1000):
         session.close()
 
 if __name__ == "__main__":
-    #With current API limits of 70 calls per second, it will take approximately 1 hour to fetch 365 days of data for 5.
-    enriched_data = generate_enriched_stock_data(days_back_to_fetch=365)
+    #With current API limits of 70 calls per minute, it will take approximately 1 hour to fetch 365 days of data for 5.
+    enriched_data = generate_enriched_stock_data(days_back_to_fetch=1000)
     print_dataset_overview(enriched_data)
 
     database_url = Config.SQLALCHEMY_DATABASE_URI
@@ -716,7 +732,7 @@ Source: From Economic Indicators ('UNEMPLOYMENT').
 Example: unemployment_rate = 4.0 means 4% of the labor force is unemployed.
 
 put_call_ratio
-Definition: Ratio of traded put options volume to call options volume; indicates market sentiment.
+Definition: Ratio of traded put options volume to call options volume with expiration dates between 20-40 days out; indicates market sentiment.
 Source: Calculated from Options Data ('HISTORICAL_OPTIONS').
 Example: If put_volume = 7,000 and call_volume = 10,000, put_call_ratio = 7,000 / 10,000 = 0.7.
 

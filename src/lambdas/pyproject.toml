@@ -1,19 +1,20 @@
 [tool.poetry]
-name = "ingest-alpha-vantage"
+name = "lambda environment"
 version = "0.1.0"
-description = "Lambda function to ingest data from Alpha Vantage API into PostgreSQL"
-authors = ["Josh Phillips <you@example.com>"]
+description = "Lambda functions to ingest and enrich data"
+authors = ["Josh Phillips <Josh.L.Phillips@me.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.12"
 requests = "^2.31.0"
 psycopg2-binary = "^2.9.9"
 boto3 = "^1.28.0"
-yfinance = "^0.2.43"
 pandas = "^2.1.1"
 scipy = "^1.11.3"
 SQLAlchemy = ">=1.4.36,<2.0"
 python-dotenv = "^0.19.1"
+openlineage-python = "1.18.0"
+openai = "1.39.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.2"
