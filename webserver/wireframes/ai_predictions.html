@@ -1,0 +1,260 @@
+<html><head><base href="https://www.websimulationcreationengine.com/market-insights-signal-generator/">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Insider Trading Insights Generator</title>
+<script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+<style>
+  body {
+    font-family: 'Roboto', sans-serif;
+    background-color: #0a0e17;
+    color: #ffffff;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+  .header {
+    background-color: #1c2331;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  }
+  .dashboard {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+  .tradingview-widget-container {
+    flex: 2;
+    border-right: 1px solid #2a3f5f;
+  }
+  .signal-container {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+  }
+  .signal-alert {
+    background-color: #2a3f5f;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+  }
+  .signal-alert:hover {
+    transform: scale(1.05);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  }
+  .buy {
+    border-left: 5px solid #4CAF50;
+  }
+  .sell {
+    border-left: 5px solid #F44336;
+  }
+  .alert-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .alert-title {
+    font-size: 18px;
+    font-weight: bold;
+  }
+  .alert-time {
+    font-size: 14px;
+    color: #a0a0a0;
+  }
+  .alert-content {
+    font-size: 14px;
+  }
+  .blink {
+    animation: blinker 1s linear infinite;
+  }
+  @keyframes blinker {
+    50% { opacity: 0; }
+  }
+  .symbol-selector {
+    background-color: #1c2331;
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .symbol-button {
+    background-color: #2a3f5f;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    margin: 5px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  .symbol-button:hover {
+    background-color: #3a5f8f;
+  }
+  .strength-indicator {
+    display: inline-block;
+    padding: 3px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: bold;
+  }
+  .strong { background-color: #4CAF50; }
+  .moderate { background-color: #FFC107; }
+  .weak { background-color: #FF5722; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>Insider Trading Insights Generator</h1>
+  </div>
+  <div class="symbol-selector" id="symbolSelector"></div>
+  <div class="dashboard">
+    <div class="tradingview-widget-container" id="tradingview_chart"></div>
+    <div class="signal-container" id="signals"></div>
+  </div>
+
+<script>
+  const symbols = [
+    'AAPL', 'MSFT', 'AMZN', 'GOOGL', 'FB', 'TSLA', 'NVDA', 'JPM', 'V', 'JNJ', 'WMT', 'BAC', 'PG', 'DIS', 'ADBE',
+    'CRM', 'NFLX', 'PYPL', 'INTC', 'CMCSA', 'PEP', 'CSCO', 'VZ', 'COST', 'ABT', 'ABBV', 'AVGO', 'TMO', 'ACN', 'NKE'
+  ];
+
+  let currentSymbol = 'AAPL';
+
+  const symbolSelector = document.getElementById('symbolSelector');
+  symbols.forEach(symbol => {
+    const button = document.createElement('button');
+    button.textContent = symbol;
+    button.className = 'symbol-button';
+    button.onclick = () => changeSymbol(symbol);
+    symbolSelector.appendChild(button);
+  });
+
+  function changeSymbol(symbol) {
+    currentSymbol = symbol;
+    if (widget && widget.chart && typeof widget.chart.setSymbol === 'function') {
+      widget.chart.setSymbol(symbol);
+    } else {
+      createWidget(symbol);
+    }
+  }
+
+  let widget;
+
+  function createWidget(symbol) {
+    if (widget) {
+      widget.remove();
+    }
+
+    widget = new TradingView.widget({
+      "width": "100%",
+      "height": "100%",
+      "symbol": symbol,
+      "interval": "D",
+      "timezone": "Etc/UTC",
+      "theme": "dark",
+      "style": "1",
+      "locale": "en",
+      "toolbar_bg": "#f1f3f6",
+      "enable_publishing": false,
+      "allow_symbol_change": true,
+      "container_id": "tradingview_chart"
+    });
+  }
+
+  createWidget(currentSymbol);
+
+  const signalContainer = document.getElementById('signals');
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+  function playAlert(frequency, type) {
+    const oscillator = audioContext.createOscillator();
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+    
+    const gainNode = audioContext.createGain();
+    gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + 1);
+  }
+
+  function createSignalAlert(type, asset, reason, strength, politicianData, hedgeFundData) {
+    const alert = document.createElement('div');
+    alert.className = `signal-alert ${type}`;
+    alert.innerHTML = `
+      <div class="alert-header">
+        <span class="alert-title">${type.toUpperCase()} ${asset}</span>
+        <span class="alert-time">${moment().format('YYYY-MM-DD HH:mm:ss')}</span>
+      </div>
+      <div class="alert-content">
+        <p><strong>Signal Strength:</strong> <span class="strength-indicator ${strength.toLowerCase()}">${strength}</span></p>
+        <p><strong>Reason:</strong> ${reason}</p>
+        <p><strong>Politician Activity:</strong></p>
+        <ul>
+          ${politicianData.map(data => `<li>${data.name}: ${data.action} ${data.amount} on ${data.date}</li>`).join('')}
+        </ul>
+        <p><strong>Hedge Fund Activity:</strong></p>
+        <ul>
+          ${hedgeFundData.map(data => `<li>${data.name}: ${data.action} ${data.amount} on ${data.date}</li>`).join('')}
+        </ul>
+      </div>
+    `;
+    signalContainer.prepend(alert);
+    
+    if (type === 'buy') {
+      playAlert(440, 'sine'); // A4 note
+    } else {
+      playAlert(329.63, 'square'); // E4 note
+    }
+    
+    alert.classList.add('blink');
+    setTimeout(() => alert.classList.remove('blink'), 5000);
+  }
+
+  function generateSignal() {
+    const asset = currentSymbol;
+    const type = Math.random() > 0.5 ? 'buy' : 'sell';
+    const strengths = ['Strong', 'Moderate', 'Weak'];
+    const strength = strengths[Math.floor(Math.random() * strengths.length)];
+    
+    const politicianNames = ['Sen. John Smith', 'Rep. Jane Doe', 'Sen. Michael Johnson', 'Rep. Emily Brown'];
+    const hedgeFundNames = ['Citadel LLC', 'Bridgewater Associates', 'Renaissance Technologies', 'Two Sigma Investments'];
+    
+    const politicianData = Array(Math.floor(Math.random() * 3) + 1).fill().map(() => ({
+      name: politicianNames[Math.floor(Math.random() * politicianNames.length)],
+      action: type === 'buy' ? 'Bought' : 'Sold',
+      amount: `$${(Math.random() * 1000000 + 100000).toFixed(2)}`,
+      date: moment().subtract(Math.floor(Math.random() * 30), 'days').format('YYYY-MM-DD')
+    }));
+    
+    const hedgeFundData = Array(Math.floor(Math.random() * 3) + 1).fill().map(() => ({
+      name: hedgeFundNames[Math.floor(Math.random() * hedgeFundNames.length)],
+      action: type === 'buy' ? 'Increased position by' : 'Decreased position by',
+      amount: `${(Math.random() * 10 + 1).toFixed(2)}%`,
+      date: moment().subtract(Math.floor(Math.random() * 90), 'days').format('YYYY-MM-DD')
+    }));
+    
+    const reason = `${strength} ${type} signal generated based on recent insider trading activity:
+      1) Multiple ${type === 'buy' ? 'purchases' : 'sales'} by influential politicians.
+      2) Significant ${type === 'buy' ? 'increase' : 'decrease'} in positions by major hedge funds.
+      3) Alignment between politician trades and hedge fund activity suggests potential ${type === 'buy' ? 'upward' : 'downward'} movement.`;
+
+    createSignalAlert(type, asset, reason, strength, politicianData, hedgeFundData);
+  }
+
+  // Generate a signal every 30 seconds
+  setInterval(generateSignal, 30000);
+
+  // Initial signal generation
+  generateSignal();
+</script>
+</body></html>

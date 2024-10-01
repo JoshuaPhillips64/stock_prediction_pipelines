@@ -10,13 +10,14 @@ DB_PORT = os.getenv('DB_PORT', '5432')
 DB_NAME = os.getenv('DB_NAME')
 DB_USER = os.getenv('DB_USER')
 DB_PASSWORD = os.getenv('DB_PASSWORD')
+DB_DATABASE = os.getenv('DB_DATABASE')
 
 # API Keys
 ALPHA_VANTAGE_API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY')
 FRED_API_KEY = os.getenv('FRED_API_KEY')
 
 # Stock symbols
-STOCK_SYMBOLS = os.getenv('STOCK_SYMBOLS').split(',')
+STOCK_SYMBOLS = stock_symbols = ['KO', 'JNJ', 'PG', 'PEP', 'WMT', 'XOM', 'GIS', 'MCD', 'CL', 'MMM']
 
 # S3 Configurations
 S3_BUCKET_NAME = os.getenv('S3_BUCKET_NAME')
@@ -26,6 +27,9 @@ S3_KEY = os.getenv('S3_KEY')
 AWS_REGION = os.getenv('AWS_REGION')
 AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+
+#openai api key
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 
 # Environment setting
 ENVIRONMENT = os.getenv('ENVIRONMENT', 'local')

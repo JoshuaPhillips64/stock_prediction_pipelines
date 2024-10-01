@@ -1,0 +1,45 @@
+﻿Postgres Data Types,Pandas Data Types,MySQL Type
+int,Int64,int
+integer,Int64,int
+smallint,Int8,smallint
+text,object,enum
+bigint,Int64,bigint
+serial,Int64,int
+smallserial,int,smallint
+bigserial,Int64,bigint
+bit,object,bit
+boolean,bool,tinyint
+real,float64,float
+double precision,float64,double
+numeric,float64,decimal
+decimal,float64,decimal
+money,object,"decimal(19,2)"
+char,object,char/longtext
+national character,object,char/longtext
+varchar,object,varchar
+national character varying,object,varchar/mediumtext/longtext
+date,datetime64[ns],date
+time,datetime64[ns],time
+timestamp,datetime64[ns],datetime
+timestamp,datetime64[ns],timestamp
+timestamp without time zone,datetime64[ns],timestamp
+interval,timedelta[ns],time
+bytea,object,longblob
+text,object,longtext
+cidr,object,varchar(43)
+inet,object,varchar(43)
+macaddr,object,varchar(17)
+uuid,object,varchar(36)
+xml,object,longtext
+json,object,longtext
+tsvector,object,longtext
+tsquery,object,longtext
+array,object,longtext
+point,object,point
+line,object,linestring
+lseg,object,linestring
+box,object,polygon
+path,object,linestring
+polygon,object,polygon
+circle,object,polygon
+txid_snapshot,object,varchar

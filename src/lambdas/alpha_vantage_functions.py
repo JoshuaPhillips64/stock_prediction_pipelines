@@ -1,16 +1,10 @@
 import sys
-import os
 from pathlib import Path
 from datetime import datetime, timedelta
 import requests
 from typing import Dict, Any, List
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.dialects.postgresql import insert
-from app.models import EnrichedStockData
-from config import Config
+from config import ALPHA_VANTAGE_API_KEY
 import pandas as pd
-import numpy as np
 import logging
 import time
 import random
@@ -24,7 +18,7 @@ project_root = Path(__file__).resolve().parent.parent
 sys.path.append(str(project_root))
 
 # Alpha Vantage API configuration
-API_KEY = Config.ALPHA_VANTAGE_API_KEY
+API_KEY = ALPHA_VANTAGE_API_KEY
 
 # Initialize variables for rate limiting
 LAST_API_CALL = 0
@@ -408,14 +402,18 @@ def get_sector_performance(sector: str, date: datetime, sector_etf_data_cache: D
         logger.error(f"Error calculating sector performance for ETF '{etf_symbol}' on {date}: {e}")
         return None
 
-def generate_enriched_stock_data(days_back_to_fetch=5,stocks_to_pull=Config.STOCKS) -> List[Dict[str, Any]]:
+def generate_enriched_stock_data(start_date: datetime, end_date: datetime, stocks_to_pull: List[str]) -> List[Dict[str, Any]]:
     """
     Generates enriched stock data by fetching and combining various data sources.
+
+    Args:
+        start_date (datetime): The start date for fetching data.
+        end_date (datetime): The end date for fetching data.
+        stocks_to_pull (List[str]): List of stock symbols to process.
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing enriched stock data.
     """
-    stocks = stocks_to_pull
     enriched_data = []
 
     # Pre-fetch economic indicators to minimize API calls
@@ -424,8 +422,6 @@ def generate_enriched_stock_data(days_back_to_fetch=5,stocks_to_pull=Config.STOC
     economic_indicators_cache['gdp'] = get_alpha_vantage_data("", "REAL_GDP", {"interval": "quarterly"}).get("data", [])
     economic_indicators_cache['inflation'] = get_alpha_vantage_data("", "INFLATION", {"interval": "annual"}).get("data", [])
     economic_indicators_cache['unemployment'] = get_alpha_vantage_data("", "UNEMPLOYMENT").get("data", [])
-
-    one_year_ago = datetime.now() - timedelta(days=days_back_to_fetch)
 
     # Cache for market index data
     index_data_cache = {}
@@ -448,6 +444,9 @@ def generate_enriched_stock_data(days_back_to_fetch=5,stocks_to_pull=Config.STOC
         'Real Estate': 'XLRE',
         'UTILITIES': 'XLU',
         'LIFE SCIENCES': 'XLP',  # Mapped to Consumer Staples for PG
+        'ENERGY & TRANSPORTATION': 'XLE',  # Mapped to Energy
+
+
     }
 
     sector_etf_data_cache = {}
@@ -457,7 +456,7 @@ def generate_enriched_stock_data(days_back_to_fetch=5,stocks_to_pull=Config.STOC
         if etf_data:
             sector_etf_data_cache[etf_symbol] = etf_data
 
-    for stock in stocks:
+    for stock in stocks_to_pull:
         logger.info(f"Fetching data for {stock}...")
         stock_data = fetch_time_series_data(stock)
         technical_indicators = fetch_technical_indicators(stock)
@@ -468,8 +467,11 @@ def generate_enriched_stock_data(days_back_to_fetch=5,stocks_to_pull=Config.STOC
 
         sector = company_overview.get('Sector', 'Unknown')
 
-        # Get dates within the last year
-        dates_in_range = [date_str for date_str in stock_data.keys() if datetime.strptime(date_str, '%Y-%m-%d') >= one_year_ago]
+        # Get dates within the specified range
+        dates_in_range = [
+            date_str for date_str in stock_data.keys()
+            if start_date.date() <= datetime.strptime(date_str, '%Y-%m-%d').date() <= end_date.date()
+        ]
         sorted_dates = sorted(dates_in_range, reverse=True)
         trading_dates = set(sorted_dates)  # Create a set for quick lookup
 
@@ -548,202 +550,3 @@ def generate_enriched_stock_data(days_back_to_fetch=5,stocks_to_pull=Config.STOC
             enriched_data.append(enriched_record)
 
     return enriched_data
-
-def print_dataset_overview(data: List[Dict[str, Any]]):
-    """
-    Prints an overview of the dataset.
-
-    Args:
-        data (List[Dict[str, Any]]): The enriched stock data.
-    """
-    df = pd.DataFrame(data)
-    print("\nDataset Overview:")
-    print(f"Total records: {len(df)}")
-    print(f"Date range: {df['date'].min()} to {df['date'].max()}")
-    print("\nNumerical columns summary:")
-    print(df.describe())
-    print("\nMissing values:")
-    print(df.isnull().sum())
-
-def bulk_upsert_to_db(data: List[Dict[str, Any]], batch_size: int = 1000):
-    """
-    Performs bulk upsert to the database.
-
-    Args:
-        data (List[Dict[str, Any]]): The enriched stock data.
-        batch_size (int, optional): The batch size for upserting.
-    """
-    engine = create_engine(Config.SQLALCHEMY_DATABASE_URI)
-    Session = sessionmaker(bind=engine)
-    session = Session()
-
-    try:
-        for i in range(0, len(data), batch_size):
-            batch = data[i:i+batch_size]
-
-            insert_stmt = insert(EnrichedStockData).values(batch)
-
-            upsert_stmt = insert_stmt.on_conflict_do_update(
-                index_elements=['symbol', 'date'],
-                set_={c.key: getattr(insert_stmt.excluded, c.key) for c in EnrichedStockData.__table__.columns if c.key not in ['symbol', 'date']}
-            )
-
-            session.execute(upsert_stmt)
-
-        session.commit()
-        logger.info(f"Successfully upserted {len(data)} records.")
-    except Exception as e:
-        session.rollback()
-        logger.error(f"Error during upsert: {str(e)}")
-    finally:
-        session.close()
-
-if __name__ == "__main__":
-
-    #With current API limits of 70 calls per minute, it will take approximately 1 hour to fetch 365 days of data for 5.
-    enriched_data = generate_enriched_stock_data(days_back_to_fetch=1000, stocks_to_pull=['PG'])
-    #print_dataset_overview(enriched_data)
-
-    database_url = Config.SQLALCHEMY_DATABASE_URI
-    engine = create_engine(database_url)
-    Session = sessionmaker(bind=engine)
-
-    bulk_upsert_to_db(enriched_data)
-
-"""
-DATA DEFINITIONS
-
-symbol
-Definition: The ticker symbol of the stock.
-Example: 'AAPL' for Apple Inc.
-
-date
-Definition: The date for which the data is recorded.
-Example: datetime.date(2023, 10, 1) represents October 1, 2023.
-
-open
-Definition: The stock's opening price on the given date.
-Source: Retrieved from Time Series (Daily Adjusted) data ('1. open').
-Example: If open = 150.00, the stock opened at $150.00 on that date.
-
-high
-Definition: The highest price the stock reached on the given date.
-Source: From '2. high' in the time series data.
-Example: high = 155.00 means the stock peaked at $155.00 that day.
-
-low
-Definition: The lowest price the stock reached on the given date.
-Source: From '3. low' in the time series data.
-Example: low = 148.00 indicates the stock's lowest price was $148.00.
-
-close
-Definition: The stock's closing price on the given date.
-Source: From '4. close' in the time series data.
-Example: close = 152.00 means the stock closed at $152.00.
-
-volume
-Definition: The total number of shares traded on the given date.
-Source: From '6. volume' in the time series data.
-Example: volume = 10,000,000 indicates 10 million shares were traded.
-
-market_capitalization
-Definition: The total market value of a company's outstanding shares.
-Source: Retrieved from Company Overview ('MarketCapitalization').
-Example: market_capitalization = 2,500,000,000,000 means the company is valued at $2.5 trillion.
-
-pe_ratio
-Definition: Price-to-Earnings ratio; stock price divided by earnings per share.
-Source: From 'PERatio' in Company Overview.
-Example: pe_ratio = 30.5 implies investors pay $30.50 for every $1 of earnings.
-
-dividend_yield
-Definition: Annual dividends per share divided by price per share.
-Source: From 'DividendYield' in Company Overview.
-Example: dividend_yield = 0.015 means a 1.5% dividend yield.
-
-beta
-Definition: A measure of the stock's volatility relative to the market.
-Source: From 'Beta' in Company Overview.
-Example: beta = 1.2 indicates the stock is 20% more volatile than the market.
-
-rsi (Relative Strength Index)
-Definition: An oscillator measuring the speed and change of price movements (typically over 14 periods).
-Source: From Technical Indicators ('RSI').
-Example: rsi = 70 suggests the stock may be overbought.
-
-macd (Moving Average Convergence Divergence)
-Definition: Shows the relationship between two moving averages of prices.
-Source: From 'MACD' in Technical Indicators.
-Example: macd = 1.5 indicates bullish momentum.
-
-macd_signal
-Definition: The signal line of the MACD indicator.
-Source: From 'MACD_Signal' in Technical Indicators.
-Example: macd_signal = 1.2.
-
-macd_hist
-Definition: The MACD histogram; difference between macd and macd_signal.
-Source: From 'MACD_Hist' in Technical Indicators.
-Example: macd_hist = 0.3 suggests increasing momentum.
-
-adx (Average Directional Index)
-Definition: Measures the strength of a trend.
-Source: From 'ADX' in Technical Indicators.
-Example: adx = 25 indicates a strong trend (values above 25 are strong).
-
-upper_band
-Definition: Upper Bollinger Band; indicates overbought levels.
-Source: From 'Real Upper Band' in Bollinger Bands data.
-Example: upper_band = 155.00.
-
-lower_band
-Definition: Lower Bollinger Band; indicates oversold levels.
-Source: From 'Real Lower Band' in Bollinger Bands data.
-Example: lower_band = 145.00.
-
-sp500_return
-Definition: Daily return percentage of the S&P 500 index (using SPY ETF as a proxy).
-Calculation: ((current_close - previous_close) / previous_close) * 100.
-Example: If SPY closed at $450 today and $447 yesterday, sp500_return = ((450 - 447) / 447) * 100 = 0.671%.
-
-nasdaq_return
-Definition: Daily return percentage of the NASDAQ index (using QQQ ETF as a proxy).
-Calculation: Similar to sp500_return.
-Example: If nasdaq_return = -0.3, NASDAQ decreased by 0.3% from the previous day.
-
-sentiment_score
-Definition: Average sentiment score from recent news articles about the stock.
-Source: From News and Sentiment data.
-Range: -1 (very negative) to 1 (very positive).
-Example: sentiment_score = 0.2 indicates slightly positive news sentiment.
-
-gdp_growth
-Definition: The most recent GDP growth rate available up to the given date.
-Source: From Economic Indicators ('REAL_GDP').
-Example: gdp_growth = 2.5 means GDP grew by 2.5% in the last quarter.
-
-inflation_rate
-Definition: The most recent inflation rate available up to the given date.
-Source: From Economic Indicators ('INFLATION').
-Example: inflation_rate = 1.8 indicates prices increased by 1.8% year-over-year.
-
-unemployment_rate
-Definition: The most recent unemployment rate available up to the given date.
-Source: From Economic Indicators ('UNEMPLOYMENT').
-Example: unemployment_rate = 4.0 means 4% of the labor force is unemployed.
-
-put_call_ratio
-Definition: Ratio of traded put options volume to call options volume with expiration dates between 20-40 days out; indicates market sentiment.
-Source: Calculated from Options Data ('HISTORICAL_OPTIONS').
-Example: If put_volume = 7,000 and call_volume = 10,000, put_call_ratio = 7,000 / 10,000 = 0.7.
-
-implied_volatility
-Definition: Average implied volatility from options data; reflects market's forecast of stock volatility.
-Source: From 'implied_volatility' in options data.
-Example: implied_volatility = 25 indicates an expected annualized volatility of 25%.
-
-sector_performance
-Definition: Daily return percentage of the stock's sector ETF.
-Calculation: Similar to sp500_return, using sector-specific ETF.
-Example: If the sector ETF closed at $100 today and $99 yesterday, sector_performance = ((100 - 99) / 99) * 100 = 1.01%.
-"""

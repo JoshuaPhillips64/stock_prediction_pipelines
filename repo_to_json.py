@@ -27,6 +27,16 @@ def create_repo_text(root_path):
         # Special handling for 'terraform/.terraform' directory
         if 'webserver' in root and 'migrations' in dirs:
             dirs.remove('migrations')
+        # Special handling for 'terraform/.terraform' directory
+        if 'webserver' in root and '__pycache__' in dirs:
+            dirs.remove('__pycache__')
+
+        if 'terraform' in dirs:
+            dirs.remove('terraform')
+        if 'docs' in dirs:
+            dirs.remove('docs')
+        if 'unit_tests' in dirs:
+            dirs.remove('unit_tests')
 
         # Generate relative path from the root path
         relative_path = os.path.relpath(root, root_path)
@@ -52,6 +62,6 @@ if __name__ == "__main__":
     # Use the current working directory (cwd)
     repo_path = os.getcwd()
     # USe the folder src or another folder
-    # repo_path = os.path.join(os.getcwd(), 'src')
+    #repo_path = os.path.join(os.getcwd(), 'src/lambdas')
 
     create_repo_text(repo_path)
