@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from flask import Blueprint, render_template, jsonify, current_app
 from sqlalchemy import func
 from app import db
-from app.models import EnrichedStockData
+from app.models import EnrichedStockData, CompanyOverview
 from config import Config
 import json
 
@@ -18,8 +18,8 @@ def index():
     for symbol in Config.STOCKS:
         latest_data = (
             EnrichedStockData.query.filter_by(symbol=symbol)
-            .order_by(EnrichedStockData.date.desc())
-            .first()
+                .order_by(EnrichedStockData.date.desc())
+                .first()
         )
 
         historical_data = (
@@ -27,14 +27,14 @@ def index():
                 EnrichedStockData.symbol == symbol,
                 EnrichedStockData.date >= thirty_days_ago
             )
-            .order_by(EnrichedStockData.date)
-            .all()
+                .order_by(EnrichedStockData.date)
+                .all()
         )
 
         prediction = (
             current_app.AiStockPredictions.query.filter_by(symbol=symbol)
-            .order_by(current_app.AiStockPredictions.prediction_date.desc())
-            .first()
+                .order_by(current_app.AiStockPredictions.prediction_date.desc())
+                .first()
         )
 
         if latest_data and historical_data and prediction:
@@ -92,7 +92,6 @@ def ai_prediction():
 
         prediction_chart_data = []
         for prediction in prediction_data:
-            # Check if feature_importance is already a dict, if not, parse it
             if isinstance(prediction.feature_importance, str):
                 feature_importance = json.loads(prediction.feature_importance)
             else:
@@ -108,13 +107,15 @@ def ai_prediction():
                 'feature_importance': feature_importance
             })
 
+        company_overview = CompanyOverview.query.filter_by(symbol=symbol).order_by(CompanyOverview.last_updated.desc()).first()
+
         stocks_data.append({
             'symbol': symbol,
             'chart_data': chart_data,
-            'prediction_chart_data': prediction_chart_data
+            'prediction_chart_data': prediction_chart_data,
+            'company_overview': company_overview.data if company_overview else None
         })
 
-    #current_app.logger.info(f"Stocks data being passed to template: {stocks_data}")
     return render_template("ai-prediction.html", stocks_data=stocks_data)
 
 @bp.route("/about")
