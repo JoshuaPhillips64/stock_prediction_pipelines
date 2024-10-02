@@ -1,67 +1,121 @@
-from datetime import timedelta
-from flask import Blueprint, render_template
+from datetime import datetime, timedelta
+from flask import Blueprint, render_template, jsonify, current_app
+from sqlalchemy import func
 from app import db
 from app.models import EnrichedStockData
+from config import Config
+import json
 
 bp = Blueprint("main", __name__)
 
 @bp.route("/")
+@bp.route("/index")
 def index():
-    # Fetch all unique stock tickers, limit to 6
-    unique_tickers = db.session.query(EnrichedStockData.symbol).distinct().limit(6).all()
-    unique_tickers = [ticker[0] for ticker in unique_tickers]  # Extracting the symbols
-
-    # Fetch stock data for the last 30 days for these tickers
-    today = db.session.query(db.func.max(EnrichedStockData.date)).scalar()
+    stocks = []
+    today = db.session.query(func.max(EnrichedStockData.date)).scalar()
     thirty_days_ago = today - timedelta(days=30)
 
-    historical_data_all = (
-        EnrichedStockData.query.filter(
-            EnrichedStockData.symbol.in_(unique_tickers),
-            EnrichedStockData.date >= thirty_days_ago
-        )
-        .order_by(EnrichedStockData.date)
-        .all()
-    )
-
-    # Organize the data by symbol
-    historical_data_by_symbol = {}
-    for data in historical_data_all:
-        if data.symbol not in historical_data_by_symbol:
-            historical_data_by_symbol[data.symbol] = []
-        historical_data_by_symbol[data.symbol].append({
-            "date": data.date.isoformat(),
-            "open": data.open,
-            "high": data.high,
-            "low": data.low,
-            "close": data.close
-        })
-
-    stocks = []
-    for symbol in unique_tickers:
-        # Get the most recent stock data for this symbol (latest close price)
+    for symbol in Config.STOCKS:
         latest_data = (
             EnrichedStockData.query.filter_by(symbol=symbol)
             .order_by(EnrichedStockData.date.desc())
             .first()
         )
 
-        if latest_data:
-            # Use the cached historical data
-            historical_data = historical_data_by_symbol.get(symbol, [])
+        historical_data = (
+            EnrichedStockData.query.filter(
+                EnrichedStockData.symbol == symbol,
+                EnrichedStockData.date >= thirty_days_ago
+            )
+            .order_by(EnrichedStockData.date)
+            .all()
+        )
 
-            # Add a simple prediction logic (modify as needed)
-            prediction = latest_data.close * (1 + (0.2 * (latest_data.high - latest_data.low) / latest_data.close))
+        prediction = (
+            current_app.AiStockPredictions.query.filter_by(symbol=symbol)
+            .order_by(current_app.AiStockPredictions.prediction_date.desc())
+            .first()
+        )
 
+        if latest_data and historical_data and prediction:
             stocks.append({
                 "symbol": symbol,
                 "current_price": latest_data.close,
-                "prediction": prediction,
-                "historical_data": historical_data,
+                "prediction": prediction.predicted_amount,
+                "historical_data": [
+                    {
+                        "date": data.date.isoformat(),
+                        "open": data.open,
+                        "high": data.high,
+                        "low": data.low,
+                        "close": data.close
+                    } for data in historical_data
+                ],
             })
 
     return render_template("index.html", stocks=stocks)
 
+@bp.route("/ai-prediction")
+def ai_prediction():
+    stocks_data = []
+    today = db.session.query(func.max(EnrichedStockData.date)).scalar()
+    ninety_days_ago = today - timedelta(days=90)
+    one_twenty_days_ago = today - timedelta(days=120)
+
+    for symbol in Config.STOCKS:
+        stock_data = (
+            EnrichedStockData.query.filter(
+                EnrichedStockData.symbol == symbol,
+                EnrichedStockData.date >= ninety_days_ago
+            )
+            .order_by(EnrichedStockData.date)
+            .all()
+        )
+
+        chart_data = {
+            'x': [data.date.strftime('%Y-%m-%d') for data in stock_data],
+            'open': [float(data.open) for data in stock_data],
+            'high': [float(data.high) for data in stock_data],
+            'low': [float(data.low) for data in stock_data],
+            'close': [float(data.close) for data in stock_data],
+            'volume': [float(data.volume) for data in stock_data],
+        }
+
+        prediction_data = (
+            current_app.AiStockPredictions.query.filter(
+                current_app.AiStockPredictions.symbol == symbol,
+                current_app.AiStockPredictions.prediction_date >= one_twenty_days_ago
+            )
+            .order_by(current_app.AiStockPredictions.prediction_date)
+            .all()
+        )
+
+        prediction_chart_data = []
+        for prediction in prediction_data:
+            # Check if feature_importance is already a dict, if not, parse it
+            if isinstance(prediction.feature_importance, str):
+                feature_importance = json.loads(prediction.feature_importance)
+            else:
+                feature_importance = prediction.feature_importance
+
+            prediction_chart_data.append({
+                'date': prediction.prediction_date.strftime('%Y-%m-%d'),
+                'predicted_amount': float(prediction.predicted_amount),
+                'prediction_confidence_score': float(prediction.prediction_confidence_score),
+                'prediction_rmse': float(prediction.prediction_rmse),
+                'up_or_down': prediction.up_or_down,
+                'prediction_explanation': prediction.prediction_explanation,
+                'feature_importance': feature_importance
+            })
+
+        stocks_data.append({
+            'symbol': symbol,
+            'chart_data': chart_data,
+            'prediction_chart_data': prediction_chart_data
+        })
+
+    #current_app.logger.info(f"Stocks data being passed to template: {stocks_data}")
+    return render_template("ai-prediction.html", stocks_data=stocks_data)
 
 @bp.route("/about")
 def about():

@@ -73,3 +73,15 @@ class EnrichedStockData(db.Model):
 
     def __repr__(self):
         return f"<EnrichedStockData {self.symbol} {self.date}>"
+
+def create_ai_stock_predictions_model():
+    """Creates the AiStockPredictions model dynamically after the app is initialized."""
+    class AiStockPredictions(db.Model):  # Use the global db object
+        __table__ = db.Table('ai_stock_predictions', metadata, autoload=True, autoload_with=db.engine)
+
+        def to_dict(self):
+            return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
+        def __repr__(self):
+            return f"<AiStockPredictions {self.symbol} {self.date}>"
+    return AiStockPredictions

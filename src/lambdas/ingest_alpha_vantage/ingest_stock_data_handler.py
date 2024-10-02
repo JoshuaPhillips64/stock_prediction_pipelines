@@ -69,8 +69,8 @@ if __name__ == "__main__":
     example_event = {
         'body': json.dumps({
             'stocks': ['KO', 'JNJ', 'PG', 'PEP', 'WMT', 'XOM', 'GIS', 'MCD', 'CL', 'MMM'],
-            'start_date': '2023-01-01',
-            'end_date': '2024-01-01'
+            'start_date': '2022-06-01',
+            'end_date': '2023-01-01'
         })
     }
 

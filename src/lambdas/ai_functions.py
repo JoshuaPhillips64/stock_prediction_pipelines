@@ -20,8 +20,8 @@ def execute_chatgpt_call(user_input, system_prompt):
         response = client.chat.completions.create(
             model="gpt-4o-mini",  # Use a valid model name
             messages=messages,
-            temperature=0.2,
-            max_tokens=5000,
+            temperature=0.3,
+            max_tokens=1000,
             top_p=1.0,
             frequency_penalty=0.0,
             presence_penalty=0.0
@@ -87,7 +87,7 @@ def parse_response_to_json(response):
         return None
 
 
-def get_system_prompt():
+def get_regression_system_prompt():
     return """
    You are an advanced AI model trained to predict stock prices using historical and financial data. Analyze a dataset of stock market indicators and make a prediction for the price 30 days from the date given. 
 
@@ -96,9 +96,10 @@ def get_system_prompt():
     - Predicted_Price_30_Days
     - Confidence Score (r2 * 100)
     - Prediction RMSE (Root Mean Squared Error)
-    - Prediction_Explanation (3-4 brief sentences not restating any other json key that highlight the most significant features to the model and their importance score.)
+    - Prediction_Explanation (3-4 concise sentences not restating any other json key that highlight the most significant feature impacts to the model and their importance score.)
     - Further_Considerations (suggest additional data points or factors to improve accuracy)
     - Up_or_Down (binary classification of likely price movement)
+    - Nested JSON object with feature importance scores for top 6 indicator used in the model.
     
     Ensure the analysis is thorough and clear for non-experts, and if the initial output is unsatisfactory, refine it based on feedback.
     """

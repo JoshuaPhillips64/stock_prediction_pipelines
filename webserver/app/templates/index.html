@@ -26,7 +26,7 @@
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1600px;
             margin: 0 auto;
             padding: 40px 20px;
         }
@@ -37,18 +37,18 @@
         }
 
         h1 {
-            font-size: 2.5em;
+            font-size: 2.8em;
             margin-bottom: 40px;
         }
 
         h2 {
-            font-size: 1.8em;
+            font-size: 2em;
             margin-top: 40px;
         }
 
         .stock-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
             gap: 30px;
             margin-bottom: 60px;
         }
@@ -86,7 +86,7 @@
 
         .candlestick-chart {
             width: 100%;
-            height: 300px;
+            height: 450px;
             margin-top: 20px;
         }
 
@@ -100,6 +100,7 @@
             text-decoration: none;
             font-weight: bold;
             font-size: 18px;
+            margin: 0 15px;
             transition: color 0.3s ease;
         }
 
@@ -113,9 +114,9 @@
         <h1>StockVision: 30-Day Market Forecast</h1>
         <nav>
             <a href="{{ url_for('main.about') }}">About Our Model</a>
+            <a href="{{ url_for('main.ai_prediction') }}">AI Predictions</a>
         </nav>
 
-        <input type="text" id="stockSearch" placeholder="Search Stock Symbol...">
         <div class="stock-grid" id="stockGrid">
             {% for stock in stocks %}
                 <div class="stock-card">
@@ -168,7 +169,13 @@
 
                         const layout = {
                             dragmode: 'zoom',
-                            showlegend: false,
+                            showlegend: true,
+                            legend: {
+                                x: 0,
+                                y: 1,
+                                bgcolor: 'rgba(44, 62, 80, 0.8)',
+                                font: {color: '#ecf0f1'}
+                            },
                             xaxis: {
                                 rangeslider: {visible: false},
                                 title: 'Date',
@@ -176,21 +183,28 @@
                                 color: '#ecf0f1'
                             },
                             yaxis: {
-                                title: 'Price',
+                                title: 'Price ($)',
                                 tickformat: '$.2f',
                                 color: '#ecf0f1'
                             },
                             margin: {
                                 l: 50,
                                 r: 20,
-                                t: 20,
+                                t: 40,
                                 b: 40
                             },
-                            height: 300,
+                            height: 450,
                             plot_bgcolor: '#34495e',
                             paper_bgcolor: '#2c3e50',
                             font: {
                                 color: '#ecf0f1'
+                            },
+                            title: {
+                                text: `${stockData.symbol} Stock Price`,
+                                font: {
+                                    size: 24,
+                                    color: '#ecf0f1'
+                                }
                             }
                         };
 
@@ -200,9 +214,5 @@
             {% endfor %}
         </div>
     </div>
-
-    <script>
-        // Add the search functionality here if needed
-    </script>
 </body>
 </html>

@@ -371,6 +371,7 @@ def get_sector_performance(sector: str, date: datetime, sector_etf_data_cache: D
         'TRADE & SERVICES': 'XLY',  # Mapped to Consumer Discretionary
         'MANUFACTURING': 'XLI',  # Mapped to Industrials
         'LIFE SCIENCES': 'XLP',  # Mapped to Consumer Staples for PG
+        'ENERGY & TRANSPORTATION': 'XLE',  # Mapped to Energy
 
     }
 
