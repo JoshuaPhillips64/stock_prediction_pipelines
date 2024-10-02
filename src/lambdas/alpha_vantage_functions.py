@@ -64,21 +64,40 @@ def get_alpha_vantage_data(symbol: str, function: str, additional_params: Dict[s
 
     return data
 
+
 def fetch_time_series_data(symbol: str) -> Dict[str, Dict[str, Any]]:
     """
-    Fetches historical daily adjusted time series data for a stock or ETF.
+    Fetches historical daily adjusted time series data for a stock or ETF,
+    including adjustments for stock splits.
 
     Args:
         symbol (str): The stock or ETF symbol.
 
     Returns:
-        Dict[str, Dict[str, Any]]: A dictionary with date keys and OHLC data.
+        Dict[str, Dict[str, Any]]: A dictionary with date keys and OHLC data,
+                                   adjusted for stock splits.
     """
     data = get_alpha_vantage_data(symbol, "TIME_SERIES_DAILY_ADJUSTED", {"outputsize": "full"})
     if 'Time Series (Daily)' not in data:
         logger.error(f"Error fetching daily time series data for {symbol}: {data.get('Note', data)}")
         return None
-    return data['Time Series (Daily)']
+
+    time_series = data['Time Series (Daily)']
+    split_coefficient = 1.0  # Initial coefficient, no split adjustment yet
+
+    # Reverse the time series to apply split adjustments retroactively
+    for date_str, day_data in sorted(time_series.items(), reverse=True):
+        current_split_coefficient = float(day_data.get('8. split coefficient', 1.0))
+        split_coefficient *= current_split_coefficient
+
+        # Apply cumulative split adjustments retroactively
+        day_data['1. open'] = float(day_data['1. open']) / split_coefficient
+        day_data['2. high'] = float(day_data['2. high']) / split_coefficient
+        day_data['3. low'] = float(day_data['3. low']) / split_coefficient
+        day_data['4. close'] = float(day_data['4. close']) / split_coefficient
+        day_data['6. volume'] = float(day_data['6. volume']) * split_coefficient
+
+    return time_series
 
 def fetch_technical_indicators(symbol: str) -> Dict[str, Dict[str, Dict[str, Any]]]:
     """

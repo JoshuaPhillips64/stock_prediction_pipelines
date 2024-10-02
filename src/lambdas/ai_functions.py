@@ -3,6 +3,7 @@ import re
 import os
 import json
 from config import OPENAI_API_KEY
+import ast
 
 def execute_chatgpt_call(user_input, system_prompt):
     # Create an OpenAI client
@@ -15,6 +16,7 @@ def execute_chatgpt_call(user_input, system_prompt):
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": f"{user_input}"}
         ]
+        print(f'Here are the conversation sent to chatgpt: {messages}')
 
         # Make the API call to the OpenAI Chat Completion endpoint
         response = client.chat.completions.create(
@@ -102,4 +104,9 @@ def get_regression_system_prompt():
     - Nested JSON object with feature importance scores for top 6 indicator used in the model.
     
     Ensure the analysis is thorough and clear for non-experts, and if the initial output is unsatisfactory, refine it based on feedback.
+    """
+
+def get_classification_system_prompt():
+    return """
+    
     """

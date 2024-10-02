@@ -20,7 +20,7 @@ def process_stock_prediction(stock_symbol, analysis_date, engine):
         SELECT * FROM enriched_stock_data
         WHERE symbol = '{stock_symbol}' AND date <= '{analysis_date}'
         ORDER BY date DESC
-        LIMIT 30
+        LIMIT 200
     """
     df = fetch_dataframe(engine, query)
 
@@ -114,7 +114,7 @@ def lambda_handler(event, context):
 # For local testing
 if __name__ == "__main__":
     test_event = {
-        'stock_symbols': ['PEP'],
+        'stock_symbols': ['WMT'],
         'analysis_dates': [
     '2024-08-30', '2024-08-29', '2024-08-28', '2024-08-27',
     '2024-08-26', '2024-08-25', '2024-08-24', '2024-08-23',
