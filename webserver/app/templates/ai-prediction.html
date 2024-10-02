@@ -171,7 +171,28 @@
 
     // Define feature definitions
     const featureDefinitions = {
-        // ... (keep the existing feature definitions)
+        macd: "Moving Average Convergence Divergence: Shows the relationship between two moving averages of prices.",
+        gdp_growth: "The most recent GDP growth rate available up to the given date.",
+        inflation_rate: "The most recent inflation rate available up to the given date.",
+        put_call_ratio: "Put/Call option volume with expiration between 25 and 35 days in future; indicates market sentiment.",
+        sentiment_score: "Average sentiment score from recent news articles about the stock.",
+        sector_performance: "Daily return percentage of the stock's sector ETF.",
+        technical_indicators: "A combination of various technical indicators used to analyze price trends and patterns.",
+        consumer_sentiment: "A measure of consumer confidence in the economy.",
+        rsi: "Relative Strength Index: An oscillator measuring the speed and change of price movements.",
+        macd_signal: "The signal line of the MACD indicator.",
+        macd_hist: "The MACD histogram; difference between MACD and MACD signal.",
+        adx: "Average Directional Index: Measures the strength of a trend.",
+        upper_band: "Upper Bollinger Band; indicates overbought levels.",
+        lower_band: "Lower Bollinger Band; indicates oversold levels.",
+        sp500_return: "Daily return percentage of the S&P 500 index.",
+        nasdaq_return: "Daily return percentage of the NASDAQ index.",
+        implied_volatility: "Average implied volatility from options data; reflects market's forecast of stock volatility.",
+        beta: "A measure of the stock's volatility relative to the market.",
+        pe_ratio: "Price-to-Earnings ratio; stock price divided by earnings per share.",
+        dividend_yield: "Annual dividends per share divided by price per share.",
+        market_capitalization: "The total market value of a company's outstanding shares.",
+        unemployment_rate: "The most recent unemployment rate available up to the given date."
     };
 
     stockButtons.forEach(button => {
