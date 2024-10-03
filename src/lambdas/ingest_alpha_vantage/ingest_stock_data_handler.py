@@ -47,7 +47,7 @@ def lambda_handler(event, context):
             table_name='enriched_stock_data',
             upsert_id='symbol, date',
             postgres_connection=engine,
-            auto_match_schema='public'
+            auto_match_platform='postgres'
         )
 
         return {
@@ -68,9 +68,9 @@ if __name__ == "__main__":
     # This section demonstrates how to use the lambda function locally
     example_event = {
         'body': json.dumps({
-            'stocks': ['WMT'],
-            'start_date': '2024-01-01',
-            'end_date': '2024-10-01'
+            'stocks': ['KO', 'JNJ', 'PG', 'PEP', 'WMT', 'XOM', 'GIS', 'MCD', 'CL', 'MMM'],
+            'start_date': '2022-01-01',
+            'end_date': '2023-10-31'
         })
     }
 

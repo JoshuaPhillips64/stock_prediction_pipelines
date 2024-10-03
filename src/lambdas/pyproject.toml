@@ -18,6 +18,8 @@ numpy = "1.26.0"
 scikit-learn = "1.5.2"
 openlineage-python = "1.18.0"
 openai = "1.39.0"
+statsmodels = "0.14.0"
+plotly = "5.17.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.2"

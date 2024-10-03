@@ -15,6 +15,7 @@ DB_DATABASE = os.getenv('DB_DATABASE')
 # API Keys
 ALPHA_VANTAGE_API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY')
 FRED_API_KEY = os.getenv('FRED_API_KEY')
+ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
 
 # Stock symbols
 STOCK_SYMBOLS = stock_symbols = ['KO', 'JNJ', 'PG', 'PEP', 'WMT', 'XOM', 'GIS', 'MCD', 'CL', 'MMM']

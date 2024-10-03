@@ -1,6 +1,6 @@
 import sys
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import requests
 from typing import Dict, Any, List
 from config import ALPHA_VANTAGE_API_KEY
@@ -8,6 +8,8 @@ import pandas as pd
 import logging
 import time
 import random
+import csv
+from io import StringIO
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -88,9 +90,13 @@ def fetch_time_series_data(symbol: str) -> Dict[str, Dict[str, Any]]:
     # Reverse the time series to apply split adjustments retroactively
     for date_str, day_data in sorted(time_series.items(), reverse=True):
         current_split_coefficient = float(day_data.get('8. split coefficient', 1.0))
-        split_coefficient *= current_split_coefficient
 
-        # Apply cumulative split adjustments retroactively
+        # Skip adjustment on the split day (if split coefficient is not 1.0)
+        if current_split_coefficient != 1.0 and split_coefficient == 1.0:
+            split_coefficient = current_split_coefficient
+            continue  # Skip adjustment on the split day itself
+
+        # Apply cumulative split adjustments retroactively for days before the split
         day_data['1. open'] = float(day_data['1. open']) / split_coefficient
         day_data['2. high'] = float(day_data['2. high']) / split_coefficient
         day_data['3. low'] = float(day_data['3. low']) / split_coefficient
@@ -148,6 +154,171 @@ def fetch_company_overview(symbol: str) -> Dict[str, Any]:
         logger.error(f"Error fetching company overview for {symbol}: {data.get('Note', data)}")
         return None
     return data
+
+def fetch_earnings_data(symbol: str) -> Dict[str, Any]:
+    """
+    Fetches earnings data for a given symbol.
+
+    Args:
+        symbol (str): The stock symbol.
+
+    Returns:
+        Dict[str, Any]: A dictionary containing annual and quarterly earnings data.
+    """
+    data = get_alpha_vantage_data(symbol, "EARNINGS")
+    if 'annualEarnings' not in data or 'quarterlyEarnings' not in data:
+        logger.error(f"Error fetching earnings data for {symbol}: {data.get('Note', data)}")
+        return None
+    return data
+
+def fetch_earnings_calendar(symbol: str, horizon: str = "12month") -> List[Dict[str, Any]]:
+    """
+    Fetches earnings calendar data for a given symbol.
+
+    Args:
+        symbol (str): The stock symbol.
+        horizon (str): The time horizon for earnings calendar (3month, 6month, or 12month).
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries containing earnings calendar data.
+    """
+    base_url = "https://www.alphavantage.co/query"
+    params = {
+        "function": "EARNINGS_CALENDAR",
+        "symbol": symbol,
+        "horizon": horizon,
+        "apikey": API_KEY
+    }
+
+    response = requests.get(base_url, params=params)
+    if response.status_code != 200:
+        logger.error(f"Error fetching earnings calendar for {symbol}: {response.status_code}")
+        return []
+
+    csv_data = StringIO(response.text)
+    reader = csv.DictReader(csv_data)
+    return list(reader)
+
+
+def apply_earnings_data(stock_data: List[Dict[str, Any]], earnings_info: Dict[str, Dict[str, Any]],
+                        earnings_calendar: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Applies earnings data to the stock data, including historical and future estimates.
+
+    Args:
+        stock_data (List[Dict[str, Any]]): The list of stock data dictionaries.
+        earnings_info (Dict[str, Dict[str, Any]]): The processed earnings information.
+        earnings_calendar (List[Dict[str, Any]]): The earnings calendar data.
+
+    Returns:
+        List[Dict[str, Any]]: The updated stock data with earnings information.
+    """
+    try:
+        # Sort earnings dates
+        earnings_dates = sorted([datetime.strptime(d, '%Y-%m-%d').date() for d in earnings_info.keys()])
+
+        # Sort stock data by date
+        stock_data.sort(key=lambda x: x['date'])
+
+        # Create a dictionary of earnings calendar data for quick lookup
+        earnings_calendar_dict = {datetime.strptime(event['reportDate'], '%Y-%m-%d').date(): event for event in
+                                  earnings_calendar}
+
+        last_earnings_date = None
+        next_earnings_date = None
+        next_earnings_estimated_eps = None
+
+        for record in stock_data:
+            record_date = record['date']
+
+            if not isinstance(record_date, date):
+                logger.warning(f"Record date {record_date} is not a date object. Attempting to convert.")
+                try:
+                    record_date = datetime.strptime(str(record_date), '%Y-%m-%d').date()
+                except ValueError:
+                    logger.error(f"Unable to convert record date {record_date} to date object. Skipping this record.")
+                    continue
+
+            # Find the last earnings date before or on the current record date
+            while earnings_dates and earnings_dates[0] <= record_date:
+                last_earnings_date = earnings_dates.pop(0)
+
+            # Find the next earnings date after the current record date
+            next_earnings_date = next((date for date in earnings_dates if date > record_date), None)
+
+            # Get earnings data for the last earnings date
+            if last_earnings_date:
+                current_earnings = earnings_info[last_earnings_date.strftime('%Y-%m-%d')]
+                record.update({
+                    'reported_eps': current_earnings.get('reported_eps'),
+                    'estimated_eps': current_earnings.get('estimated_eps'),
+                    'eps_surprise': current_earnings.get('surprise'),
+                    'eps_surprise_percentage': current_earnings.get('surprise_percentage')
+                })
+            else:
+                record.update({
+                    'reported_eps': None,
+                    'estimated_eps': None,
+                    'eps_surprise': None,
+                    'eps_surprise_percentage': None
+                })
+
+            # Get next earnings estimated EPS from earnings calendar if available
+            if next_earnings_date in earnings_calendar_dict:
+                next_earnings_estimated_eps = safe_float(earnings_calendar_dict[next_earnings_date].get('estimate'))
+
+            elif next_earnings_date:
+                next_earnings_estimated_eps = earnings_info[next_earnings_date.strftime('%Y-%m-%d')].get(
+                    'estimated_eps')
+            else:
+                next_earnings_estimated_eps = None
+
+            # Add earnings dates and next estimated EPS
+            record['last_earnings_date'] = last_earnings_date
+            record['next_earnings_date'] = next_earnings_date
+            record['next_earnings_estimated_eps'] = next_earnings_estimated_eps
+
+        return stock_data
+
+    except Exception as e:
+        logger.error(f"Error in apply_earnings_data: {str(e)}")
+        return stock_data
+
+
+def process_earnings_data(earnings_data: Dict[str, Any], earnings_calendar: List[Dict[str, Any]]) -> Dict[
+    str, Dict[str, Any]]:
+    """
+    Processes earnings data and earnings calendar to create a unified earnings information dictionary.
+
+    Args:
+        earnings_data (Dict[str, Any]): The earnings data from the EARNINGS endpoint.
+        earnings_calendar (List[Dict[str, Any]]): The earnings calendar data.
+
+    Returns:
+        Dict[str, Dict[str, Any]]: A dictionary with dates as keys and earnings information as values.
+    """
+    earnings_info = {}
+
+    # Process quarterly earnings
+    for quarter in earnings_data['quarterlyEarnings']:
+        date = quarter['fiscalDateEnding']
+        earnings_info[date] = {
+            'reported_eps': quarter['reportedEPS'],
+            'estimated_eps': quarter['estimatedEPS'],
+            'surprise': quarter['surprise'],
+            'surprise_percentage': quarter['surprisePercentage']
+        }
+
+    # Add information from earnings calendar
+    for event in earnings_calendar:
+        date = event['reportDate']
+        if date not in earnings_info:
+            earnings_info[date] = {}
+            earnings_info[date].update({
+            'estimated_eps': safe_float(event['estimate'])
+        })
+
+    return earnings_info
 
 def get_market_index_performance(date: datetime, index_data_cache: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
     """
@@ -465,8 +636,6 @@ def generate_enriched_stock_data(start_date: datetime, end_date: datetime, stock
         'UTILITIES': 'XLU',
         'LIFE SCIENCES': 'XLP',  # Mapped to Consumer Staples for PG
         'ENERGY & TRANSPORTATION': 'XLE',  # Mapped to Energy
-
-
     }
 
     sector_etf_data_cache = {}
@@ -476,11 +645,17 @@ def generate_enriched_stock_data(start_date: datetime, end_date: datetime, stock
         if etf_data:
             sector_etf_data_cache[etf_symbol] = etf_data
 
+    enriched_data = []
+
     for stock in stocks_to_pull:
         logger.info(f"Fetching data for {stock}...")
         stock_data = fetch_time_series_data(stock)
         technical_indicators = fetch_technical_indicators(stock)
         company_overview = fetch_company_overview(stock)
+        # Fetch earnings data
+        earnings_data = fetch_earnings_data(stock)
+        earnings_calendar = fetch_earnings_calendar(stock)
+        earnings_info = process_earnings_data(earnings_data, earnings_calendar)
 
         if not stock_data or not company_overview:
             continue
@@ -499,6 +674,8 @@ def generate_enriched_stock_data(start_date: datetime, end_date: datetime, stock
         market_performance_cache = {}
         options_data_cache = {}
         sentiment_score_cache = {}
+
+        stock_records = []
 
         for date_str in sorted_dates:
             date = datetime.strptime(date_str, '%Y-%m-%d')
@@ -565,8 +742,19 @@ def generate_enriched_stock_data(start_date: datetime, end_date: datetime, stock
                 'unemployment_rate': economic_indicators['unemployment_rate'],
                 'put_call_ratio': options_data['put_call_ratio'],
                 'implied_volatility': options_data['implied_volatility'],
-                'sector_performance': sector_performance
+                'sector_performance': sector_performance,
+                'reported_eps': None,
+                'estimated_eps': None,
+                'eps_surprise': None,
+                'eps_surprise_percentage': None,
+                'next_earnings_date': None
             }
-            enriched_data.append(enriched_record)
+            stock_records.append(enriched_record)
+
+        # Apply earnings data to stock records
+        stock_records = apply_earnings_data(stock_records, earnings_info, earnings_calendar)
+
+        # Add processed records to enriched_data
+        enriched_data.extend(stock_records)
 
     return enriched_data

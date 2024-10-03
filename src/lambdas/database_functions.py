@@ -80,14 +80,12 @@ def get_table_data_types(engine: Engine, table: str, schema: Optional[str] = Non
     query = f"""
         SELECT column_name, data_type
         FROM information_schema.columns
-        WHERE table_name = :table
+        WHERE table_name = '{table}'
     """
-    params = {"table": table}
     if schema:
-        query += " AND table_schema = :schema"
-        params["schema"] = schema
+        query += f" AND table_schema = {schema}"
 
-    return fetch_dataframe(engine, text(query).bindparams(**params))
+    return fetch_dataframe(engine, query)
 
 
 def match_db_data_types_to_pandas(df: pd.DataFrame, engine: Engine, table: str,
@@ -173,7 +171,7 @@ def upsert_df(df, table_name, upsert_id, postgres_connection, json_columns=[], a
         return connection.execute(text(query)).scalar()
 
     if auto_match_platform is not None:
-        df = match_db_data_types_to_pandas(df.copy(), table_name, platform=auto_match_platform, schema=auto_match_schema)
+        df = match_db_data_types_to_pandas(df.copy(), postgres_connection, table_name, schema=auto_match_schema)
 
     con = postgres_connection.connect()
 
