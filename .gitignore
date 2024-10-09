@@ -45,7 +45,7 @@ htmlcov/
 airflow_dags/airflow.db
 airflow_dags/logs/
 /.env
-/src/airflow_dags/config/airflow.cfg
+/src/airflow/config/airflow.cfg
 /config/settings.yaml
 /repo_structure.txt
 /.idea

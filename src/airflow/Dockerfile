@@ -15,6 +15,9 @@ RUN pip install psycopg2-binary
 
 USER airflow
 
+RUN pip install apache-airflow-providers-postgres \
+    apache-airflow-providers-amazon
+
 # Copy the pyproject.toml and poetry.lock files
 COPY pyproject.toml ./
 
