@@ -4,8 +4,10 @@ import os
 import json
 from config import OPENAI_API_KEY, ANTHROPIC_API_KEY
 import ast
-import anthropic
+import os
 import time
+import logging
+from anthropic import Anthropic, RateLimitError, APIError
 
 def execute_chatgpt_call(user_input, system_prompt, data=None):
     # Create an OpenAI client
@@ -23,7 +25,7 @@ def execute_chatgpt_call(user_input, system_prompt, data=None):
 
         # Make the API call to the OpenAI Chat Completion endpoint
         response = client.chat.completions.create(
-            model="gpt-4o-mini",  # Use a valid model name
+            model="gpt-4o",  # Use a valid model name
             messages=messages,
             temperature=0.3,
             max_tokens=1000,
@@ -151,16 +153,10 @@ FOR USING ANTHROPIC API FOR CACHING PROMPTS
 
 """
 
-import os
-import time
-import logging
-from anthropic import Anthropic, RateLimitError, APIError
-
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Initialize the Anthropic client with the beta header
-ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
 client = Anthropic(
     api_key=ANTHROPIC_API_KEY,
     default_headers={"anthropic-beta": "prompt-caching-2024-07-31"}

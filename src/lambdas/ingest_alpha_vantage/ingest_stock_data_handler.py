@@ -68,9 +68,9 @@ if __name__ == "__main__":
     # This section demonstrates how to use the lambda function locally
     example_event = {
         'body': json.dumps({
-            'stocks': ['KO', 'JNJ', 'PG', 'PEP', 'WMT', 'XOM', 'GIS', 'MCD', 'CL', 'MMM'],
-            'start_date': '2022-01-01',
-            'end_date': '2023-10-31'
+            'stocks': ['PG'],
+            'start_date': '2015-01-01',
+            'end_date': '2017-01-01'
         })
     }
 

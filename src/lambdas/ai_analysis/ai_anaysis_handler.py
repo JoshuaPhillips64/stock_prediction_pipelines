@@ -114,11 +114,13 @@ def lambda_handler(event, context):
 # For local testing
 if __name__ == "__main__":
     test_event = {
-        'stock_symbols': ['PG'],
+        'stock_symbols': ['KO', 'JNJ', 'PG', 'PEP', 'WMT', 'XOM', 'GIS', 'MCD', 'CL', 'MMM'],
         'analysis_dates': [
-            '2024-06-29',
-            '2024-07-28',
-            '2024-05-27',
+            '2024-06-15',
+            '2024-07-15',
+            '2024-08-15',
+            '2024-09-15',
+            '2024-10-01',
 
         ]
     }

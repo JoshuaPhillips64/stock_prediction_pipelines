@@ -7,6 +7,7 @@ authors = ["Josh Phillips <you@example.com>"]
 [tool.poetry.dependencies]
 python = "3.12.5"
 apache-airflow = "2.10.1"
+psycopg2-binary = "2.9.9"
 #apache-airflow-providers-openlineage = "1.11.0"
 
 [tool.poetry.dev-dependencies]
