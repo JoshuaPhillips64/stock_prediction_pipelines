@@ -50,6 +50,7 @@ if [ "$1" = "webserver" ]; then
     exec_command airflow webserver
 elif [ "$1" = "scheduler" ]; then
     wait_for_postgres
+    airflow_init
     exec_command airflow scheduler
 else
     exec_command "$@"

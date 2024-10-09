@@ -1,85 +1,121 @@
 from airflow import DAG
-from airflow.utils.dates import days_ago
-from airflow.operators.python import BranchPythonOperator
-from airflow.providers.amazon.aws.operators.lambda_function import LambdaInvokeFunctionOperator
-from airflow.providers.http.operators.http import SimpleHttpOperator
-import os
+from airflow.operators.python import PythonOperator
+from airflow.utils.task_group import TaskGroup
+from airflow.hooks.postgres_hook import PostgresHook
+from datetime import datetime, timedelta
+import boto3
+from datetime import datetime, timedelta
+import time
 
+# Default arguments for the DAG
 default_args = {
     'owner': 'airflow',
+    'depends_on_past': False,
+    'start_date': datetime(2024, 10, 1),
+    'email_on_failure': False,
+    'email_on_retry': False,
+    'retries': 1,
+    'retry_delay': timedelta(minutes=5),
 }
 
-def choose_operator(**kwargs):
-    environment = os.getenv('ENVIRONMENT', 'production')
-    if environment == 'local':
-        return 'ingest_alpha_vantage_http'
-    else:
-        return 'ingest_alpha_vantage_lambda'
+# Set yesterday's date dynamically
+yesterday = datetime.now - timedelta(1).strftime('%Y-%m-%d')
 
-def choose_enrich_operator(**kwargs):
-    environment = os.getenv('ENVIRONMENT', 'production')
-    if environment == 'local':
-        return 'enrich_stock_data_http'
-    else:
-        return 'enrich_stock_data_lambda'
+# Stock tickers and the corresponding default date (yesterday) for Lambda invocations
+stock_inputs = [
+    {'ticker': 'AAPL', 'date': yesterday},
+    {'ticker': 'MSFT', 'date': yesterday},
+    {'ticker': 'GOOGL', 'date': yesterday},
+    {'ticker': 'AMZN', 'date': yesterday},
+    {'ticker': 'TSLA', 'date': yesterday},
+    {'ticker': 'META', 'date': yesterday},
+    {'ticker': 'JNJ', 'date': yesterday},
+    {'ticker': 'PEP', 'date': yesterday},
+    {'ticker': 'KO', 'date': yesterday},
+    {'ticker': 'WMT', 'date': yesterday}
+]
 
+
+# Function to invoke the Lambda function with stock ticker and date as input
+def invoke_lambda_function(stock_ticker, date, **kwargs):
+    client = boto3.client('lambda')
+
+    payload = {
+        'ticker': stock_ticker,
+        'date': date
+    }
+
+    response = client.invoke(
+        FunctionName='your-lambda-function-name',
+        InvocationType='RequestResponse',  # synchronous invocation
+        Payload=bytes(str(payload), encoding='utf-8')
+    )
+
+    response_payload = response['Payload'].read()
+    print(f'Lambda response for {stock_ticker}: {response_payload}')
+
+    # Simulate storing the response for later monitoring
+    return response_payload
+
+
+# Function to monitor the completion of all Lambda invocations and query the PostgreSQL database
+def monitor_lambdas_completion(**kwargs):
+    # Pull the XCom data for all Lambda invocations
+    stock_tickers = kwargs['ti'].xcom_pull(task_ids=[f'invoke_lambda_{stock["ticker"]}' for stock in stock_inputs])
+
+    # Check the responses for each stock
+    all_completed = True
+    for ticker, ticker_response in zip([stock['ticker'] for stock in stock_inputs], stock_tickers):
+        if not ticker_response:
+            print(f"Lambda invocation for {ticker} not completed yet.")
+            all_completed = False
+        else:
+            print(f"Lambda invocation for {ticker} completed successfully.")
+
+    # If all Lambda invocations were successful, check the PostgreSQL table for each stock ticker
+    if all_completed:
+        pg_hook = PostgresHook(postgres_conn_id='your_postgres_conn_id')  # Ensure connection is set in Airflow UI
+        for stock in stock_inputs:
+            sql = """
+            SELECT * FROM enriched_stock_data
+            WHERE stock = %s
+            ORDER BY date DESC
+            LIMIT 1;  # Get the most recent record
+            """
+            result = pg_hook.get_first(sql, parameters=(stock['ticker'],))
+            if result:
+                print(f"Most recent record for {stock['ticker']}: {result}")
+            else:
+                print(f"No data found for {stock['ticker']} in enriched_stock_data.")
+    else:
+        raise ValueError("Not all Lambda invocations completed successfully.")
+
+
+# Define the DAG
 with DAG(
-    'data_ingestion_dag',
-    default_args=default_args,
-    description='DAG for ingesting data from various sources into PostgreSQL',
-    schedule_interval='@hourly',
-    start_date=days_ago(1),
-    tags=['ingestion'],
+        'lambda_batch_invoke_dag',
+        default_args=default_args,
+        description='Invoke Lambda for 10 stock tickers, query PostgreSQL, and monitor completion',
+        schedule_interval='0 1 * * *',  # Every day at 1 AM CST
+        catchup=False,
 ) as dag:
+    # Task Group to invoke 10 Lambdas in parallel
+    with TaskGroup('invoke_lambdas') as invoke_lambdas_group:
+        for stock in stock_inputs:
+            # Create a PythonOperator for each Lambda invocation
+            invoke_lambda_task = PythonOperator(
+                task_id=f'invoke_lambda_{stock["ticker"]}',
+                python_callable=invoke_lambda_function,
+                op_kwargs={'stock_ticker': stock['ticker'], 'date': stock['date']},
+                provide_context=True
+            )
 
-    # Task to choose the ingestion method
-    choose_task = BranchPythonOperator(
-        task_id='choose_operator',
-        python_callable=choose_operator,
+    # Task to monitor completion of all Lambda invocations and query PostgreSQL
+    monitor_completion_task = PythonOperator(
+        task_id='monitor_lambdas_completion',
+        python_callable=monitor_lambas_completion,
+        provide_context=True
     )
 
-    # Task for ingesting via Lambda
-    ingest_alpha_vantage_lambda = LambdaInvokeFunctionOperator(
-        task_id='ingest_alpha_vantage_lambda',
-        function_name='ingest_alpha_vantage_function_name',  # Replace with your Lambda function name
-        invocation_type='RequestResponse',
-    )
-
-    # Task for ingesting via HTTP
-    ingest_alpha_vantage_http = SimpleHttpOperator(
-        task_id='ingest_alpha_vantage_http',
-        method='POST',
-        http_conn_id='ingest_alpha_vantage_service',
-        endpoint='/invoke',
-        data='{}',
-        headers={"Content-Type": "application/json"},
-    )
-
-    # Task to choose between Lambda or HTTP for enriching stock data
-    choose_enrich_task = BranchPythonOperator(
-        task_id='choose_enrich_operator',
-        python_callable=choose_enrich_operator,
-    )
-
-    # New task for enriching stock data via Lambda
-    enrich_stock_data_lambda = LambdaInvokeFunctionOperator(
-        task_id='enrich_stock_data_lambda',
-        function_name='enrich_stock_data_function_name',  # Replace with your Lambda function name
-        invocation_type='RequestResponse',
-    )
-
-    # New task for enriching stock data via HTTP
-    enrich_stock_data_http = SimpleHttpOperator(
-        task_id='enrich_stock_data_http',
-        method='POST',
-        http_conn_id='enrich_stock_data_service',
-        endpoint='/invoke',
-        data='{}',
-        headers={"Content-Type": "application/json"},
-    )
-
-    # Define task dependencies
-    choose_task >> [ingest_alpha_vantage_lambda, ingest_alpha_vantage_http]
-    ingest_alpha_vantage_lambda >> choose_enrich_task
-    ingest_alpha_vantage_http >> choose_enrich_task
-    choose_enrich_task >> [enrich_stock_data_lambda, enrich_stock_data_http]
+    # Set task dependencies
+    invoke_lambdas_group >> monitor_completion_task
