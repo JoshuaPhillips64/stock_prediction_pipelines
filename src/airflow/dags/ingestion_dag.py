@@ -19,7 +19,7 @@ default_args = {
 }
 
 # Set yesterday's date dynamically
-yesterday = datetime.now - timedelta(1).strftime('%Y-%m-%d')
+yesterday = (datetime.now() - timedelta(1)).strftime('%Y-%m-%d')
 
 # Stock tickers and the corresponding default date (yesterday) for Lambda invocations
 stock_inputs = [
