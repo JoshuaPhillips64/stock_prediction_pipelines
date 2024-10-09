@@ -27,6 +27,11 @@ openai = "1.39.0"
 anthropic = "0.34.2"
 statsmodels = "0.14.0"
 plotly = "5.17.0"
+xgboost = "2.1.1"
+lightgbm = "4.5.0"
+imblearn = "0.0"
+
+
 
 # The second file doesn't specify a version for flask so using the first file's version
 flask = "2.2.5"

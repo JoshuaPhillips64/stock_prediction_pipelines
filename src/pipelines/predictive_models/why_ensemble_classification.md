@@ -12,8 +12,6 @@ LightGBM is efficient with high-dimensional data and handles categorical feature
 The soft voting mechanism allows for nuanced predictions based on probability outputs from both models.
 
 
-
-
 Comprehensive Feature Engineering
 
 The model incorporates a wide range of engineered features.
