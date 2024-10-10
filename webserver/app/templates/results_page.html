@@ -1,0 +1,179 @@
+<html><head><base href="results?modelType=SARIMAX&stockSymbol=&inputDate=&hyperparameterTuning=MEDIUM&featureSet=advanced&lookbackPeriod=720&predictionHorizon=30">
+<title>StockSage AI - Prediction Results</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    :root {
+        --primary-color: #2c3e50;
+        --secondary-color: #3498db;
+        --accent-color: #e74c3c;
+        --background-color: #f8f9fa;
+        --text-color: #34495e;
+        --border-radius: 8px;
+    }
+    body {
+        font-family: 'Poppins', sans-serif;
+        line-height: 1.6;
+        color: var(--text-color);
+        margin: 0;
+        padding: 0;
+        background-color: var(--background-color);
+    }
+    header {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        padding: 1rem;
+        text-align: center;
+    }
+    .logo {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        font-weight: 600;
+    }
+    .logo i {
+        margin-right: 10px;
+    }
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+    .results-header {
+        background-color: white;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .results-header h2 {
+        margin-bottom: 0.5rem;
+    }
+    .results-content {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+    }
+    .chart-container, .metrics-container {
+        background-color: white;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .metrics-list {
+        list-style-type: none;
+        padding: 0;
+    }
+    .metrics-list li {
+        margin-bottom: 1rem;
+        padding: 0.5rem;
+        background-color: #f1f8ff;
+        border-radius: var(--border-radius);
+    }
+    .metric-label {
+        font-weight: 600;
+        color: var(--primary-color);
+    }
+    .metric-value {
+        float: right;
+        font-weight: 400;
+    }
+    .back-btn {
+        display: inline-block;
+        margin-top: 2rem;
+        padding: 0.5rem 1rem;
+        background-color: var(--secondary-color);
+        color: white;
+        text-decoration: none;
+        border-radius: var(--border-radius);
+        transition: background-color 0.3s ease;
+    }
+    .back-btn:hover {
+        background-color: var(--primary-color);
+    }
+    @media (max-width: 768px) {
+        .results-content {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <i class="fas fa-chart-line"></i>
+            <span>StockSage AI</span>
+        </div>
+    </header>
+    <div class="container">
+        <div class="results-header">
+            <h2>Stock Prediction Results</h2>
+            <p>Here are the results of your stock prediction model:</p>
+        </div>
+        <div class="results-content">
+            <div class="chart-container">
+                <h3>Price Prediction Chart</h3>
+                <canvas id="predictionChart"></canvas>
+            </div>
+            <div class="metrics-container">
+                <h3>Model Metrics</h3>
+                <ul class="metrics-list">
+                    <li><span class="metric-label">Model Type:</span> <span class="metric-value">SARIMAX</span></li>
+                    <li><span class="metric-label">Stock Symbol:</span> <span class="metric-value">N/A (not provided)</span></li>
+                    <li><span class="metric-label">Input Date:</span> <span class="metric-value">N/A (not provided)</span></li>
+                    <li><span class="metric-label">Hyperparameter Tuning:</span> <span class="metric-value">MEDIUM</span></li>
+                    <li><span class="metric-label">Feature Set:</span> <span class="metric-value">Advanced</span></li>
+                    <li><span class="metric-label">Lookback Period:</span> <span class="metric-value">720 days</span></li>
+                    <li><span class="metric-label">Prediction Horizon:</span> <span class="metric-value">30 days</span></li>
+                    <li><span class="metric-label">Mean Absolute Error:</span> <span class="metric-value">2.34</span></li>
+                    <li><span class="metric-label">Root Mean Squared Error:</span> <span class="metric-value">3.12</span></li>
+                    <li><span class="metric-label">R-squared:</span> <span class="metric-value">0.87</span></li>
+                </ul>
+            </div>
+        </div>
+        <a href="/" class="back-btn">Back to Model Generator</a>
+    </div>
+
+    <script>
+        // Sample data for the chart
+        const labels = Array.from({length: 30}, (_, i) => `Day ${i+1}`);
+        const actualPrices = Array.from({length: 30}, () => Math.random() * 100 + 100);
+        const predictedPrices = actualPrices.map(price => price + (Math.random() - 0.5) * 10);
+
+        // Create the chart
+        const ctx = document.getElementById('predictionChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Actual Price',
+                    data: actualPrices,
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1
+                }, {
+                    label: 'Predicted Price',
+                    data: predictedPrices,
+                    borderColor: 'rgb(255, 99, 132)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Stock Price Prediction'
+                    },
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false
+                    }
+                }
+            }
+        });
+    </script>
+</body></html>

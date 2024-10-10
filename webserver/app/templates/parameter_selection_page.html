@@ -1,0 +1,540 @@
+<html><head><base href="https://www.stockpredictionmodel.com/"><title>StockSage AI - Advanced Stock Prediction Model</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+<style>
+    :root {
+        --primary-color: #2c3e50;
+        --secondary-color: #3498db;
+        --accent-color: #e74c3c;
+        --background-color: #f8f9fa;
+        --text-color: #34495e;
+        --border-radius: 8px;
+    }
+    body {
+        font-family: 'Poppins', sans-serif;
+        line-height: 1.6;
+        color: var(--text-color);
+        margin: 0;
+        padding: 0;
+        background-color: var(--background-color);
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Cpath opacity='.5' d='M96 95h4v1h-4v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9zm-1 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9z'/%3E%3Cpath d='M6 5V0H5v5H0v1h5v94h1V6h94V5H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+    
+    header {
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      padding: 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+    
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .logo, .logo span {
+        color: white;
+    }
+    
+    .logo {
+        display: flex;
+        align-items: center;
+        font-size: 1.5rem;
+        font-weight: 600;
+        transition: transform 0.3s ease;
+    }
+    
+    .logo:hover {
+        transform: scale(1.05);
+    }
+    
+    nav ul {
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+    }
+    
+    nav ul li {
+        margin: 0 15px;
+    }
+    
+    nav ul li a {
+        color: white;
+        text-decoration: none;
+        font-weight: 500;
+        position: relative;
+        transition: color 0.3s ease;
+    }
+    
+    nav ul li a::after {
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 2px;
+        bottom: -5px;
+        left: 0;
+        background-color: var(--accent-color);
+        transform: scaleX(0);
+        transition: transform 0.3s ease;
+    }
+    
+    nav ul li a:hover {
+        color: var(--secondary-color);
+    }
+    
+    nav ul li a:hover::after {
+        transform: scaleX(1);
+    }
+    
+    .container-flex {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 20px;
+        padding: 15px;
+        margin-top: 10px;
+    }
+
+    .left-container, .right-container {
+        flex: 1;
+        background-color: #fff;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        padding: 20px;
+        max-height: calc(100vh - 100px);
+        overflow-y: auto;
+    }
+
+    .how-to-content {
+        font-size: 1.1em;
+        line-height: 1.6;
+    }
+
+    .how-to-content ol, .how-to-content ul {
+        padding-left: 20px;
+    }
+
+    .how-to-content li {
+        margin-bottom: 10px;
+    }
+
+    h1, h2 {
+        color: var(--primary-color);
+    }
+    
+    .summary {
+        padding: 10px;
+        margin-bottom: 15px;
+    }
+    
+    .option-group {
+        margin-bottom: 10px;
+    }
+    
+    label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        color: var(--primary-color);
+    }
+    
+    select, input[type="text"], input[type="date"], input[type="number"] {
+        width: 100%;
+        padding: 8px;
+        margin-bottom: 5px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 16px;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        appearance: none;
+        background-color: #fff;
+    }
+    
+    select {
+        background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23007CB2%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
+        background-repeat: no-repeat;
+        background-position: right 12px top 50%;
+        background-size: 12px auto;
+        padding-right: 30px;
+    }
+    
+    select:focus, input:focus {
+        outline: none;
+        border-color: var(--secondary-color);
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+    }
+    
+    .info-icon {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        background-color: var(--secondary-color);
+        color: #fff;
+        border-radius: 50%;
+        text-align: center;
+        line-height: 20px;
+        margin-left: 5px;
+        cursor: help;
+        font-size: 14px;
+    }
+    
+    .tooltip {
+        display: none;
+        background-color: #fff;
+        border: 1px solid #ddd;
+        padding: 10px;
+        border-radius: var(--border-radius);
+        position: absolute;
+        z-index: 1;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        max-width: 300px;
+    }
+    
+    .info-icon:hover + .tooltip {
+        display: block;
+    }
+    
+    .generate-btn {
+        background-color: var(--accent-color);
+        color: #fff;
+        padding: 12px 24px;
+        border: none;
+        border-radius: var(--border-radius);
+        cursor: pointer;
+        font-size: 18px;
+        font-weight: 500;
+        transition: background-color 0.3s ease, transform 0.1s ease;
+        position: relative;
+        overflow: hidden;
+        margin-top: 10px;
+    }
+    
+    .generate-btn::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 5px;
+        height: 5px;
+        background: rgba(255, 255, 255, 0.5);
+        opacity: 0;
+        border-radius: 100%;
+        transform: scale(1, 1) translate(-50%);
+        transform-origin: 50% 50%;
+    }
+    
+    @keyframes ripple {
+        0% {
+            transform: scale(0, 0);
+            opacity: 1;
+        }
+        20% {
+            transform: scale(25, 25);
+            opacity: 1;
+        }
+        100% {
+            opacity: 0;
+            transform: scale(40, 40);
+        }
+    }
+    
+    .generate-btn:focus:not(:active)::after {
+        animation: ripple 1s ease-out;
+    }
+    
+    .generate-btn:hover {
+        background-color: #c0392b;
+        transform: translateY(-2px);
+    }
+    
+    .generate-btn:active {
+        transform: translateY(0);
+    }
+    
+    footer {
+        background-color: var(--primary-color);
+        color: #fff;
+        text-align: center;
+        padding: 20px 0;
+        margin-top: 40px;
+    }
+    
+    .back-to-top {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: var(--accent-color);
+      color: #fff;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-decoration: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    
+    .back-to-top.visible {
+      opacity: 1;
+    }
+    
+    @media (max-width: 768px) {
+        .header-content {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        nav ul {
+            margin-top: 15px;
+        }
+        .container-flex {
+            flex-direction: column;
+            padding: 20px;
+        }
+        .left-container, .right-container {
+            max-height: none;
+        }
+    }
+
+    /* Add these styles to reduce vertical spacing */
+    .summary-content {
+        padding: 0 18px;
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.2s ease-out;
+        background-color: #f1f1f1;
+    }
+
+    .collapsible {
+        background-color: var(--secondary-color);
+        color: white;
+        cursor: pointer;
+        padding: 10px;
+        width: 100%;
+        border: none;
+        text-align: left;
+        outline: none;
+        font-size: 15px;
+    }
+
+    .collapsible:after {
+        content: '\002B';
+        color: white;
+        font-weight: bold;
+        float: right;
+        margin-left: 5px;
+    }
+
+    .active:after {
+        content: "\2212";
+    }
+
+    .question-mark {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        background-color: var(--secondary-color);
+        color: white;
+        border-radius: 50%;
+        text-align: center;
+        line-height: 16px;
+        margin-left: 5px;
+        font-size: 12px;
+        cursor: help;
+    }
+</style>
+</head>
+<body>
+    <header>
+        <div class="wrapper">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-chart-line"></i>
+                    <span>StockSage AI</span>
+                </div>
+                <nav>
+                    <ul>
+                        <li><a href="#home">Home</a></li>
+                        <li><a href="#about">About</a></li>
+                        <li><a href="#contact">Contact</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </header>
+    <div class="wrapper">
+        <div class="container-flex" id="home">
+            <div class="left-container">
+                <h2>How to Use Our Stock Prediction Model</h2>
+                <div class="how-to-content">
+                    <p>Welcome to StockSage AI's advanced Stock Prediction Model Generator. Follow these simple steps to create your customized prediction:</p>
+                    <ol>
+                        <li>Choose your preferred model type from the dropdown menu on the right.</li>
+                        <li>Enter the stock symbol you want to analyze (e.g., AAPL for Apple Inc.).</li>
+                        <li>Select the input date for your prediction.</li>
+                        <li>Choose the level of hyperparameter tuning. Higher levels may improve accuracy but take longer to process.</li>
+                        <li>Select a feature set. Advanced features include more complex technical indicators and market sentiment data.</li>
+                        <li>Set the lookback period (historical data used for training) and prediction horizon (days to forecast).</li>
+                        <li>Click the "GENERATE" button to create your prediction model.</li>
+                    </ol>
+                    <p>After generating, you'll receive a comprehensive analysis of your chosen stock, including:</p>
+                    <ul>
+                        <li>Detailed price predictions</li>
+                        <li>Trend indicators</li>
+                        <li>Confidence intervals</li>
+                        <li>Visual representations of forecast data</li>
+                    </ul>
+                    <p>Note: Processing time may vary based on your selected options. More complex models and longer prediction horizons will take more time to generate.</p>
+                </div>
+            </div>
+            <div class="right-container">
+                <h2>Create Your Predictive Stock Model</h2>
+                <form id="predictionForm">
+                    <div class="option-group">
+                        <label for="modelType">Model Type <span class="question-mark" title="SARIMAX is best for time series forecasting, while Binary Classification predicts whether the stock will go up or down.">?</span></label>
+                        <select id="modelType" name="modelType">
+                            <option value="SARIMAX">SARIMAX</option>
+                            <option value="BINARY CLASSIFICATION">Binary Classification</option>
+                        </select>
+                    </div>
+
+                    <div class="option-group">
+                        <label for="stockSymbol">Stock Symbol <span class="question-mark" title="Enter the stock symbol, e.g., AAPL for Apple Inc.">?</span></label>
+                        <input type="text" id="stockSymbol" name="stockSymbol" placeholder="e.g., AAPL">
+                    </div>
+
+                    <div class="option-group">
+                        <label for="inputDate">Input Date <span class="question-mark" title="Select the date for the prediction.">?</span></label>
+                        <input type="date" id="inputDate" name="inputDate">
+                    </div>
+
+                    <div class="option-group">
+                        <label for="hyperparameterTuning">Hyperparameter Tuning <span class="question-mark" title="Higher levels of tuning may improve model accuracy but will take longer to process.">?</span></label>
+                        <select id="hyperparameterTuning" name="hyperparameterTuning">
+                            <option value="LOW">Low</option>
+                            <option value="MEDIUM" selected>Medium</option>
+                            <option value="HIGH">High</option>
+                        </select>
+                    </div>
+
+                    <div class="option-group">
+                        <label for="featureSet">Feature Set <span class="question-mark" title="Advanced features include more complex technical indicators and market sentiment data.">?</span></label>
+                        <select id="featureSet" name="featureSet">
+                            <option value="basic">Basic</option>
+                            <option value="technical">Technical</option>
+                            <option value="advanced" selected>Advanced</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                    </div>
+
+                    <div class="option-group">
+                        <label for="lookbackPeriod">Lookback Period (days) <span class="question-mark" title="The number of historical days used for training the model.">?</span></label>
+                        <input type="number" id="lookbackPeriod" name="lookbackPeriod" value="720" min="1">
+                    </div>
+
+                    <div class="option-group">
+                        <label for="predictionHorizon">Prediction Horizon (days) <span class="question-mark" title="The number of days into the future to predict.">?</span></label>
+                        <input type="number" id="predictionHorizon" name="predictionHorizon" value="30" min="1">
+                    </div>
+
+                    <button type="submit" class="generate-btn">GENERATE</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="wrapper">
+            <p>&copy; 2023 StockSage AI. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <a href="#" class="back-to-top" id="backToTop">
+        <i class="fas fa-chevron-up"></i>
+    </a>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', (event) => {
+        const form = document.getElementById('predictionForm');
+        const aboutSection = document.getElementById('about');
+        const homeSection = document.getElementById('home');
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData(form);
+            const queryString = new URLSearchParams(formData).toString();
+            window.location.href = `results?${queryString}`;
+        });
+
+        document.querySelector('a[href="#about"]').addEventListener('click', (e) => {
+            e.preventDefault();
+            homeSection.style.display = 'none';
+            aboutSection.style.display = 'block';
+        });
+
+        document.querySelector('a[href="#home"]').addEventListener('click', (e) => {
+            e.preventDefault();
+            homeSection.style.display = 'block';
+            aboutSection.style.display = 'none';
+        });
+
+        // Smooth scrolling
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // Back to top button
+        const backToTopButton = document.getElementById('backToTop');
+        window.addEventListener('scroll', () => {
+            if (window.pageYOffset > 300) {
+                backToTopButton.classList.add('visible');
+            } else {
+                backToTopButton.classList.remove('visible');
+            }
+        });
+
+        backToTopButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Loading indicator for generate button
+        const generateBtn = document.querySelector('.generate-btn');
+        generateBtn.addEventListener('click', () => {
+            generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+            generateBtn.disabled = true;
+            // Simulate loading (remove this in production)
+            setTimeout(() => {
+                generateBtn.innerHTML = 'GENERATE';
+                generateBtn.disabled = false;
+            }, 3000);
+        });
+
+        // Add this script for the collapsible summary
+        var coll = document.getElementsByClassName("collapsible");
+        var i;
+
+        for (i = 0; i < coll.length; i++) {
+            coll[i].addEventListener("click", function() {
+                this.classList.toggle("active");
+                var content = this.nextElementSibling;
+                if (content.style.maxHeight){
+                    content.style.maxHeight = null;
+                } else {
+                    content.style.maxHeight = content.scrollHeight + "px";
+                }
+            });
+        }
+    });
+    </script>
+</body></html>
