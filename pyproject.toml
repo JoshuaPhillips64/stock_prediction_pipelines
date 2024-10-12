@@ -9,7 +9,7 @@ authors = ["Josh Phillips <Josh.L.Phillips@me.com>"]
 in-project = true
 
 [tool.poetry.dependencies]
-python = "3.12.6"
+python = "3.12.5"
 python-dotenv = "^0.19.1"
 requests = "2.31.0"
 psycopg2-binary = "2.9.9"

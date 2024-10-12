@@ -12,6 +12,9 @@ DB_USER = os.getenv('DB_USER')
 DB_PASSWORD = os.getenv('DB_PASSWORD')
 DB_DATABASE = os.getenv('DB_DATABASE')
 
+# API URLs
+API_URL = os.getenv('API_URL')
+
 # API Keys
 ALPHA_VANTAGE_API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY')
 FRED_API_KEY = os.getenv('FRED_API_KEY')

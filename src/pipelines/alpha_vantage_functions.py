@@ -759,38 +759,74 @@ def generate_enriched_stock_data(start_date: datetime, end_date: datetime, stock
 
     return enriched_data
 
-def generate_basic_stock_data(symbol: str) -> List[Dict[str, Any]]:
+
+def generate_basic_stock_data(start_date: datetime, end_date: datetime, stocks_to_pull: List[str]) -> List[
+    Dict[str, Any]]:
     """
-    Generates basic stock data by fetching time series data for a given stock symbol.
+    Generates basic stock data by fetching time series data for the stock and enriching it with market index and economic indicators.
 
     Args:
-        symbol (str): The stock symbol to fetch data for.
+        start_date (datetime): The start date for fetching data.
+        end_date (datetime): The end date for fetching data.
+        stocks_to_pull (List[str]): List of stock symbols to process.
 
     Returns:
-        List[Dict[str, Any]]: A list of dictionaries containing basic stock data.
+        List[Dict[str, Any]]: A list of dictionaries containing basic stock data enriched with market index and economic indicators.
     """
-    logger.info(f"Fetching basic stock data for {symbol}...")
-    stock_data = fetch_time_series_data(symbol)
+    enriched_data = []
 
-    if not stock_data:
-        logger.error(f"No data found for symbol {symbol}")
-        return []
+    # Pre-fetch economic indicators to minimize API calls
+    logger.info("Fetching economic indicators data...")
+    economic_indicators_cache = {}
+    economic_indicators_cache['gdp'] = get_alpha_vantage_data("", "REAL_GDP", {"interval": "quarterly"}).get("data", [])
+    economic_indicators_cache['inflation'] = get_alpha_vantage_data("", "INFLATION", {"interval": "annual"}).get("data",
+                                                                                                                 [])
+    economic_indicators_cache['unemployment'] = get_alpha_vantage_data("", "UNEMPLOYMENT").get("data", [])
 
-    # Convert the stock data into a list of dictionaries with basic fields
-    basic_data = []
-    for date_str, data in stock_data.items():
-        try:
-            basic_record = {
-                'symbol': symbol,
-                'date': datetime.strptime(date_str, '%Y-%m-%d').date(),
-                'open': safe_float(data['1. open']),
-                'high': safe_float(data['2. high']),
-                'low': safe_float(data['3. low']),
-                'close': safe_float(data['4. close']),
-                'volume': safe_float(data['6. volume'])
+    # Cache for market index data
+    index_data_cache = {}
+    for index in ["SPY", "QQQ"]:
+        index_data = fetch_time_series_data(index)
+        if index_data:
+            index_data_cache[index] = index_data
+
+    for stock in stocks_to_pull:
+        logger.info(f"Fetching data for {stock}...")
+        stock_data = fetch_time_series_data(stock)
+
+        if not stock_data:
+            continue
+
+        # Get dates within the specified range
+        dates_in_range = [
+            date_str for date_str in stock_data.keys()
+            if start_date.date() <= datetime.strptime(date_str, '%Y-%m-%d').date() <= end_date.date()
+        ]
+        sorted_dates = sorted(dates_in_range, reverse=True)
+
+        for date_str in sorted_dates:
+            date = datetime.strptime(date_str, '%Y-%m-%d')
+
+            # Fetch market performance data
+            market_performance = get_market_index_performance(date, index_data_cache)
+
+            # Fetch economic indicators
+            economic_indicators = get_economic_indicators_cached(date, economic_indicators_cache)
+
+            enriched_record = {
+                'symbol': stock,
+                'date': date.date(),
+                'open': safe_float(stock_data[date_str]['1. open']),
+                'high': safe_float(stock_data[date_str]['2. high']),
+                'low': safe_float(stock_data[date_str]['3. low']),
+                'close': safe_float(stock_data[date_str]['4. close']),
+                'volume': safe_float(stock_data[date_str]['6. volume']),  # Adjusted for TIME_SERIES_DAILY_ADJUSTED
+                'sp500_return': market_performance['sp500_return'],
+                'nasdaq_return': market_performance['nasdaq_return'],
+                'gdp_growth': economic_indicators['gdp_growth'],
+                'inflation_rate': economic_indicators['inflation_rate'],
+                'unemployment_rate': economic_indicators['unemployment_rate']
             }
-            basic_data.append(basic_record)
-        except Exception as e:
-            logger.error(f"Error processing data for {symbol} on {date_str}: {e}")
+            enriched_data.append(enriched_record)
 
-    return basic_data
+    return enriched_data

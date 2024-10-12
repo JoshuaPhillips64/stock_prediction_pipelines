@@ -1,25 +1,73 @@
-# Import necessary libraries
+import json
 import pickle
 import pandas as pd
 import numpy as np
 import logging
-from database_functions import create_engine_from_url, fetch_dataframe, upsert_df
-from config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
-from aws_functions import pull_from_s3
 from datetime import datetime, timedelta
 import os
-from statsmodels.tsa.stattools import adfuller
-import warnings
 import tempfile
+import warnings
 
+# Suppress warnings
 warnings.filterwarnings("ignore")
+
+# AWS S3 and database functions (assumed to be available in your environment)
+from aws_functions import pull_from_s3
+from database_functions import create_engine_from_url, fetch_dataframe, upsert_df
+
+# Configuration variables (assumed to be available in your environment)
+from config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, S3_BUCKET_NAME
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Load the trained SARIMAX model from S3
-def load_model_from_s3(stock_symbol, s3_bucket_name, s3_folder=''):
-    model_file_name = f'sarimax_stock_prediction_model_{stock_symbol}.pkl'
+def lambda_handler(event, context):
+    # Parse input parameters from event payload
+    try:
+        body = json.loads(event['body'])
+        model_key = body.get('model_key')
+        stock_symbol = body.get('stock_symbol')
+        input_date = body.get('input_date')
+        hyperparameter_tuning = body.get('hyperparameter_tuning', 'MEDIUM')
+        feature_set = body.get('feature_set', 'advanced')
+        lookback_period = body.get('lookback_period', 720)
+        prediction_horizon = body.get('prediction_horizon', 30)
+    except Exception as e:
+        logging.error(f"Error parsing input parameters: {e}")
+        return {
+            'statusCode': 400,
+            'body': json.dumps('Invalid input parameters')
+        }
+
+    # Call the make_SARIMAX_prediction function
+    result = make_SARIMAX_prediction(
+        model_key=model_key,
+        stock_symbol=stock_symbol,
+        input_date=input_date,
+        hyperparameter_tuning=hyperparameter_tuning,
+        feature_set=feature_set,
+        lookback_period=lookback_period,
+        prediction_horizon=prediction_horizon
+    )
+
+    if result:
+        return {
+            'statusCode': 200,
+            'body': json.dumps('Prediction completed and logged successfully.')
+        }
+    else:
+        return {
+            'statusCode': 500,
+            'body': json.dumps('Prediction failed.')
+        }
+
+# Helper functions and updated make_SARIMAX_prediction function
+
+def load_model_from_s3(model_key, s3_bucket_name, s3_folder=''):
+    model_file_name = f'sarimax_model_{model_key}.pkl'
+
+    s3_bucket_name = 'trained-models-stock-prediction'
+    s3_folder = 'sarimax'
 
     # If folder name is provided, include it in the path
     s3_file_name = f'{s3_folder}/{model_file_name}' if s3_folder else model_file_name
@@ -29,7 +77,7 @@ def load_model_from_s3(stock_symbol, s3_bucket_name, s3_folder=''):
         with tempfile.TemporaryDirectory() as tmpdir:
             temp_model_location = os.path.join(tmpdir, model_file_name)
 
-            # Download the model from S3 using the `pull_from_s3` function you provided
+            # Download the model from S3 using the `pull_from_s3` function
             pull_from_s3(s3_bucket_name, s3_file_name, temp_model_location)
             logging.info(f"Model {model_file_name} downloaded from S3 successfully.")
 
@@ -46,30 +94,26 @@ def load_model_from_s3(stock_symbol, s3_bucket_name, s3_folder=''):
         return None
 
 def check_stationarity(df, column='log_return_1', alpha=0.05):
+    from statsmodels.tsa.stattools import adfuller
     logging.info("Checking stationarity of the time series...")
     result = adfuller(df[column].dropna())
     p_value = result[1]
     logging.info(f"ADF Statistic: {result[0]}, p-value: {p_value}")
     return p_value < alpha
 
-
-def preprocess_data(df):
+def preprocess_data(df, prediction_horizon):
     logging.info("Starting data preprocessing with stationarity check...")
     df = df.copy()
     df.sort_values('date', inplace=True)
-
-    # Ensure 'date' column is datetime
-    df['date'] = pd.to_datetime(df['date'])
-
     df.set_index('date', inplace=True)
     df.replace([np.inf, -np.inf], np.nan, inplace=True)
     df.dropna(subset=['close'], inplace=True)
     df.fillna(method='ffill', inplace=True)
 
-    # Calculate log return
-    df['log_return_30'] = np.log(df['close'].shift(-30) / df['close'])
+    # Calculate log return over prediction_horizon days
+    df['log_return_future'] = np.log(df['close'].shift(-prediction_horizon) / df['close'])
     df['log_return_1'] = np.log(df['close'] / df['close'].shift(1))
-    df.dropna(subset=['log_return_30'], inplace=True)
+    df.dropna(subset=['log_return_future'], inplace=True)
 
     # Perform differencing if the series is non-stationary
     if not check_stationarity(df, column='log_return_1'):
@@ -79,45 +123,26 @@ def preprocess_data(df):
     logging.info("Data preprocessing completed.")
     return df
 
-# Feature Engineering
 def engineer_additional_features(df):
     logging.info("Starting feature engineering...")
 
-    # Shift period to align features with the target variable
-    shift_period = 30
+    # Calculate technical indicators
+    df['sma_50'] = df['close'].rolling(window=50).mean()
+    df['sma_100'] = df['close'].rolling(window=100).mean()
+    df['ema_50'] = df['close'].ewm(span=50, adjust=False).mean()
 
-    # Shift features forward by shift_period to ensure only past data is used
-    feature_columns = df.columns.difference(['log_return_30'])
-    df[feature_columns] = df[feature_columns].shift(shift_period)
+    # Momentum indicators
+    df['momentum_30'] = df['close'].pct_change(periods=30)
+    df['momentum_60'] = df['close'].pct_change(periods=60)
 
-    # Drop original technical indicators to prevent data leakage
-    technical_indicators = ['macd', 'macd_signal', 'macd_hist', 'rsi', 'upper_band', 'lower_band', 'adx', 'implied_volatility', 'other_indicator']
-    df.drop(columns=[col for col in technical_indicators if col in df.columns], inplace=True)
+    # Calculate MACD
+    df = calculate_macd(df)
 
-    # Recalculate technical indicators using shifted data
-    # Shifted close, high, low prices
-    df['close_shifted'] = df['close'].shift(shift_period)
-    df['high_shifted'] = df['high'].shift(shift_period)
-    df['low_shifted'] = df['low'].shift(shift_period)
-    df['log_return_1_shifted'] = df['log_return_1'].shift(shift_period)
+    # Calculate ADX
+    df = calculate_adx(df)
 
-    # Recalculate SMA and EMA using shifted close prices
-    df['sma_50'] = df['close_shifted'].rolling(window=50).mean()
-    df['sma_100'] = df['close_shifted'].rolling(window=100).mean()
-    df['ema_50'] = df['close_shifted'].ewm(span=50, adjust=False).mean()
-
-    # Momentum indicators using shifted close prices
-    df['momentum_30'] = df['close_shifted'].shift(30) / df['close_shifted'].shift(60) - 1
-    df['momentum_60'] = df['close_shifted'].shift(60) / df['close_shifted'].shift(90) - 1
-
-    # Recalculate MACD
-    df = calculate_macd(df, price_column='close_shifted')
-
-    # Recalculate ADX
-    df = calculate_adx(df, high_column='high_shifted', low_column='low_shifted', close_column='close_shifted')
-
-    # Recalculate RSI using shifted close prices
-    delta = df['close_shifted'].diff()
+    # Calculate RSI
+    delta = df['close'].diff()
     up = delta.clip(lower=0)
     down = -delta.clip(upper=0)
     roll_up = up.rolling(window=14).mean()
@@ -125,36 +150,29 @@ def engineer_additional_features(df):
     rs = roll_up / roll_down
     df['rsi'] = 100.0 - (100.0 / (1.0 + rs))
 
-    # Recalculate Bollinger Bands using shifted close prices
-    df['middle_band'] = df['close_shifted'].rolling(window=20).mean()
-    df['std_dev'] = df['close_shifted'].rolling(window=20).std()
+    # Bollinger Bands
+    df['middle_band'] = df['close'].rolling(window=20).mean()
+    df['std_dev'] = df['close'].rolling(window=20).std()
     df['upper_band'] = df['middle_band'] + (df['std_dev'] * 2)
     df['lower_band'] = df['middle_band'] - (df['std_dev'] * 2)
     df.drop(columns=['middle_band', 'std_dev'], inplace=True)
 
-    # Adjusted rolling calculations
-    df['rolling_volatility_60'] = df['log_return_1_shifted'].rolling(window=60).std()
-    df['corr_sp500_60'] = df['log_return_1_shifted'].rolling(window=60).corr(df['sp500_return'].shift(1 + shift_period))
-    df['corr_nasdaq_60'] = df['log_return_1_shifted'].rolling(window=60).corr(df['nasdaq_return'].shift(1 + shift_period))
+    # Rolling calculations
+    df['rolling_volatility_60'] = df['log_return_1'].rolling(window=60).std()
+    df['corr_sp500_60'] = df['log_return_1'].rolling(window=60).corr(df['sp500_return'].shift(1))
+    df['corr_nasdaq_60'] = df['log_return_1'].rolling(window=60).corr(df['nasdaq_return'].shift(1))
 
-    # Stochastic Oscillator with shifted data
-    low_14 = df['low_shifted'].rolling(window=14).min()
-    high_14 = df['high_shifted'].rolling(window=14).max()
-    df['%K'] = (df['close_shifted'] - low_14) / (high_14 - low_14) * 100
+    # Stochastic Oscillator
+    low_14 = df['low'].rolling(window=14).min()
+    high_14 = df['high'].rolling(window=14).max()
+    df['%K'] = (df['close'] - low_14) / (high_14 - low_14) * 100
     df['%D'] = df['%K'].rolling(window=3).mean()
 
-    # Commodity Channel Index with shifted data
-    typical_price = (df['high_shifted'] + df['low_shifted'] + df['close_shifted']) / 3
+    # Commodity Channel Index
+    typical_price = (df['high'] + df['low'] + df['close']) / 3
     sma_tp = typical_price.rolling(window=20).mean()
     mad = typical_price.rolling(window=20).apply(lambda x: np.abs(x - x.mean()).mean())
     df['cci'] = (typical_price - sma_tp) / (0.015 * mad)
-
-    # Use current date features shifted appropriately
-    df['day_of_week'] = df.index.shift(shift_period, freq='D').dayofweek
-    df['month'] = df.index.shift(shift_period, freq='D').month
-
-    # Drop shifted columns if not needed
-    df.drop(columns=['close_shifted', 'high_shifted', 'low_shifted', 'log_return_1_shifted'], inplace=True)
 
     df.dropna(inplace=True)
     logging.info("Feature engineering completed.")
@@ -170,7 +188,6 @@ def calculate_macd(df, price_column='close'):
     df.drop(columns=['ema_12', 'ema_26'], inplace=True)
     logging.info("MACD calculation completed.")
     return df
-
 
 def calculate_adx(df, high_column='high', low_column='low', close_column='close', period=14):
     logging.info("Calculating ADX...")
@@ -200,27 +217,26 @@ def calculate_adx(df, high_column='high', low_column='low', close_column='close'
     logging.info("ADX calculation completed.")
     return df
 
-# Feature Selection
-def select_features(df):
+def select_features(df, feature_set='advanced'):
     logging.info("Starting feature selection...")
-    features = [
+
+    # Define feature categories
+    basic_features = [
         'volume',
-        'sector_performance',  # Retained original variable
-        'sector_performance_lag_1', 'sector_performance_lag_7', 'sector_performance_lag_30',
-        'sp500_return',  # Retained original variable
-        'sp500_return_lag_1', 'sp500_return_lag_7', 'sp500_return_lag_30',
-        'nasdaq_return',  # Retained original variable
-        'nasdaq_return_lag_1', 'nasdaq_return_lag_7', 'nasdaq_return_lag_30',
-        'sentiment_score',  # Retained original variable
-        'sentiment_score_lag_1',
-        'gdp_growth',  # Retained original variable
+        'open',
+        'high',
+        'low',
+        'close',
+        'sp500_return',
+        'nasdaq_return',
+        'gdp_growth',
+        'inflation_rate',
+        'unemployment_rate',
         'gdp_growth_lag_1', 'gdp_growth_lag_7', 'gdp_growth_lag_30',
-        'inflation_rate',  # Retained original variable
-        'inflation_rate_lag_1', 'inflation_rate_lag_7', 'inflation_rate_lag_30',
-        'unemployment_rate',  # Retained original variable
+        'inflation_rate_lag_1', 'inflation_rate_lag_7',
+        'inflation_rate_lag_30',
         'unemployment_rate_lag_1', 'unemployment_rate_lag_7', 'unemployment_rate_lag_30',
-        'market_capitalization', 'pe_ratio', 'dividend_yield', 'beta', 'put_call_ratio',
-        'macd_hist', 'adx', 'implied_volatility', 'macd', 'rsi', 'upper_band', 'lower_band',
+        'macd_hist', 'adx', 'macd', 'rsi', 'upper_band', 'lower_band',
         'macd_signal',
         'rolling_volatility_60',
         'corr_sp500_60', 'corr_nasdaq_60',
@@ -228,106 +244,208 @@ def select_features(df):
         '%K', '%D', 'cci',
         'momentum_30', 'momentum_60'
     ]
+
+    advanced_features = [
+        'sentiment_score',
+        'implied_volatility',
+        'market_capitalization',
+        'pe_ratio',
+        'dividend_yield',
+        'beta',
+        'put_call_ratio',
+        'sector_performance',
+        'sector_performance_lag_1', 'sector_performance_lag_7', 'sector_performance_lag_30',
+        'sp500_return_lag_1', 'sp500_return_lag_7', 'sp500_return_lag_30',
+        'nasdaq_return_lag_1', 'nasdaq_return_lag_7', 'nasdaq_return_lag_30',
+        'sentiment_score_lag_1'
+    ]
+
+    if feature_set == 'basic':
+        features = basic_features
+    elif feature_set == 'advanced':
+        features = basic_features + advanced_features
+    else:
+        raise ValueError(f"Invalid feature_set: {feature_set}")
+
+    # Only include features that are in df columns
     features = [feature for feature in features if feature in df.columns]
     selected_features = df[features].copy()
 
     # Keep the target variable separate
-    target = df['log_return_30']
+    target = df['log_return_future']
 
     # Ensure there are no NaNs
     data = pd.concat([selected_features, target], axis=1).dropna()
     selected_features = data[features]
-    target = data['log_return_30']
+    target = data['log_return_future']
 
     logging.info("Feature selection completed.")
-    return features
+    return selected_features, target, features
 
-
-# Select the relevant features for the prediction
-def select_features(df, feature_list):
-    features = df[feature_list].dropna()
-    return features
-
-
-# Predict the future price using the loaded model
-def make_prediction(stock_symbol, input_date, s3_bucket_name,s3_folder):
-    model_data = load_model_from_s3(stock_symbol, s3_bucket_name, s3_folder)
+def make_SARIMAX_prediction(model_key, stock_symbol, input_date, hyperparameter_tuning, feature_set, lookback_period, prediction_horizon):
+    s3_bucket_name = 'trained-models-stock-prediction'
+    s3_folder = 'sarimax'
+    model_data = load_model_from_s3(model_key, s3_bucket_name, s3_folder)
     if model_data is None:
-        return
+        return False
 
     final_model = model_data['model']
     scaler = model_data['scaler']
     feature_list = model_data['feature_list']
 
-    # Connect to the database to get data up to the prediction_date
+    # Retrieve parameters from model_data
+    model_prediction_horizon = model_data.get('prediction_horizon', prediction_horizon)
+    model_feature_set = model_data.get('feature_set', feature_set)
+    model_hyperparameter_tuning = model_data.get('hyperparameter_tuning', hyperparameter_tuning)
+    model_lookback_period = model_data.get('lookback_period', lookback_period)
+
+    # Use parameters from model_data to ensure consistency
+    prediction_horizon = model_prediction_horizon
+    feature_set = model_feature_set
+    hyperparameter_tuning = model_hyperparameter_tuning
+    lookback_period = model_lookback_period
+
+    # Compute start_date and end_date
+    input_date_dt = datetime.strptime(input_date, '%Y-%m-%d')
+    start_date_dt = input_date_dt - timedelta(days=lookback_period + prediction_horizon)
+    start_date = start_date_dt.strftime('%Y-%m-%d')
+    end_date = input_date
+
+    if feature_set == 'advanced':
+        stock_table = 'enriched_stock_data'
+    else:
+        stock_table = 'basic_stock_data'
+
+    # Database connection
     db_url = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     engine = create_engine_from_url(db_url)
 
+    # Fetch the data up to the given date
     query = f"""
-    SELECT * FROM enriched_stock_data
-    WHERE symbol = '{stock_symbol}' AND date <= '{input_date}'
+    SELECT * FROM {stock_table}
+    WHERE symbol = '{stock_symbol}'
+    AND date BETWEEN '{start_date}' AND '{end_date}'
     ORDER BY date
     """
-
-    # Fetch the data up to the given date
     historical_data = fetch_dataframe(engine, query)
     if historical_data.empty:
-        logging.error(f"No data found for stock symbol {stock_symbol} up to {prediction_date}.")
-        return
+        logging.error(f"No data found for stock symbol {stock_symbol} up to {input_date}.")
+        return False
 
-    # Preprocess the data
-    preprocessed_data = preprocess_data(historical_data)
+    # Ensure 'date' column is datetime
+    historical_data['date'] = pd.to_datetime(historical_data['date'])
 
-    # Engineer features
-    engineered_data = engineer_additional_features(preprocessed_data)
+    # Generate a list of the last (N) business days before the input date
+    dates = pd.bdate_range(end=input_date_dt, periods=prediction_horizon).tolist()
 
-    # Select relevant features
-    X_future = select_features(engineered_data, feature_list)
+    # Add the input_date + prediction_horizon to the list of dates
+    final_prediction_date = pd.date_range(start=input_date_dt, periods=prediction_horizon+1)[-1]
+    dates.append(final_prediction_date)
 
-    # Scale the features
-    X_scaled = pd.DataFrame(scaler.transform(X_future), columns=feature_list)
+    predictions = {}
+    for prediction_date in dates:
+        current_end_date = prediction_date - timedelta(days=prediction_horizon)
+        current_start_date = current_end_date - timedelta(days=lookback_period)
 
-    # Get the last row for prediction (as of the prediction_date)
-    X_pred = X_scaled.iloc[-1:].values.reshape(1, -1)
+        current_data = historical_data[
+            (historical_data['date'] >= current_start_date) &
+            (historical_data['date'] <= current_end_date)
+        ]
 
-    # Make the prediction
-    y_pred_future = final_model.forecast(steps=1, exog=X_pred)
-    predicted_log_return = y_pred_future.iloc[0]
+        # Preprocess the data
+        preprocessed_data = preprocess_data(current_data, prediction_horizon)
 
-    # Convert log return to price
-    last_known_price = historical_data['close'].iloc[-1]
-    predicted_price = last_known_price * np.exp(predicted_log_return)
+        # Engineer features
+        engineered_data = engineer_additional_features(preprocessed_data)
 
-    logging.info(f"Predicted price for {stock_symbol} 30 days out from {input_date}: {predicted_price}")
+        # Select relevant features
+        X_future, _, _ = select_features(engineered_data, feature_set=feature_set)
+        X_future = X_future[feature_list]
 
-    # Get the prediction date
-    prediction_date = (datetime.strptime(input_date, '%Y-%m-%d') + timedelta(days=30)).strftime('%Y-%m-%d')
+        # Scale the features
+        X_scaled = pd.DataFrame(scaler.transform(X_future), index=X_future.index, columns=X_future.columns)
+
+        # Get the last row for prediction
+        X_pred = X_scaled.iloc[[-1]]
+
+        # Make the prediction
+        y_pred_future = final_model.forecast(steps=1, exog=X_pred)
+        predicted_log_return = y_pred_future.iloc[0]
+
+        # Convert log return to price
+        last_known_price = current_data['close'].iloc[-1]
+        predicted_price = last_known_price * np.exp(predicted_log_return)
+
+        predictions[prediction_date.strftime('%Y-%m-%d')] = {
+            "last_known_price": float(last_known_price),
+            "predicted_price": float(predicted_price)
+        }
+
+    logging.info(f"Predictions generated for {stock_symbol} from {dates[0].strftime('%Y-%m-%d')} to {dates[-1].strftime('%Y-%m-%d')}")
+
+    # Prepare the model location string
+    model_file_name = f'sarimax_model_{model_key}.pkl'
+    model_location = f's3://{s3_bucket_name}/{s3_folder}/{model_file_name}'
 
     # Log the prediction to the database
     log_data = pd.DataFrame({
+        'model_key': [model_key],
         'symbol': [stock_symbol],
         'date': [input_date],
         'model': ['SARIMAX'],
-        'prediction_date': [prediction_date],
-        'predicted_price': [predicted_price],
-        'last_known_price': [last_known_price],
-        'model_location': [f'trained_models/sarimax_stock_prediction_model_{stock_symbol}.pkl'],
-        'date_created': [datetime.now().strftime('%Y-%m-%d %H:%M:%S')]
+        'prediction_date': [dates[-1].strftime('%Y-%m-%d')],  # Use the last date in the prediction range
+        'predicted_price': [predictions[dates[-1].strftime('%Y-%m-%d')]["predicted_price"]],  # Use the last predicted price
+        'last_known_price': [predictions[dates[0].strftime('%Y-%m-%d')]["last_known_price"]],  # Use the first last known price
+        'model_parameters': [json.dumps({
+            'hyperparameter_tuning': hyperparameter_tuning,
+            'feature_set': feature_set,
+            'lookback_period': lookback_period,
+            'prediction_horizon': prediction_horizon
+        })],
+        'model_location': [model_location],
+        'date_created': [datetime.now().strftime('%Y-%m-%d %H:%M:%S')],
+        'predictions_json': [json.dumps(predictions)]  # New field with all predictions
     })
 
-    upsert_df(log_data, 'predictions_log', 'symbol,date,model', engine)
-    logging.info("Prediction logged successfully.")
+    # Upsert data to the database
+    upsert_df(log_data, 'predictions_log', 'model_key,symbol,date', engine, json_columns=['predictions_json','model_parameters'])
+    logging.info("Predictions logged successfully.")
 
+    return True
+#%% TEST FUnction
 
-#%% Example usage:
-# Create list of dates to loop through
-dates = pd.date_range(start='2024-08-01', end='2024-09-30', freq='B').strftime('%Y-%m-%d')
-#convert to list
-dates = dates.tolist()
+# Assume necessary imports are in place, including the lambda_handler and make_SARIMAX_prediction functions
+"""
+def run_lambda_sarimax_predictions():
+    # Define the model parameters
+    model_key = 'SARIMAX_JNJ_advanced_HIGH_720_30'
+    stock_symbol = 'JNJ'
+    hyperparameter_tuning = 'MEDIUM'
+    feature_set = 'advanced'
+    lookback_period = 720
+    prediction_horizon = 30
 
-# Loop through the dates and make predictions
-for date in dates:
-    make_prediction(stock_symbol="JNJ",
-                    input_date=date,
-                    s3_bucket_name='trained-models-stock-prediction',
-                    s3_folder='sarimax')
+    # Define the input date (this will be the end date of our prediction range)
+    input_date_str = '2024-10-01'
+
+    # Prepare the event payload for the Lambda function
+    event = {
+        'body': json.dumps({
+            'model_key': model_key,
+            'stock_symbol': stock_symbol,
+            'input_date': input_date_str,
+            'hyperparameter_tuning': hyperparameter_tuning,
+            'feature_set': feature_set,
+            'lookback_period': lookback_period,
+            'prediction_horizon': prediction_horizon
+        })
+    }
+
+    # Simulate Lambda function invocation
+    result = lambda_handler(event, None)
+
+    return result
+
+# Call the function to test
+response = run_lambda_sarimax_predictions()
+"""

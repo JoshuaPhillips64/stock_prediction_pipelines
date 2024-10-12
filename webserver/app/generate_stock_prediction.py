@@ -27,7 +27,13 @@ def generate_model_key(model_type, stock_symbol, feature_set, hyperparameter_tun
     """
     Generates a unique model key based on input parameters.
     """
-    model_key = f"{model_type}_{stock_symbol}_{feature_set}_{hyperparameter_tuning}_{lookback_period}_{prediction_horizon}"
+    # Get today's date
+    today = datetime.today()
+
+    # Format the date
+    formatted_date = today.strftime('%Y-%m-%d')
+
+    model_key = f"{model_type}_{stock_symbol}_{feature_set}_{hyperparameter_tuning}_{lookback_period}_{prediction_horizon}_{formatted_date}"
     return model_key
 
 def generate_stock_prediction(
@@ -47,7 +53,7 @@ def generate_stock_prediction(
         stock_symbol (str): The stock symbol to predict.
         input_date (str): The date for which to make the prediction (format: 'YYYY-MM-DD').
         hyperparameter_tuning (str, optional): The level of hyperparameter tuning. Options: 'LOW', 'MEDIUM', 'HIGH'. Defaults to 'MEDIUM'.
-        feature_set (str, optional): The set of features to use. Options: 'basic', 'technical', 'advanced', 'custom'. Defaults to 'advanced'.
+        feature_set (str, optional): The set of features to use. Options: 'basic', 'advanced'. Defaults to 'advanced'.
         lookback_period (int, optional): The number of days of historical data to use for training. Defaults to 720.
         prediction_horizon (int, optional): The number of days into the future to predict. Defaults to 30.
 
@@ -61,12 +67,15 @@ def generate_stock_prediction(
         # Generate model key
         model_key = generate_model_key(model_type, stock_symbol, feature_set, hyperparameter_tuning, lookback_period, prediction_horizon)
 
+        model_exists = check_model_existence(model_key, model_type, engine)
+        ### ADD step to skip model training if model key already exists
+
         # Check if data exists, fetch via Lambda if necessary
         logger.info(f"Checking data existence for {stock_symbol}.")
-        data_exists = check_data_existence(stock_symbol, input_date, engine, lookback_period)
+        data_exists = check_data_existence(stock_symbol, input_date, engine, lookback_period, feature_set)
 
         if not data_exists:
-            logger.info(f"Data for {stock_symbol} not found in the database. Fetching data via Lambda.")
+            logger.info(f"Data for {stock_symbol} Running update lembda via Lambda.")
             payload = {
                 'stock_symbol': stock_symbol,
                 'start_date': (datetime.strptime(input_date, '%Y-%m-%d') - timedelta(days=lookback_period)).strftime('%Y-%m-%d'),
@@ -77,6 +86,10 @@ def generate_stock_prediction(
             if response.status_code != 200:
                 raise ValueError(f"Failed to load data via Lambda. Status code: {response.status_code}, Response: {response.text}")
             load_data_output = response.json()
+            data_exists_second = check_data_existence(stock_symbol, input_date, engine, lookback_period, feature_set)
+            if not data_exists_second:
+                raise ValueError(f"Failed to load data for {stock_symbol} via Lambda.")
+
             logger.info(f"Data for {stock_symbol} successfully fetched and saved to the database via Lambda.")
         else:
             logger.info(f"Data for {stock_symbol} already exists in the database.")
@@ -188,28 +201,77 @@ def validate_inputs(model_type: str, stock_symbol: str, input_date: str, hyperpa
     if feature_set not in ('basic', 'technical', 'advanced', 'custom'):
         raise ValueError(f"Invalid feature_set: {feature_set}")
 
-def check_data_existence(stock_symbol: str, input_date: str, engine, lookback_period: int) -> bool:
+def check_data_existence(stock_symbol: str, input_date: str, engine, lookback_period: int, feature_set) -> bool:
     """
-    Checks if data for the given stock symbol and date exists in the database.
+    Checks if data for the given stock symbol exists for all weekdays between the start and end dates in the date range.
 
     Args:
         stock_symbol (str): The stock symbol.
         input_date (str): The input date (format: 'YYYY-MM-DD').
         engine: The SQLAlchemy engine.
-        lookback_period (int): Number of days of historical data to check.
+        lookback_period (int): Number of weekdays to check (excluding weekends).
 
     Returns:
-        bool: True if data exists, False otherwise.
+        bool: True if data exists for the full date range, False otherwise.
     """
+    # Determine the appropriate table based on feature set
+    if feature_set == 'basic':
+        upsert_table = 'basic_stock_data'
+    else:
+        upsert_table = 'enriched_stock_data'
+
+    # Calculate the start date
     start_date = (datetime.strptime(input_date, '%Y-%m-%d') - timedelta(days=lookback_period)).strftime('%Y-%m-%d')
+
+    # Query to get the min and max dates from the database for the specified symbol
     query = f"""
-        SELECT 1
-        FROM enriched_stock_data
+        SELECT MIN(date) AS min_date, MAX(date) AS max_date
+        FROM {upsert_table}
         WHERE symbol = '{stock_symbol}' AND date BETWEEN '{start_date}' AND '{input_date}'
-        LIMIT 1
+    """
+
+    # Execute the query and fetch the result
+    result = fetch_dataframe(engine, query)
+
+    # Check if the min and max dates match the expected range
+    if not result.empty:
+        min_date = result['min_date'][0]
+        max_date = result['max_date'][0]
+
+        # Ensure that the min date equals the start date and the max date equals the input date
+        if min_date == start_date and max_date == input_date:
+            return True
+
+    return False
+
+def check_model_existence(model_key, model_type, engine):
+    """
+    Checks if the model with the specified key exists in the database.
+
+    Args:
+        model_key (str): The model key.
+        engine: The SQLAlchemy engine.
+
+    Returns:
+        bool: True if the model exists, False otherwise.
+    """
+
+    if model_type == 'SARIMAX':
+        model_table = 'trained_models'
+    elif model_type == 'BINARY CLASSIFICATION':
+        model_table = 'trained_models_binary'
+    else:
+        raise ValueError(f"Invalid model_type: {model_type}")
+
+    query = f"""
+        SELECT COUNT(*)
+        FROM {model_table}
+        WHERE model_key = '{model_key}'
     """
     result = fetch_dataframe(engine, query)
-    return not result.empty
+    if result.iloc[0, 0] > 0:
+        return True
+    return False
 
 # Example of a Flask route that uses the generate_stock_prediction function
 @app.route('/predict_stock', methods=['POST'])
