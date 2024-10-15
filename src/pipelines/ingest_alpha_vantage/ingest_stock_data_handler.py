@@ -11,6 +11,12 @@ from config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, DB_DATABASE
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def json_serial(obj):
+    """JSON serializer for objects not serializable by default json code"""
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    raise TypeError(f"Type {type(obj)} not serializable")
+
 def lambda_handler(event, context):
     try:
         # Parse input parameters
@@ -71,7 +77,7 @@ def lambda_handler(event, context):
 
         return {
             'statusCode': 200,
-            'body': json.dumps(f'Successfully processed {len(df)} records for {len(stocks)} stocks')
+            'body': json.dumps(stock_data, default=json_serial)
         }
 
     except Exception as e:
@@ -96,5 +102,5 @@ example_event = {
 
 example_context = {}
 
-result = lambda_handler(example_event, example_context)
+#result = lambda_handler(example_event, example_context)
 #print(f"Lambda function result: {result}")

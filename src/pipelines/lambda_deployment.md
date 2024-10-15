@@ -37,4 +37,4 @@
    This will be automated in the future.
    Future goal is to get this into terraform
 
-This process will build, test, tag, and push the Selenium Docker image to AWS Lambda via AWS ECR for deployment.
+This process will build, test, tag, and push the Docker image to AWS Lambda via AWS ECR for deployment.

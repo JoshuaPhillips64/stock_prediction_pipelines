@@ -13,7 +13,7 @@ import warnings
 from database_functions import create_engine_from_url, fetch_dataframe, upsert_df
 from config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, S3_BUCKET_NAME
 from aws_functions import s3_upload_file
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import json
 import pickle
 import os
@@ -28,17 +28,24 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # %%
+
+def json_serial(obj):
+    """JSON serializer for objects not serializable by default json code"""
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    raise TypeError(f"Type {type(obj)} not serializable")
+
 def lambda_handler(event, context):
     """
     AWS Lambda handler function to initiate XGBoost classification model training and prediction.
     """
     # Call the train_classification_model function
-    success = train_classification_model(event, context)
+    success, output = train_classification_model(event, context)
 
     if success:
         return {
             'statusCode': 200,
-            'body': json.dumps('Model trained, saved, and predictions logged successfully.')
+            'body': json.dumps(output,default=json_serial)
         }
     else:
         return {
@@ -571,6 +578,7 @@ def train_classification_model(event, context):
     # Compute start_date and end_date
     try:
         input_date_dt = datetime.strptime(input_date, '%Y-%m-%d')
+        prediction_date = input_date_dt + timedelta(days=prediction_horizon)
     except ValueError:
         logging.error("Incorrect date format. Expected YYYY-MM-DD.")
         return False
@@ -644,7 +652,8 @@ def train_classification_model(event, context):
                 'best_params': best_params,
                 'hyperparameter_tuning': hyperparameter_tuning,
                 'feature_set': feature_set,
-                'prediction_horizon': prediction_horizon
+                'prediction_horizon': prediction_horizon,
+                'input_date': input_date
             }, f)
 
         logging.info(f"Model training completed and saved temporarily at {temp_model_location}")
@@ -695,39 +704,40 @@ def train_classification_model(event, context):
             test_start_date=X_test.index.min()
         )
 
-        # Prepare data for logging
-        log_data = pd.DataFrame({
-            'model_key': [model_key],
-            'symbol': [stock_symbol],
-            'prediction_date': [datetime.now().date()],
-            'prediction_explanation': ['Based on XGBoostClassifier with feature engineering and SMOTE'],
-            'prediction_accuracy': [metrics['accuracy']],
-            'prediction_precision': [metrics['precision']],
-            'prediction_recall': [metrics['recall']],
-            'prediction_f1_score': [metrics['f1_score']],
-            'prediction_roc_auc': [metrics['roc_auc']],
-            'confusion_matrix': [json.dumps(metrics['confusion_matrix'])],
-            'feature_importance': [json.dumps(importance_df.to_dict())],
-            'model_parameters': [json.dumps(best_params)],
-            'predicted_movement': [future_prediction['predicted_movement'].apply(lambda x: 'Down' if x == 0 else 'Up').iloc[0]],
-            'predicted_price': [future_prediction['predicted_price'].iloc[0]],
-            'prediction_probability': [future_prediction['prediction_probability'].iloc[0]],
-            'last_known_price': [original_data['close'].iloc[-1]],
-            'predictions_json': [predictions_json_str],
-            'model_location': [f's3://{s3_bucket_name}/{s3_folder}/{model_file_name}'],
-            'date_created': [datetime.now().strftime('%Y-%m-%d %H:%M:%S')]
-        })
+        # Prepare output data
+        output = {
+            'model_key': model_key,
+            'symbol': stock_symbol,
+            'prediction_date': prediction_date,
+            'prediction_explanation': 'Binary Clssification Based on XGBoostClassifier with feature engineering and SMOTE',
+            'prediction_accuracy': metrics['accuracy'],
+            'prediction_precision': metrics['precision'],
+            'prediction_recall': metrics['recall'],
+            'prediction_f1_score': metrics['f1_score'],
+            'prediction_roc_auc': metrics['roc_auc'],
+            'confusion_matrix': json.dumps(metrics['confusion_matrix']),
+            'feature_importance': json.dumps(importance_df.to_dict()),
+            'model_parameters': json.dumps(best_params),
+            'predicted_movement': 'Down' if future_prediction['predicted_movement'].iloc[0] == 0 else 'Up',
+            'predicted_price': float(future_prediction['predicted_price'].iloc[0]),
+            'prediction_probability': float(future_prediction['prediction_probability'].iloc[0]),
+            'last_known_price': float(original_data['close'].iloc[-1]),
+            'predictions_json': predictions_json_str,
+            'model_location': f's3://{s3_bucket_name}/{s3_folder}/{model_file_name}',
+            'date_created': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
 
-        # Upsert data to the database
+        # Log data to the database (keep this part)
+        log_data = pd.DataFrame({k: [v] for k, v in output.items()})
         upsert_df(log_data, 'trained_models_binary', 'model_key', engine,
-            json_columns=['model_parameters','feature_importance', 'confusion_matrix', 'predictions_json']
-        )
+                  json_columns=['model_parameters', 'feature_importance', 'confusion_matrix', 'predictions_json']
+                  )
         logging.info("Model saved and data logged to the database.")
 
-        return True
+        return True, output
     else:
         logging.error("Failed to generate prediction. No data logged to the database.")
-        return False
+        return False, None
 
 #%% Example payload for the Lambda event
 def main():

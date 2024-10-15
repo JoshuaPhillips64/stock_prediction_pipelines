@@ -16,7 +16,7 @@ import warnings
 from database_functions import create_engine_from_url, fetch_dataframe, upsert_df
 from config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, S3_BUCKET_NAME
 from aws_functions import s3_upload_file
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import json
 import pickle
 import os
@@ -31,18 +31,25 @@ logger = logging.getLogger(__name__)
 
 
 # %%
+
+def json_serial(obj):
+    """JSON serializer for objects not serializable by default json code"""
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    raise TypeError(f"Type {type(obj)} not serializable")
+
+
 def lambda_handler(event, context):
     """
     AWS Lambda handler function to initiate SARIMAX model training and prediction.
     """
-    # Parse input parameters from event payload
     try:
         body = json.loads(event['body'])
         model_key = body.get('model_key')
         stock_symbol = body.get('stock_symbol')
         input_date = body.get('input_date')
         hyperparameter_tuning = body.get('hyperparameter_tuning', 'MEDIUM')
-        feature_set = body.get('feature_set', 'advanced')
+        feature_set = body.get('feature_set', 'basic')
         lookback_period = body.get('lookback_period', 720)
         prediction_horizon = body.get('prediction_horizon', 30)
     except Exception as e:
@@ -67,7 +74,7 @@ def lambda_handler(event, context):
         if result:
             return {
                 'statusCode': 200,
-                'body': json.dumps('Prediction completed and logged successfully.')
+                'body': json.dumps(result, default=json_serial)
             }
         else:
             return {
@@ -79,8 +86,7 @@ def lambda_handler(event, context):
         logging.error(f"An unexpected error occurred: {e}")
         return {
             'statusCode': 500,
-            'body': json.dumps('An unexpected error occurred during processing.')
-        }
+            'body': json.dumps('An unexpected error occurred during processing.')}
 
 
 def check_stationarity(df, column='log_return_1', alpha=0.05):
@@ -304,7 +310,7 @@ def feature_importance_analysis(X, y):
     # Plot the feature importance using Plotly
     fig = go.Figure([go.Bar(x=importance_df['feature'], y=importance_df['importance'])])
     fig.update_layout(title='Feature Importance', xaxis_title='Features', yaxis_title='Importance', xaxis_tickangle=-45)
-    fig.show()
+    #fig.show()
 
     logging.info("Feature importance analysis completed.")
     return importance_df
@@ -540,7 +546,7 @@ def plot_full_stock_prediction(actual_close, predicted_close, future_price, test
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
     )
 
-    fig.show()
+    #fig.show()
     logging.info("Full stock prediction plot completed.")
 
 
@@ -554,6 +560,7 @@ def train_SARIMAX_model(model_key, stock_symbol, input_date, hyperparameter_tuni
     try:
         # Compute start_date and end_date
         input_date_dt = datetime.strptime(input_date, '%Y-%m-%d')
+        prediction_date = input_date_dt + timedelta(days=prediction_horizon)
         start_date_dt = input_date_dt - timedelta(days=lookback_period)
         start_date = start_date_dt.strftime('%Y-%m-%d')
         end_date = input_date
@@ -615,7 +622,8 @@ def train_SARIMAX_model(model_key, stock_symbol, input_date, hyperparameter_tuni
                     'best_seasonal_order': best_seasonal_order,
                     'hyperparameter_tuning': hyperparameter_tuning,
                     'feature_set': feature_set,
-                    'prediction_horizon': prediction_horizon
+                    'prediction_horizon': prediction_horizon,
+                    'input_date': input_date
                 }, f)
 
             logging.info(f"Model training completed and saved temporarily at {temp_model_location}")
@@ -667,35 +675,43 @@ def train_SARIMAX_model(model_key, stock_symbol, input_date, hyperparameter_tuni
         plot_full_stock_prediction(actual_close, predicted_close, future_price, test_start_date)
 
         # Prepare data for logging
-        log_data = pd.DataFrame({
-            'model_key': [model_key],
-            'symbol': [stock_symbol],
-            'prediction_date': [datetime.now().date()],
-            'prediction_explanation': ['Based on SARIMAX model with feature engineering'],
-            'prediction_rmse': [str(rmse)],
-            'prediction_mae': [str(mae)],
-            'prediction_mape': [str(mape)],
-            'prediction_confidence_score': [str(1 / (1 + rmse))],  # Simple confidence score
-            'feature_importance': [json.dumps(importance_df.to_dict())],
-            'model_parameters': [json.dumps({
+        log_data = {
+            'model_key': model_key,
+            'symbol': stock_symbol,
+            'prediction_date': prediction_date,
+            'prediction_explanation': 'Regression Prediction Based on SARIMAX model with feature engineering',
+            'prediction_rmse': str(rmse),
+            'prediction_mae': str(mae),
+            'prediction_mape': str(mape),
+            'prediction_confidence_score': str(1 / (1 + rmse)),  # Simple confidence score
+            'feature_importance': json.dumps(importance_df.to_dict()),
+            'model_parameters': json.dumps({
                 'order': best_order,
                 'seasonal_order': best_seasonal_order,
                 'hyperparameter_tuning': hyperparameter_tuning,
                 'feature_set': feature_set,
                 'prediction_horizon': prediction_horizon
-            })],
-            'predicted_amount': [future_price['predicted_price'].iloc[0]],
-            'last_known_price': [original_data['close'].iloc[-1]],
-            'predictions_json': [predictions_json_str],  # Log the prediction details here
-            'model_location': [f's3://trained-models-stock-prediction/sarimax_model_{model_key}.pkl'],
-            'date_created': [datetime.now().strftime('%Y-%m-%d %H:%M:%S')]
-        })
+            }),
+            'predicted_amount': float(future_price['predicted_price'].iloc[0]),
+            'last_known_price': float(original_data['close'].iloc[-1]),
+            'predictions_json': predictions_json_str,
+            'model_location': f's3://trained-models-stock-prediction/sarimax_model_{model_key}.pkl',
+            'date_created': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+
+        # Convert log_data to DataFrame for database insertion
+        log_df = pd.DataFrame([log_data])
 
         # Upsert data to the database
-        upsert_df(log_data, 'trained_models', 'model_key', engine,
+        upsert_df(log_df, 'trained_models', 'model_key', engine,
                   json_columns=['feature_importance', 'model_parameters', 'predictions_json'])
         logging.info("Model saved and data logged to the database.")
-        return True
+
+        return log_data
+
+    except Exception as e:
+        logging.error(f"An error occurred during model training or prediction: {e}")
+        return False
 
     except Exception as e:
         logging.error(f"An error occurred during model training or prediction: {e}")
