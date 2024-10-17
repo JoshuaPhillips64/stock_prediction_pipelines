@@ -436,4 +436,4 @@ if __name__ == "__main__":
         ]
     }
 
-    print(lambda_handler(test_event, None))
+    #print(lambda_handler(test_event, None))

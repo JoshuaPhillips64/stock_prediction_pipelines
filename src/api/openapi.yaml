@@ -1,0 +1,1036 @@
+openapi: 3.0.0
+info:
+  title: Stock Prediction API
+  version: 1.0.0
+  description: >
+    This API provides endpoints for ingesting stock data, training and evaluating predictive models (SARIMAX and XGBoost classification),
+    making predictions, and generating AI-powered analysis using OpenAI and Anthropic's Claude models.
+servers:
+  - url: https://smartstockpredictor.com/api/ # Replace with your actual API Gateway URL
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-KEY
+      description: >
+        API Key needed to access the endpoints.
+        Provide it in the `X-API-KEY` header.
+security:
+  - ApiKeyAuth: [] # Apply API Key security globally to all operations
+tags:
+  - name: Data Ingestion
+    description: Endpoints related to ingesting and enriching stock data.
+  - name: Model Training
+    description: Endpoints for training predictive models.
+  - name: Prediction
+    description: Endpoints for making predictions using trained models.
+  - name: AI Analysis
+    description: Endpoints for generating AI-powered analysis of predictions.
+paths:
+  /ingest-stock-data:
+    post:
+      summary: Ingest and enrich stock data into the database.
+      description: >
+        Fetches historical daily adjusted time series data, technical indicators, company overview, and earnings data from Alpha Vantage for specified stocks and a date range.
+        Enriches it with market index performance, economic indicators (GDP, inflation, unemployment), sentiment scores, and options data.
+        Stores the data in a PostgreSQL database.
+      security:
+        - ApiKeyAuth: [] # Apply API Key security to this operation
+      tags:
+        - Data Ingestion
+      requestBody:
+        description: Request body for ingesting and enriching stock data.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                stocks:
+                  type: array
+                  items:
+                    type: string
+                  description: List of stock symbols to ingest.
+                start_date:
+                  type: string
+                  format: date
+                  description: Start date for historical data (YYYY-MM-DD).
+                end_date:
+                  type: string
+                  format: date
+                  description: End date for historical data (YYYY-MM-DD).
+                feature_set:
+                  type: string
+                  enum: ['basic', 'advanced']
+                  default: 'basic'
+                  description: >
+                    Feature set to use (basic or advanced).
+                    'basic' includes time series data, market index performance, and economic indicators.
+                    'advanced' includes all basic features plus technical indicators, sentiment scores, company overview,
+                    options data, and earnings data.
+              required:
+                - stocks
+                - start_date
+                - end_date
+                - feature_set
+              example:
+                stocks: ['PG']
+                start_date: '2024-01-01'
+                end_date: '2024-10-10'
+                feature_set: 'basic'
+      responses:
+        '200':
+          description: Stock data ingested successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    symbol:
+                      type: string
+                      description: The stock or ETF symbol.
+                    date:
+                      type: string
+                      format: date
+                      description: The date of the data point.
+                    open:
+                      type: number
+                      format: float
+                      description: The opening price of the stock on this day.
+                    high:
+                      type: number
+                      format: float
+                      description: The highest price of the stock on this day.
+                    low:
+                      type: number
+                      format: float
+                      description: The lowest price of the stock on this day.
+                    close:
+                      type: number
+                      format: float
+                      description: The closing price of the stock on this day.
+                    volume:
+                      type: number
+                      format: float
+                      description: The trading volume of the stock on this day.
+                    market_capitalization:
+                      type: number
+                      format: float
+                      description: The market capitalization of the company.
+                    pe_ratio:
+                      type: number
+                      format: float
+                      description: The price-to-earnings ratio of the company.
+                    dividend_yield:
+                      type: number
+                      format: float
+                      description: The dividend yield of the company.
+                    beta:
+                      type: number
+                      format: float
+                      description: The beta of the stock, a measure of its volatility relative to the market.
+                    rsi:
+                      type: number
+                      format: float
+                      description: The Relative Strength Index (RSI), a momentum indicator.
+                    macd:
+                      type: number
+                      format: float
+                      description: The Moving Average Convergence Divergence (MACD), a trend-following momentum indicator.
+                    macd_signal:
+                      type: number
+                      format: float
+                      description: The signal line of the MACD.
+                    macd_hist:
+                      type: number
+                      format: float
+                      description: The histogram of the MACD.
+                    adx:
+                      type: number
+                      format: float
+                      description: The Average Directional Index (ADX), a trend strength indicator.
+                    upper_band:
+                      type: number
+                      format: float
+                      description: The upper Bollinger Band.
+                    lower_band:
+                      type: number
+                      format: float
+                      description: The lower Bollinger Band.
+                    sp500_return:
+                      type: number
+                      format: float
+                      description: The daily return of the S&P 500 index.
+                    nasdaq_return:
+                      type: number
+                      format: float
+                      description: The daily return of the Nasdaq index.
+                    sentiment_score:
+                      type: number
+                      format: float
+                      description: The average sentiment score from recent news articles about the stock.
+                    gdp_growth:
+                      type: number
+                      format: float
+                      description: The latest GDP growth rate.
+                    inflation_rate:
+                      type: number
+                      format: float
+                      description: The latest inflation rate.
+                    unemployment_rate:
+                      type: number
+                      format: float
+                      description: The latest unemployment rate.
+                    put_call_ratio:
+                      type: number
+                      format: float
+                      description: The put-call ratio, a measure of investor sentiment based on options trading.
+                    implied_volatility:
+                      type: number
+                      format: float
+                      description: The implied volatility of the stock's options.
+                    sector_performance:
+                      type: number
+                      format: float
+                      description: The daily return of the sector ETF corresponding to the stock's sector.
+                    reported_eps:
+                      type: number
+                      format: float
+                      description: The reported earnings per share (EPS) for the latest earnings period.
+                    estimated_eps:
+                      type: number
+                      format: float
+                      description: The estimated earnings per share (EPS) for the latest earnings period.
+                    eps_surprise:
+                      type: number
+                      format: float
+                      description: The difference between reported and estimated EPS.
+                    eps_surprise_percentage:
+                      type: number
+                      format: float
+                      description: The percentage difference between reported and estimated EPS.
+                    last_earnings_date:
+                      type: string
+                      format: date
+                      description: The date of the last earnings report.
+                    next_earnings_date:
+                      type: string
+                      format: date
+                      description: The date of the next scheduled earnings report.
+                    next_earnings_estimated_eps:
+                      type: number
+                      format: float
+                      description: The estimated earnings per share (EPS) for the next earnings period.
+                  required:
+                    - symbol
+                    - date
+                    - open
+                    - high
+                    - low
+                    - close
+                    - volume
+                    - market_capitalization
+                    - pe_ratio
+                    - dividend_yield
+                    - beta
+                    - rsi
+                    - macd
+                    - macd_signal
+                    - macd_hist
+                    - adx
+                    - upper_band
+                    - lower_band
+                    - sp500_return
+                    - nasdaq_return
+                    - sentiment_score
+                    - gdp_growth
+                    - inflation_rate
+                    - unemployment_rate
+                    - put_call_ratio
+                    - implied_volatility
+                    - sector_performance
+                    - reported_eps
+                    - estimated_eps
+                    - eps_surprise
+                    - eps_surprise_percentage
+                    - last_earnings_date
+                    - next_earnings_date
+                    - next_earnings_estimated_eps
+                  example:
+                    - symbol: 'PG'
+                      date: '2024-10-10'
+                      open: 135.67
+                      high: 136.45
+                      low: 134.89
+                      close: 135.50
+                      volume: 7500000
+                      market_capitalization: 350000000000
+                      pe_ratio: 25.4
+                      dividend_yield: 2.3
+                      beta: 1.1
+                      rsi: 55.2
+                      macd: 1.2
+                      macd_signal: 0.8
+                      macd_hist: 0.4
+                      adx: 25.5
+                      upper_band: 140.0
+                      lower_band: 130.0
+                      sp500_return: 0.5
+                      nasdaq_return: 0.7
+                      sentiment_score: 0.6
+                      gdp_growth: 2.1
+                      inflation_rate: 1.5
+                      unemployment_rate: 4.2
+                      put_call_ratio: 0.9
+                      implied_volatility: 20.5
+                      sector_performance: 0.3
+                      reported_eps: 3.2
+                      estimated_eps: 3.0
+                      eps_surprise: 0.2
+                      eps_surprise_percentage: 6.7
+                      last_earnings_date: '2024-09-15'
+                      next_earnings_date: '2024-12-15'
+                      next_earnings_estimated_eps: 3.1
+        '400':
+          description: Bad Request - Invalid input parameters.
+        '401':
+          description: Unauthorized - API Key is missing or invalid.
+        '404':
+          description: Not Found - No data found for the specified parameters.
+        '500':
+          description: Internal Server Error - Error during data ingestion.
+
+  /train-sarimax-model:
+    post:
+      summary: Train a SARIMAX model for a given stock.
+      description: >
+        Trains a SARIMAX model using historical stock data and selected features to predict future stock log returns.
+        The model uses a TimeSeriesSplit for cross-validation and can perform hyperparameter tuning based on the specified level.
+        The trained model is saved as a pickle file to an S3 bucket and training details, including evaluation metrics, feature importance,
+        and model parameters, are logged to the database.
+      security:
+        - ApiKeyAuth: [] # Apply API Key security to this operation
+      tags:
+        - Model Training
+      requestBody:
+        description: Request body for training a SARIMAX model.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                model_key:
+                  type: string
+                  description: >
+                    Unique key to identify the trained model. It should be a descriptive name that includes the stock symbol, feature set,
+                    hyperparameter tuning level, lookback period, and prediction horizon (e.g., 'SARIMAX_AAPL_advanced_HIGH_720_30').
+                stock_symbol:
+                  type: string
+                  description: Stock symbol for model training.
+                input_date:
+                  type: string
+                  format: date
+                  description: >
+                    Input date for the model (YYYY-MM-DD). This is the last date used for training the model.
+                    The model will make predictions for dates after this input date.
+                hyperparameter_tuning:
+                  type: string
+                  enum: ['LOW', 'MEDIUM', 'HIGH']
+                  default: 'MEDIUM'
+                  description: >
+                    Level of hyperparameter tuning to perform during cross-validation.
+                    'LOW' tests a minimal set of hyperparameters, 'MEDIUM' tests a moderate set,
+                    and 'HIGH' tests a larger set, increasing training time but potentially finding better parameters.
+                feature_set:
+                  type: string
+                  enum: ['basic', 'advanced']
+                  default: 'advanced'
+                  description: >
+                    Feature set to use for model training.
+                    'basic' includes time series data, market index performance, and economic indicators.
+                    'advanced' includes all basic features plus technical indicators, sentiment scores, company overview,
+                    options data, and earnings data.
+                lookback_period:
+                  type: integer
+                  default: 720
+                  description: >
+                    Number of days of historical data to use for training.
+                    The model will use data from (input_date - lookback_period) to (input_date) for training.
+                prediction_horizon:
+                  type: integer
+                  default: 30
+                  description: >
+                    Number of days into the future to predict.
+                    The model will be trained to predict the stock log return at (input_date + prediction_horizon).
+              required:
+                - model_key
+                - stock_symbol
+                - input_date
+                - hyperparameter_tuning
+                - feature_set
+                - lookback_period
+                - prediction_horizon
+              example:
+                model_key: 'SARIMAX_AAPL_advanced_HIGH_720_30'
+                stock_symbol: 'AAPL'
+                input_date: '2024-10-01'
+                hyperparameter_tuning: 'HIGH'
+                feature_set: 'advanced'
+                lookback_period: 720
+                prediction_horizon: 30
+      responses:
+        '200':
+          description: >
+            SARIMAX model trained successfully. Returns a JSON object with details about the trained model, evaluation metrics, and prediction results.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  model_key:
+                    type: string
+                    description: Unique key to identify the trained model.
+                  symbol:
+                    type: string
+                    description: Stock symbol for which the model was trained.
+                  prediction_date:
+                    type: string
+                    format: date
+                    description: The date for which the prediction is made (input_date + prediction_horizon).
+                  prediction_explanation:
+                    type: string
+                    description: A description of the model and its prediction strategy.
+                  prediction_rmse:
+                    type: string
+                    description: >
+                      Root Mean Squared Error (RMSE) of the model on the test set, representing the average prediction error
+                      in terms of log return.
+                  prediction_mae:
+                    type: string
+                    description: >
+                      Mean Absolute Error (MAE) of the model on the test set, representing the average absolute difference
+                      between predicted and actual log returns.
+                  prediction_mape:
+                    type: string
+                    description: >
+                      Mean Absolute Percentage Error (MAPE) of the model on the test set, representing the average percentage
+                      error in predictions.
+                  prediction_confidence_score:
+                    type: string
+                    description: Confidence score of the model's prediction.
+                  feature_importance:
+                    type: string
+                    description: JSON string representing feature importance scores as determined by a RandomForestRegressor.
+                  model_parameters:
+                    type: string
+                    description: JSON string representing the best SARIMAX order and seasonal order found during hyperparameter tuning.
+                  predicted_amount:
+                    type: number
+                    format: float
+                    description: The predicted stock price for the prediction_date.
+                  last_known_price:
+                    type: number
+                    format: float
+                    description: The last known stock price, which is the closing price on the input_date.
+                  predictions_json:
+                    type: string
+                    description: >
+                      JSON string containing a dictionary of predictions for each date in the prediction horizon,
+                      including both the actual and predicted prices.
+                  date_created:
+                    type: string
+                    format: date-time
+                    description: Timestamp of model creation.
+                required:
+                  - model_key
+                  - symbol
+                  - prediction_date
+                  - prediction_explanation
+                  - prediction_rmse
+                  - prediction_mae
+                  - prediction_mape
+                  - prediction_confidence_score
+                  - feature_importance
+                  - model_parameters
+                  - predicted_amount
+                  - last_known_price
+                  - predictions_json
+                  - date_created
+                example:
+                  model_key: 'SARIMAX_AAPL_advanced_HIGH_720_30'
+                  symbol: 'AAPL'
+                  prediction_date: '2024-11-30'
+                  prediction_explanation: 'SARIMAX Model with seasonal adjustments and exogenous variables.'
+                  prediction_rmse: '0.05'
+                  prediction_mae: '0.04'
+                  prediction_mape: '0.07'
+                  prediction_confidence_score: '0.85'
+                  feature_importance: '{"RSI": 0.25, "MACD": 0.20}'
+                  model_parameters: '{"order": [1,1,1], "seasonal_order": [1,1,1,12]}'
+                  predicted_amount: 150.75
+                  last_known_price: 148.50
+                  predictions_json: '{"predictions":[{"date":"2024-11-30","actual_price":150.0,"predicted_price":150.75}]}'
+                  date_created: '2024-11-15T08:30:00Z'
+        '400':
+          description: Bad Request - Invalid input parameters.
+        '401':
+          description: Unauthorized - API Key is missing or invalid.
+        '500':
+          description: >
+            Internal Server Error - Error during model training or prediction.
+            This could be due to various reasons like insufficient data, model fitting errors, or problems saving the model.
+
+  /train-binary-classification-model:
+    post:
+      summary: Train a binary classification model for a given stock.
+      description: >
+        Trains an XGBoost binary classification model for a given stock symbol using a specified feature set, lookback period, and prediction horizon.
+        Performs hyperparameter tuning using time series cross-validation and handles class imbalance with SMOTE.
+        The trained model, along with relevant information, is saved to S3 and logged to the database.
+        The model predicts whether the stock price will increase (1) or decrease (0) in the future.
+      security:
+        - ApiKeyAuth: [] # Apply API Key security to this operation
+      tags:
+        - Model Training
+      requestBody:
+        description: Request body for training a binary classification model.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                model_key:
+                  type: string
+                  description: >
+                    Unique key to identify the trained model. It should be a descriptive name including the model type,
+                    stock symbol, feature set, hyperparameter tuning level, lookback period, and prediction horizon
+                    (e.g., 'XGBoost_AAPL_advanced_HIGH_720_30').
+                stock_symbol:
+                  type: string
+                  description: The stock symbol for which the model will be trained.
+                input_date:
+                  type: string
+                  format: date
+                  description: >
+                    The input date (YYYY-MM-DD) which is considered the last date of the training data.
+                hyperparameter_tuning:
+                  type: string
+                  enum: ['LOW', 'MEDIUM', 'HIGH']
+                  default: 'MEDIUM'
+                  description: >
+                    The level of hyperparameter tuning.
+                    'LOW' uses a minimal set of parameters, 'MEDIUM' a moderate set, and 'HIGH' a larger set,
+                    potentially increasing training time but improving model performance.
+                feature_set:
+                  type: string
+                  enum: ['basic', 'advanced']
+                  default: 'advanced'
+                  description: >
+                    The feature set to use for training.
+                    'basic' includes basic features, while 'advanced' includes additional features.
+                lookback_period:
+                  type: integer
+                  default: 720
+                  description: The number of days of historical data to use for training.
+                prediction_horizon:
+                  type: integer
+                  default: 30
+                  description: The prediction horizon in days, representing how many days into the future the model will predict.
+              required:
+                - model_key
+                - stock_symbol
+                - input_date
+                - hyperparameter_tuning
+                - feature_set
+                - lookback_period
+                - prediction_horizon
+              example:
+                model_key: 'XGBoost_AAPL_advanced_HIGH_720_30'
+                stock_symbol: 'AAPL'
+                input_date: '2024-10-01'
+                hyperparameter_tuning: 'HIGH'
+                feature_set: 'advanced'
+                lookback_period: 720
+                prediction_horizon: 30
+      responses:
+        '200':
+          description: >
+            XGBoost classification model trained successfully. Returns a JSON object containing details about the trained model,
+            evaluation metrics, and predictions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  model_key:
+                    type: string
+                    description: Unique identifier for the trained model.
+                  symbol:
+                    type: string
+                    description: The stock symbol the model was trained for.
+                  prediction_date:
+                    type: string
+                    format: date
+                    description: The date for which the prediction is made (input_date + prediction_horizon).
+                  prediction_explanation:
+                    type: string
+                    description: Explanation of the model type and its training process.
+                  prediction_accuracy:
+                    type: number
+                    format: float
+                    description: Accuracy score of the model on the test set.
+                  prediction_precision:
+                    type: number
+                    format: float
+                    description: Precision score of the model on the test set.
+                  prediction_recall:
+                    type: number
+                    format: float
+                    description: Recall score of the model on the test set.
+                  prediction_f1_score:
+                    type: number
+                    format: float
+                    description: F1-score of the model on the test set.
+                  prediction_roc_auc:
+                    type: number
+                    format: float
+                    description: Area under the ROC curve of the model on the test set.
+                  confusion_matrix:
+                    type: string
+                    description: JSON string representation of the confusion matrix.
+                  feature_importance:
+                    type: string
+                    description: JSON string representation of feature importance scores.
+                  model_parameters:
+                    type: string
+                    description: JSON string representation of the best hyperparameters found.
+                  predicted_movement:
+                    type: string
+                    enum: ['Up', 'Down']
+                    description: The predicted direction of price movement ('Up' or 'Down').
+                  predicted_price:
+                    type: number
+                    format: float
+                    description: The predicted stock price for the prediction_date.
+                  prediction_probability:
+                    type: number
+                    format: float
+                    description: Probability associated with the predicted movement.
+                  last_known_price:
+                    type: number
+                    format: float
+                    description: The last known closing price of the stock (on the input_date).
+                  predictions_json:
+                    type: string
+                    description: >
+                      JSON string containing a dictionary of predictions for each date in the test set,
+                      including the actual movement and the predicted movement.
+                  date_created:
+                    type: string
+                    format: date-time
+                    description: Timestamp of when the model was created.
+                required:
+                  - model_key
+                  - symbol
+                  - prediction_date
+                  - prediction_explanation
+                  - prediction_accuracy
+                  - prediction_precision
+                  - prediction_recall
+                  - prediction_f1_score
+                  - prediction_roc_auc
+                  - confusion_matrix
+                  - feature_importance
+                  - model_parameters
+                  - predicted_movement
+                  - predicted_price
+                  - prediction_probability
+                  - last_known_price
+                  - predictions_json
+                  - date_created
+                example:
+                  model_key: 'XGBoost_AAPL_advanced_HIGH_720_30'
+                  symbol: 'AAPL'
+                  prediction_date: '2024-10-31'
+                  prediction_explanation: 'Binary Classification Based on XGBoostClassifier with feature engineering and SMOTE'
+                  prediction_accuracy: 0.89
+                  prediction_precision: 0.88
+                  prediction_recall: 0.87
+                  prediction_f1_score: 0.87
+                  prediction_roc_auc: 0.9
+                  confusion_matrix: '[[50, 10], [5, 35]]'
+                  feature_importance: '{"Volume": 0.3, "Moving Average": 0.2}'
+                  model_parameters: '{"n_estimators": 100, "max_depth": 5}'
+                  predicted_movement: 'Up'
+                  predicted_price: 155.3
+                  prediction_probability: 0.78
+                  last_known_price: 152.1
+                  predictions_json: '{"predictions":[{"date":"2024-10-31","actual_movement":"Up","predicted_movement":"Up"}]}'
+                  date_created: '2024-10-27T12:00:00Z'
+        '400':
+          description: Bad Request - Invalid input parameters.
+        '401':
+          description: Unauthorized - API Key is missing or invalid.
+        '500':
+          description: >
+            Internal Server Error - Error during model training or prediction.
+            This could be due to issues like insufficient data, model fitting errors, or problems saving the model.
+
+  /make-sarimax-prediction:
+    post:
+      summary: Generate a SARIMAX prediction for a given stock and date.
+      description: >
+        Loads a previously trained SARIMAX model from an S3 bucket and uses it to make a prediction for a specific stock symbol and input date.
+        The prediction is for a future date calculated as (input_date + prediction_horizon) using the parameters specified during model training.
+        The function retrieves historical data from the database based on the model's lookback period and feature set.
+        It preprocesses the data, engineers features, scales the data according to the trained model's scaler, and then uses the model to forecast.
+        The prediction result, along with other relevant information, is logged to the database.
+      security:
+        - ApiKeyAuth: [] # Apply API Key security to this operation
+      tags:
+        - Prediction
+      requestBody:
+        description: Request body for generating a SARIMAX prediction.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                model_key:
+                  type: string
+                  description: >
+                    Unique key of the SARIMAX model to use for prediction.
+                    This key should match the one used during model training.
+                stock_symbol:
+                  type: string
+                  description: Stock symbol for which the prediction should be made.
+                input_date:
+                  type: string
+                  format: date
+                  description: >
+                    The input date (YYYY-MM-DD) for which the prediction should be made.
+                    This is the last date of available data and the starting point for the prediction horizon.
+              required:
+                - model_key
+                - stock_symbol
+                - input_date
+              example:
+                model_key: 'SARIMAX_JNJ_advanced_HIGH_720_30'
+                stock_symbol: 'JNJ'
+                input_date: '2024-10-01'
+      responses:
+        '200':
+          description: Prediction completed and logged successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  prediction_id:
+                    type: string
+                    description: Unique identifier for the prediction record.
+                  model_key:
+                    type: string
+                    description: Unique key of the SARIMAX model used.
+                  stock_symbol:
+                    type: string
+                    description: Stock symbol for which the prediction was made.
+                  input_date:
+                    type: string
+                    format: date
+                    description: The input date for the prediction.
+                  prediction_date:
+                    type: string
+                    format: date
+                    description: The future date for which the prediction was made.
+                  predicted_amount:
+                    type: number
+                    format: float
+                    description: The predicted stock price.
+                  last_known_price:
+                    type: number
+                    format: float
+                    description: The last known stock price before the prediction date.
+                  prediction_confidence_score:
+                    type: number
+                    format: float
+                    description: Confidence score of the prediction.
+                  prediction_explanation:
+                    type: string
+                    description: Explanation of the prediction based on model parameters and data.
+                  date_created:
+                    type: string
+                    format: date-time
+                    description: Timestamp when the prediction was created.
+                required:
+                  - prediction_id
+                  - model_key
+                  - stock_symbol
+                  - input_date
+                  - prediction_date
+                  - predicted_amount
+                  - last_known_price
+                  - prediction_confidence_score
+                  - prediction_explanation
+                  - date_created
+                example:
+                  prediction_id: 'pred_789'
+                  model_key: 'SARIMAX_JNJ_advanced_HIGH_720_30'
+                  stock_symbol: 'JNJ'
+                  input_date: '2024-10-01'
+                  prediction_date: '2024-10-31'
+                  predicted_amount: 165.75
+                  last_known_price: 160.50
+                  prediction_confidence_score: 0.85
+                  prediction_explanation: 'SARIMAX Model with seasonal adjustments and exogenous variables.'
+                  date_created: '2024-10-15T08:30:00Z'
+        '400':
+          description: Bad Request - Invalid input parameters.
+        '401':
+          description: Unauthorized - API Key is missing or invalid.
+        '500':
+          description: >
+            Internal Server Error - Prediction failed due to issues like model loading, data retrieval, or prediction calculation.
+
+  /ai-analysis:
+    post:
+      summary: Generate AI-powered analysis for stock predictions using ChatGPT.
+      description: >
+        Processes stock prediction data from a list of prediction dictionaries, each containing details about a model, its prediction, and relevant metrics.
+        It leverages ChatGPT to generate a comprehensive and insightful explanation for each prediction, taking into account the model type, performance metrics,
+        feature importance, and other provided information. The generated explanations are then stored in the 'ai_analysis' table in the database,
+        associated with their corresponding model keys.
+      security:
+        - ApiKeyAuth: [] # Apply API Key security to this operation
+      tags:
+        - AI Analysis
+      requestBody:
+        description: Request body for generating AI-powered analysis.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                predictions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      model_key:
+                        type: string
+                        description: Unique key identifying the prediction model.
+                      symbol:
+                        type: string
+                        description: Stock symbol for which the prediction was made.
+                      prediction_date:
+                        type: string
+                        format: date
+                        description: The date for which the stock price is predicted.
+                      prediction_explanation:
+                        type: string
+                        description: >
+                          A brief explanation of the basis of the prediction, usually indicating the model type and its key features.
+                      prediction_accuracy:
+                        type: number
+                        format: float
+                        description: Accuracy of the model (if applicable).
+                      prediction_precision:
+                        type: number
+                        format: float
+                        description: Precision of the model (if applicable).
+                      prediction_recall:
+                        type: number
+                        format: float
+                        description: Recall of the model (if applicable).
+                      prediction_f1_score:
+                        type: number
+                        format: float
+                        description: F1-score of the model (if applicable).
+                      prediction_roc_auc:
+                        type: number
+                        format: float
+                        description: >
+                          Area Under the Receiver Operating Characteristic Curve (ROC AUC) of the model (if applicable).
+                      prediction_rmse:
+                        type: number
+                        format: float
+                        description: Root Mean Squared Error (RMSE) of the model (if applicable).
+                      prediction_mae:
+                        type: number
+                        format: float
+                        description: Mean Absolute Error (MAE) of the model (if applicable).
+                      prediction_mape:
+                        type: number
+                        format: float
+                        description: Mean Absolute Percentage Error (MAPE) of the model (if applicable).
+                      prediction_confidence_score:
+                        type: number
+                        format: float
+                        description: Confidence score assigned to the prediction by the model.
+                      confusion_matrix:
+                        type: string
+                        description: JSON string representing the confusion matrix of the model (if applicable).
+                      feature_importance:
+                        type: string
+                        description: JSON string representing the feature importance scores of the model.
+                      model_parameters:
+                        type: string
+                        description: JSON string representing any parameters specific to the model.
+                      predicted_movement:
+                        type: string
+                        description: Predicted direction of the stock price movement (e.g., 'Up', 'Down').
+                      predicted_price:
+                        type: number
+                        format: float
+                        description: Predicted price of the stock for the prediction_date.
+                      prediction_probability:
+                        type: number
+                        format: float
+                        description: Probability associated with the predicted outcome (if applicable).
+                      predicted_amount:
+                        type: number
+                        format: float
+                        description: Predicted value, could be the stock price or another relevant quantity.
+                      last_known_price:
+                        type: number
+                        format: float
+                        description: The last known price of the stock before the prediction date.
+                      predictions_json:
+                        type: string
+                        description: >
+                          JSON string containing detailed predictions (e.g., for multiple dates).
+                      date_created:
+                        type: string
+                        format: date-time
+                        description: Timestamp indicating when the prediction was generated.
+                    required:
+                      - model_key
+                      - symbol
+                      - prediction_date
+                      - prediction_explanation
+                      - date_created
+                    example:
+                      model_key: 'model_123'
+                      symbol: 'KO'
+                      prediction_date: '2024-11-01'
+                      prediction_explanation: 'Binary Classification Based on XGBoostClassifier with feature engineering and SMOTE'
+                      prediction_accuracy: 0.89
+                      prediction_precision: 0.88
+                      prediction_recall: 0.87
+                      prediction_f1_score: 0.87
+                      prediction_roc_auc: 0.9
+                      prediction_rmse: 0.05
+                      prediction_mae: 0.04
+                      prediction_mape: 0.07
+                      prediction_confidence_score: 0.78
+                      confusion_matrix: '[[50, 10], [5, 35]]'
+                      feature_importance: '{"Volume": 0.3, "Moving Average": 0.2}'
+                      model_parameters: '{"n_estimators": 100, "max_depth": 5}'
+                      predicted_movement: 'Up'
+                      predicted_price: 55.3
+                      prediction_probability: 0.78
+                      predicted_amount: 55.3
+                      last_known_price: 52.1
+                      predictions_json: '{"predictions":[{"date":"2024-11-01","actual_movement":"Up","predicted_movement":"Up"}]}'
+                      date_created: '2024-10-27T12:00:00Z'
+              required:
+                - predictions
+              example:
+                predictions:
+                  - model_key: 'model_123'
+                    symbol: 'KO'
+                    prediction_date: '2024-11-01'
+                    prediction_explanation: 'Binary Classification Based on XGBoostClassifier with feature engineering and SMOTE'
+                    prediction_accuracy: 0.89
+                    prediction_precision: 0.88
+                    prediction_recall: 0.87
+                    prediction_f1_score: 0.87
+                    prediction_roc_auc: 0.9
+                    prediction_rmse: 0.05
+                    prediction_mae: 0.04
+                    prediction_mape: 0.07
+                    prediction_confidence_score: 0.78
+                    confusion_matrix: '[[50, 10], [5, 35]]'
+                    feature_importance: '{"Volume": 0.3, "Moving Average": 0.2}'
+                    model_parameters: '{"n_estimators": 100, "max_depth": 5}'
+                    predicted_movement: 'Up'
+                    predicted_price: 55.3
+                    prediction_probability: 0.78
+                    predicted_amount: 55.3
+                    last_known_price: 52.1
+                    predictions_json: '{"predictions":[{"date":"2024-11-01","actual_movement":"Up","predicted_movement":"Up"}]}'
+                    date_created: '2024-10-27T12:00:00Z'
+                  - model_key: 'model_456'
+                    symbol: 'AAPL'
+                    prediction_date: '2024-12-01'
+                    prediction_explanation: 'SARIMAX Model with seasonal adjustments and exogenous variables.'
+                    prediction_accuracy: 0.85
+                    prediction_precision: 0.82
+                    prediction_recall: 0.80
+                    prediction_f1_score: 0.81
+                    prediction_roc_auc: 0.88
+                    prediction_rmse: 0.04
+                    prediction_mae: 0.03
+                    prediction_mape: 0.06
+                    prediction_confidence_score: 0.75
+                    confusion_matrix: '[[45, 15], [10, 30]]'
+                    feature_importance: '{"RSI": 0.25, "MACD": 0.20}'
+                    model_parameters: '{"order": [1,1,1], "seasonal_order": [1,1,1,12]}'
+                    predicted_movement: 'Down'
+                    predicted_price: 150.5
+                    prediction_probability: 0.72
+                    predicted_amount: 150.5
+                    last_known_price: 155.0
+                    predictions_json: '{"predictions":[{"date":"2024-12-01","actual_movement":"Down","predicted_movement":"Down"}]}'
+                    date_created: '2024-11-15T08:30:00Z'
+      responses:
+        '200':
+          description: >
+            AI analysis generated successfully. Returns a list of dictionaries, each containing the model key and its corresponding AI-generated explanation.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    model_key:
+                      type: string
+                      description: The unique key of the prediction model.
+                    explanation:
+                      type: string
+                      description: The AI-generated explanation for the prediction.
+                    created_date:
+                      type: string
+                      format: date-time
+                      description: The timestamp when the explanation was generated.
+                  required:
+                    - model_key
+                    - explanation
+                    - created_date
+                  example:
+                    model_key: 'model_123'
+                    explanation: 'The XGBoost model predicts an upward movement based on strong volume indicators and positive sentiment scores.'
+                    created_date: '2024-10-27T12:00:00Z'
+              example:
+                - model_key: 'model_123'
+                  explanation: 'The XGBoost model predicts an upward movement based on strong volume indicators and positive sentiment scores.'
+                  created_date: '2024-10-27T12:00:00Z'
+                - model_key: 'model_456'
+                  explanation: 'The SARIMAX model forecasts a downward trend due to declining RSI and increasing MACD signal.'
+                  created_date: '2024-11-15T08:30:00Z'
+        '400':
+          description: Bad Request - No predictions provided in the input event.
+        '401':
+          description: Unauthorized - API Key is missing or invalid.
+        '500':
+          description: >
+            Internal Server Error - An error occurred during AI analysis or while logging the results to the database.
+            This could be due to issues with the ChatGPT API call, database connection, or data processing.

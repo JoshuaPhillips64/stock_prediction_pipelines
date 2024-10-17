@@ -285,7 +285,7 @@ def feature_importance_analysis(X_train, y_train):
     fig = go.Figure([go.Bar(x=importance_df['feature'], y=importance_df['importance'])])
     fig.update_layout(title='Feature Importance', xaxis_title='Features', yaxis_title='Importance', xaxis_tickangle=-45)
     # Commenting out fig.show() for Lambda compatibility
-    # fig.show()
+    #fig.show()
 
     logging.info("Feature importance analysis completed.")
     return importance_df
@@ -556,7 +556,7 @@ def plot_full_stock_prediction_classifier(original_data, y_test, y_pred, future_
     )
 
     # Commenting out fig.show() for Lambda compatibility
-    # fig.show()
+    #fig.show()
     logging.info("Full stock prediction plot completed.")
 
 # %%
@@ -748,7 +748,7 @@ def main():
             'stock_symbol': 'PG',
             'input_date': '2024-10-01',
             'hyperparameter_tuning': 'HIGH',
-            'feature_set': 'advanced',
+            'feature_set': 'basic',
             'lookback_period': 2000,
             'prediction_horizon': 30
         })
@@ -765,4 +765,4 @@ def main():
     print(json.dumps(response, indent=4))
 
 
-#main()
+main()
