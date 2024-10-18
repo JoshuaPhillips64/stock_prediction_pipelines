@@ -741,6 +741,7 @@ def train_classification_model(event, context):
 
 #%% Example payload for the Lambda event
 def main():
+    #%%
     # Sample event payload with sufficient data coverage
     event = {
         'body': json.dumps({
@@ -753,16 +754,16 @@ def main():
             'prediction_horizon': 30
         })
     }
-
+    #%%
     # Mock context object (can be empty or contain necessary attributes)
     context = {}
 
     # Invoke the lambda_handler
-    response = lambda_handler(event, context)
+    #response = lambda_handler(event, context)
 
     # Print the response
-    print("Lambda Response:")
-    print(json.dumps(response, indent=4))
+    #print("Lambda Response:")
+    #print(json.dumps(response, indent=4))
+    #%%
 
-
-main()
+#main()

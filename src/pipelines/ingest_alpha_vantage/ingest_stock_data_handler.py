@@ -1,7 +1,7 @@
 #%%
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, date
 from alpha_vantage_functions import generate_enriched_stock_data, generate_basic_stock_data
 from database_functions import create_engine_from_url, upsert_df
 import pandas as pd

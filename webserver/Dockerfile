@@ -24,4 +24,4 @@ EXPOSE 7237
 RUN pip install gunicorn
 
 # Command to run your Flask app using Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:7237", "run:app"]
+CMD ["gunicorn", "--workers 3", "--bind", "0.0.0.0:7237", "run:app"]

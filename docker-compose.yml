@@ -1,58 +1,56 @@
 version: '3.8'
 
 services:
-  webserver:
+  app:
     build:
       context: ./webserver
+    command: gunicorn --workers 3 --bind 0.0.0.0:7237 run:app
+    volumes:
+      - .:/app
     ports:
       - "7237:7237"
     environment:
       - ENVIRONMENT=${ENVIRONMENT}
-
-  marquez-db:
-    image: postgres:14
-    container_name: marquez-db
-    environment:
-      - POSTGRES_DB=${MARQUEZ_DB_NAME}
-      - POSTGRES_USER=${MARQUEZ_DB_USER}
-      - POSTGRES_PASSWORD=${MARQUEZ_DB_PASSWORD}
-    volumes:
-      - marquez_postgres_data:/var/lib/postgresql/data
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${MARQUEZ_DB_USER:-marquez}"]
-      interval: 10s
+      test: ["CMD", "curl", "-f", "http://localhost:7237/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+          cpus: "1"
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - /path/to/your/certs:/etc/nginx/certs
+    depends_on:
+      - app
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
       timeout: 5s
-      retries: 5
-
-  marquez-api:
-    image: "marquezproject/marquez:0.47.0"
-    container_name: marquez-api
-    environment:
-      - MARQUEZ_PORT=${MARQUEZ_PORT}
-      - MARQUEZ_ADMIN_PORT=${MARQUEZ_ADMIN_PORT}
-      - MARQUEZ_DB_HOST=${MARQUEZ_DB_HOST}
-      - MARQUEZ_DB_PORT=${MARQUEZ_PORT}"
-      - MARQUEZ_DB_NAME=${MARQUEZ_DB_NAME}
-      - MARQUEZ_DB_USER=${MARQUEZ_DB_USER}
-      - MARQUEZ_DB_PASSWORD=${MARQUEZ_DB_PASSWORD}
-    ports:
-      - "${MARQUEZ_PORT}:${MARQUEZ_PORT}"
-      - "${MARQUEZ_ADMIN_PORT}:${MARQUEZ_ADMIN_PORT}"
-    depends_on:
-      marquez-db:
-        condition: service_healthy
-
-  marquez-web:
-    image: "marquezproject/marquez-web:0.46.0"
-    container_name: marquez-web
-    environment:
-      - MARQUEZ_HOST=marquez-api
-      - MARQUEZ_PORT=${MARQUEZ_PORT}
-    ports:
-      - "3000:3000"
-    depends_on:
-      - marquez-api
+      retries: 3
 
 volumes:
-  marquez_postgres_data:
-  postgres_data:
+  redis-data:

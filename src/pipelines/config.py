@@ -14,6 +14,7 @@ DB_DATABASE = os.getenv('DB_DATABASE')
 
 # API URLs
 API_URL = os.getenv('API_URL')
+ADMIN_API_KEY = os.getenv('ADMIN_API_KEY')
 
 # API Keys
 ALPHA_VANTAGE_API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY')

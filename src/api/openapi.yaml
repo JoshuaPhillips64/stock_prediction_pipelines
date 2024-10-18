@@ -33,10 +33,9 @@ paths:
       summary: Ingest and enrich stock data into the database.
       description: >
         Fetches historical daily adjusted time series data, technical indicators, company overview, and earnings data from Alpha Vantage for specified stocks and a date range.
-        Enriches it with market index performance, economic indicators (GDP, inflation, unemployment), sentiment scores, and options data.
-        Stores the data in a PostgreSQL database.
+        Enriches it with market index performance, economic indicators (GDP, inflation, unemployment), AI Generated news sentiment scores, and options data.
       security:
-        - ApiKeyAuth: [] # Apply API Key security to this operation
+        - ApiKeyAuth: []
       tags:
         - Data Ingestion
       requestBody:
@@ -800,7 +799,7 @@ paths:
 
   /ai-analysis:
     post:
-      summary: Generate AI-powered analysis for stock predictions using ChatGPT.
+      summary: Generate AI-powered analysis for stock predictions using ChatGPT or Claude.
       description: >
         Processes stock prediction data from a list of prediction dictionaries, each containing details about a model, its prediction, and relevant metrics.
         It leverages ChatGPT to generate a comprehensive and insightful explanation for each prediction, taking into account the model type, performance metrics,

@@ -415,7 +415,6 @@ def make_SARIMAX_prediction(model_key, stock_symbol, input_date, hyperparameter_
 #%% TEST FUnction
 
 # Assume necessary imports are in place, including the lambda_handler and make_SARIMAX_prediction functions
-"""
 def run_lambda_sarimax_predictions():
     # Define the model parameters
     model_key = 'SARIMAX_JNJ_advanced_HIGH_720_30'
@@ -447,5 +446,4 @@ def run_lambda_sarimax_predictions():
     return result
 
 # Call the function to test
-response = run_lambda_sarimax_predictions()
-"""
+#response = run_lambda_sarimax_predictions()

@@ -4,8 +4,6 @@ import requests
 from typing import List, Dict, Any, Optional
 from config import API_URL, ADMIN_API_KEY
 from datetime import datetime, timedelta
-import time
-
 
 def call_api(endpoint: str, payload: Optional[Dict[str, Any]] = None, method: str = "POST"):
     url = f"{API_URL}/{endpoint}"
@@ -13,34 +11,22 @@ def call_api(endpoint: str, payload: Optional[Dict[str, Any]] = None, method: st
         "Content-Type": "application/json",
         "x-api-key": ADMIN_API_KEY
     }
+    if method == "POST":
+        response = requests.post(url, headers=headers, json=payload)
+    elif method == "GET":
+        response = requests.get(url, headers=headers, params=payload)
+    else:
+        raise ValueError("Invalid HTTP method")
 
-    retry_count = 0
-    max_retries = 2
+    if response.status_code == 200:
+        try:
+            return response.json()
+        except json.JSONDecodeError:
+            return response.text
+    else:
+        print(f"API call failed with status code {response.status_code}: {response.text}")
+        return None
 
-    while retry_count <= max_retries:
-        if method == "POST":
-            response = requests.post(url, headers=headers, json=payload)
-        elif method == "GET":
-            response = requests.get(url, headers=headers, params=payload)
-        else:
-            raise ValueError("Invalid HTTP method")
-
-        if response.status_code == 200:
-            try:
-                return response.json()
-            except json.JSONDecodeError:
-                return response.text
-        elif response.status_code == 504:
-            retry_count += 1
-            if retry_count <= max_retries:
-                print(f"Received 504 Gateway Timeout. Perceived root cause is lambda cold starting. Retrying {retry_count}/{max_retries} after 5 seconds...")
-                time.sleep(5)
-            else:
-                print(f"Max retries reached ({max_retries}). Aborting.")
-                return None
-        else:
-            print(f"API call failed with status code {response.status_code}: {response.text}")
-            return None
 
 def ingest_stock_data(stocks: List[str], start_date: str, end_date: str, feature_set: str = "basic"):
     payload = {
@@ -102,7 +88,12 @@ def trigger_ai_analysis(predictions: List[Dict[str, Any]]):
     return call_api("ai-analysis", payload)
 
 #%% Example Usage
-ingest_response = ingest_stock_data(["PG"], "2024-01-01", "2024-10-10")
+"""
+ingest_response = ingest_stock_data(
+    ["PG"], 
+    "2024-01-01", 
+    "2024-10-10",
+    feature_set="basic")
 print("Ingest Stock Data Response:", ingest_response)
 
 train_binary_response = train_binary_classification_model(
@@ -116,7 +107,17 @@ train_binary_response = train_binary_classification_model(
 )
 print("Train Binary Classification Model Response:", train_binary_response)
 
-#%%
+make_sarimax_response = make_sarimax_prediction(
+    model_key="SARIMAX_JNJ_advanced_HIGH_720_30",
+    stock_symbol="JNJ",
+    input_date='2024-10-01',
+    hyperparameter_tuning='MEDIUM',
+    feature_set='basic',
+    lookback_period=720,
+    prediction_horizon=30
+)
+print("Make Sarimax Prediction Response:", make_sarimax_response)
+
 train_sarimax_response = train_sarimax_model(
     model_key='sample_model_001',
     stock_symbol='PG',
@@ -128,18 +129,6 @@ train_sarimax_response = train_sarimax_model(
 )
 print("Train Sarimax Model Response:", train_sarimax_response)
 
-make_sarimax_response = make_sarimax_prediction(
-    model_key="sample_model_001",
-    stock_symbol="PG",
-    input_date='2024-10-10',
-    hyperparameter_tuning='LOW',
-    feature_set='advanced',
-    lookback_period=720,
-    prediction_horizon=30
-)
-print("Make Sarimax Prediction Response:", make_sarimax_response)
-
-#%%
 # Example prediction data (replace with your actual data)
 prediction_data = [
     {
@@ -195,3 +184,4 @@ prediction_data = [
 ]
 ai_analysis_response = trigger_ai_analysis(prediction_data)
 print("AI Analysis Response:", ai_analysis_response)
+"""
