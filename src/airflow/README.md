@@ -73,6 +73,7 @@ Now, build and start the Docker containers using Docker Compose.
 ```bash
 #Ensure logs is created and has correct permissions
 mkdir -p ./logs
+mkdir -p ./scheduler
 sudo chmod -R 777 ./logs
 sudo chmod -R 777 ./dags
 sudo chmod -R 777 ./scheduler
