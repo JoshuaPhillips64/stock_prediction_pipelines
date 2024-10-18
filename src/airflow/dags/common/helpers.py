@@ -33,18 +33,20 @@ def invoke_lambda_function(stock_ticker, start_date, end_date, feature_set):
     }
 
     try:
-        # Invoke the Lambda function
+        # Invoke the Lambda function asynchronously
         response = client.invoke(
             FunctionName=LAMBDA_FUNCTION_NAME,
             InvocationType='Event',  # Asynchronous invocation
             Payload=json.dumps(payload)
         )
 
-        # Read and decode the response's payload
-        response_payload = response['Payload'].read().decode('utf-8')
+        # Check if the invocation was accepted
+        status_code = response['StatusCode']
+        if status_code == 202:
+            logger.info(f'Lambda invoked asynchronously for {stock_ticker}. No immediate result returned.')
+        else:
+            logger.error(f'Lambda invocation failed for {stock_ticker} with status code {status_code}')
 
-        logger.info(f'Lambda invoked for {stock_ticker}')
-        return json.loads(response_payload)  # Ensure this is JSON serializable
     except Exception as e:
         logger.error(f"Error invoking Lambda for {stock_ticker}: {e}")
         raise
