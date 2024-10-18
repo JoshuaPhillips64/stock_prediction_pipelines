@@ -22,7 +22,7 @@ catchup = False
 feature_set = 'advanced'
 
 def invoke_lambda_task_wrapper(stock_ticker, feature_set, **kwargs):
-    start_date_range = '2020-01-01'
+    start_date_range = '2024-01-01'
     end_date_range = datetime.now().strftime('%Y-%m-%d')
     return invoke_lambda_function(stock_ticker, start_date_range, end_date_range, feature_set)
 
