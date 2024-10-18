@@ -1,4 +1,5 @@
 from airflow.hooks.postgres_hook import PostgresHook
+from airflow.providers.amazon.aws.hooks.base_aws import AwsBaseHook
 import boto3
 import json
 import logging
@@ -10,7 +11,11 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def invoke_lambda_function(stock_ticker, start_date, end_date, feature_set):
-    client = boto3.client('lambda')
+    # Initialize the AWS Hook
+    aws_hook = AwsBaseHook(aws_conn_id='aws_default', client_type='lambda')
+
+    # Get the boto3 client from the hook
+    client = aws_hook.get_client_type('lambda')
 
     payload = {
         'body': json.dumps({
@@ -21,16 +26,20 @@ def invoke_lambda_function(stock_ticker, start_date, end_date, feature_set):
         })
     }
 
-    response = client.invoke(
-        FunctionName=LAMBDA_FUNCTION_NAME,
-        InvocationType='Event',  # Asynchronous invocation
-        Payload=json.dumps(payload)
-    )
+    try:
+        response = client.invoke(
+            FunctionName=LAMBDA_FUNCTION_NAME,
+            InvocationType='Event',  # Asynchronous invocation
+            Payload=json.dumps(payload)
+        )
 
-    response_payload = json.loads(response['Payload'].read().decode('utf-8'))
-    logger.info(f'Lambda response for {stock_ticker}: {response_payload}')
+        response_payload = json.loads(response['Payload'].read().decode('utf-8'))
+        logger.info(f'Lambda response for {stock_ticker}: {response_payload}')
 
-    return response_payload
+        return response_payload
+    except Exception as e:
+        logger.error(f"Error invoking Lambda for {stock_ticker}: {e}")
+        raise
 
 def monitor_lambdas_completion(feature_set, **kwargs):
     ti = kwargs['ti']
