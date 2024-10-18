@@ -17,7 +17,7 @@ default_args = {
 
 dag_name = 'nightly_load_basic_stock_data'
 description = 'Nightly load of top 50 stock tickers into basic_stock_data table'
-schedule = '0 1 * * *'  # Daily at 1 AM
+schedule = '0 6 * * *'  # Daily at 1 AM
 start_date = days_ago(1)
 catchup = False
 feature_set = 'basic'
