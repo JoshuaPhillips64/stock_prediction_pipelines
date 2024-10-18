@@ -12,10 +12,10 @@ logger = logging.getLogger(__name__)
 
 def invoke_lambda_function(stock_ticker, start_date, end_date, feature_set):
     # Initialize the AWS Hook
-    aws_hook = AwsBaseHook(aws_conn_id='aws_default', client_type='lambda')
+    aws_hook = AwsBaseHook(aws_conn_id='aws_default', client_type='lambda', region_name='us-east-1')
 
     # Get the boto3 client from the hook
-    client = aws_hook.get_client_type('lambda')
+    client = aws_hook.get_client_type('lambda',  region_name='us-east-1')
 
     payload = {
         'body': json.dumps({
