@@ -10,6 +10,7 @@ from .config import LAMBDA_FUNCTION_NAME, TOP_50_TICKERS, POSTGRES_CONN_ID
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 def invoke_lambda_function(stock_ticker, start_date, end_date, feature_set):
     # Fetching AWS credentials from Airflow 'aws_default' connection
     connection = BaseHook.get_connection('aws_default')
@@ -32,14 +33,18 @@ def invoke_lambda_function(stock_ticker, start_date, end_date, feature_set):
     }
 
     try:
+        # Invoke the Lambda function
         response = client.invoke(
             FunctionName=LAMBDA_FUNCTION_NAME,
             InvocationType='Event',  # Asynchronous invocation
             Payload=json.dumps(payload)
         )
 
+        # Read and decode the response's payload
+        response_payload = response['Payload'].read().decode('utf-8')
+
         logger.info(f'Lambda invoked for {stock_ticker}')
-        return response
+        return json.loads(response_payload)  # Ensure this is JSON serializable
     except Exception as e:
         logger.error(f"Error invoking Lambda for {stock_ticker}: {e}")
         raise
