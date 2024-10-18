@@ -104,6 +104,8 @@ ssh -i "XXX.pem" XXX.us-east-2.compute.amazonaws.com
 cd stock_prediction_pipelines/src/airflow
 
 #Pull the latest changes from the repository
+git reset --hard origin/main
+
 git pull origin main
 
 docker-compose build

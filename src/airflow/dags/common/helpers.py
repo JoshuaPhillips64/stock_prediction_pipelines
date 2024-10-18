@@ -23,7 +23,7 @@ def invoke_lambda_function(stock_ticker, start_date, end_date, feature_set):
 
     response = client.invoke(
         FunctionName=LAMBDA_FUNCTION_NAME,
-        InvocationType='RequestResponse',  # Synchronous invocation
+        InvocationType='Event',  # Asynchronous invocation
         Payload=json.dumps(payload)
     )
 

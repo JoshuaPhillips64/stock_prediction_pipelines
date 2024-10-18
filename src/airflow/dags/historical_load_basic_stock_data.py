@@ -33,7 +33,9 @@ with DAG(
     schedule_interval=schedule,
     start_date=start_date,
     catchup=catchup,
-    max_active_runs=1
+    max_active_runs=1,
+    max_active_tasks=4,
+    is_paused_upon_creation=True
 ) as dag:
     with TaskGroup('invoke_lambdas') as invoke_lambdas_group:
         for stock in TOP_50_TICKERS:
