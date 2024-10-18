@@ -1,5 +1,5 @@
 from airflow.hooks.postgres_hook import PostgresHook
-from airflow.providers.amazon.aws.hooks.base_aws import AwsBaseHook
+from airflow.hooks.base_hook import BaseHook
 import boto3
 import json
 import logging
@@ -11,11 +11,16 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def invoke_lambda_function(stock_ticker, start_date, end_date, feature_set):
-    # Initialize the AWS Hook
-    aws_hook = AwsBaseHook(aws_conn_id='aws_default', client_type='lambda', region_name='us-east-1')
+    # Fetching AWS credentials from Airflow 'aws_default' connection
+    connection = BaseHook.get_connection('aws_default')
 
-    # Get the boto3 client from the hook
-    client = aws_hook.get_client_type('lambda')
+    # Initialize boto3 client with credentials from Airflow connection
+    client = boto3.client(
+        'lambda',
+        aws_access_key_id=connection.login,
+        aws_secret_access_key=connection.password,
+        region_name='us-east-1'
+    )
 
     payload = {
         'body': json.dumps({
@@ -33,10 +38,8 @@ def invoke_lambda_function(stock_ticker, start_date, end_date, feature_set):
             Payload=json.dumps(payload)
         )
 
-        response_payload = json.loads(response['Payload'].read().decode('utf-8'))
-        logger.info(f'Lambda response for {stock_ticker}: {response_payload}')
-
-        return response_payload
+        logger.info(f'Lambda invoked for {stock_ticker}')
+        return response
     except Exception as e:
         logger.error(f"Error invoking Lambda for {stock_ticker}: {e}")
         raise
