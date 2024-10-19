@@ -40,7 +40,7 @@ def lambda_handler(event, context):
         }
 
     # Call the make_SARIMAX_prediction function
-    result = make_SARIMAX_prediction(
+    result = make_binary_classification_prediction(
         model_key=model_key,
         stock_symbol=stock_symbol,
         input_date=input_date,
@@ -64,10 +64,10 @@ def lambda_handler(event, context):
 # Helper functions and updated make_SARIMAX_prediction function
 
 def load_model_from_s3(model_key, s3_bucket_name, s3_folder=''):
-    model_file_name = f'sarimax_model_{model_key}.pkl'
+    model_file_name = f'xgb_classifier_model_{model_key}.pkl'
 
     s3_bucket_name = 'trained-models-stock-prediction'
-    s3_folder = 'sarimax'
+    s3_folder = 'classification'
 
     # If folder name is provided, include it in the path
     s3_file_name = f'{s3_folder}/{model_file_name}' if s3_folder else model_file_name
@@ -115,12 +115,16 @@ def preprocess_data(df, prediction_horizon):
     df['log_return_1'] = np.log(df['close'] / df['close'].shift(1))
     df.dropna(subset=['log_return_future'], inplace=True)
 
+    # Convert to binary target
+    df['target'] = (df['log_return_future'] > 0).astype(int)  # 1 if return is positive, else 0
+
     # Perform differencing if the series is non-stationary
     if not check_stationarity(df, column='log_return_1'):
         logging.info("Time series is non-stationary, applying differencing...")
-        df['log_return_1'] = df['log_return_1'].diff().dropna()
+        df['log_return_1'] = df['log_return_1'].diff()
+        df.dropna(subset=['log_return_1'], inplace=True)
 
-    logging.info("Data preprocessing completed.")
+    logging.info(f"Data preprocessing completed. Remaining rows after preprocessing: {df.shape[0]}")
     return df
 
 def engineer_additional_features(df):
@@ -282,9 +286,9 @@ def select_features(df, feature_set='advanced'):
     logging.info("Feature selection completed.")
     return selected_features, target, features
 
-def make_SARIMAX_prediction(model_key, stock_symbol, input_date, hyperparameter_tuning, feature_set, lookback_period, prediction_horizon):
+def make_binary_classification_prediction(model_key, stock_symbol, input_date, hyperparameter_tuning, feature_set, lookback_period, prediction_horizon):
     s3_bucket_name = 'trained-models-stock-prediction'
-    s3_folder = 'sarimax'
+    s3_folder = 'classification'
     model_data = load_model_from_s3(model_key, s3_bucket_name, s3_folder)
     if model_data is None:
         return False
@@ -358,33 +362,57 @@ def make_SARIMAX_prediction(model_key, stock_symbol, input_date, hyperparameter_
         # Engineer features
         engineered_data = engineer_additional_features(preprocessed_data)
 
-        # Select relevant features
+        # Select features
+        logging.info("Starting feature selection...")
         X_future, _, _ = select_features(engineered_data, feature_set=feature_set)
+
+        # Ensure we have the correct features
+        logging.info(f"Features before selection: {X_future.columns.tolist()}")
         X_future = X_future[feature_list]
 
         # Scale the features
-        X_scaled = pd.DataFrame(scaler.transform(X_future), index=X_future.index, columns=X_future.columns)
+        logging.info("Starting feature scaling...")
+        X_future_scaled = pd.DataFrame(scaler.transform(X_future),
+                                       index=X_future.index,
+                                       columns=X_future.columns)
 
         # Get the last row for prediction
-        X_pred = X_scaled.iloc[[-1]]
+        X_pred = X_future_scaled.iloc[[-1]]
 
-        # Make the prediction
-        y_pred_future = final_model.forecast(steps=1, exog=X_pred)
-        predicted_log_return = y_pred_future.iloc[0]
+        logging.info(f"Exogenous variables shape for prediction: {X_pred.shape}")
 
-        # Convert log return to price
-        last_known_price = current_data['close'].iloc[-1]
-        predicted_price = last_known_price * np.exp(predicted_log_return)
+        # Make the prediction using the classifier
+        y_pred_future = final_model.predict(X_pred)
+        y_proba_future = final_model.predict_proba(X_pred)[:, 1]
 
-        predictions[prediction_date.strftime('%Y-%m-%d')] = {
-            "last_known_price": float(last_known_price),
-            "predicted_price": float(predicted_price)
-        }
+        logging.info(f"Predicted class: {y_pred_future[0]} with probability: {y_proba_future[0]}")
+
+        # Convert prediction to price movement
+        last_known_price = original_data['close'].values[-1]
+        if y_pred_future[0] == 1:
+            predicted_price = last_known_price * 1.02  # Example: 2% increase
+        else:
+            predicted_price = last_known_price * 0.98  # Example: 2% decrease
+
+        logging.info(
+            f"Predicted future price movement: {'Increase' if y_pred_future[0] == 1 else 'Decrease'} to {predicted_price}")
+
+        # Create a dataframe with the result
+        future_date = end_date + pd.Timedelta(days=prediction_horizon)
+        results_df = pd.DataFrame({
+            'date': [future_date],
+            'predicted_movement': [int(y_pred_future[0])],
+            'predicted_price': [predicted_price],
+            'prediction_probability': [float(y_proba_future[0])]
+        })
+
+        # Convert the df to a dictionary and append it to the predictions dictionary
+        predictions[future_date.strftime('%Y-%m-%d')] = results_df.to_dict(orient='records')[0]
 
     logging.info(f"Predictions generated for {stock_symbol} from {dates[0].strftime('%Y-%m-%d')} to {dates[-1].strftime('%Y-%m-%d')}")
 
     # Prepare the model location string
-    model_file_name = f'sarimax_model_{model_key}.pkl'
+    model_file_name = f'xgb_classifier_model_{model_key}.pkl'
     model_location = f's3://{s3_bucket_name}/{s3_folder}/{model_file_name}'
 
     # Log the prediction to the database
@@ -392,7 +420,7 @@ def make_SARIMAX_prediction(model_key, stock_symbol, input_date, hyperparameter_
         'model_key': [model_key],
         'symbol': [stock_symbol],
         'date': [input_date],
-        'model': ['SARIMAX'],
+        'model': ['BINARY'],
         'prediction_date': [dates[-1].strftime('%Y-%m-%d')],  # Use the last date in the prediction range
         'predicted_price': [predictions[dates[-1].strftime('%Y-%m-%d')]["predicted_price"]],  # Use the last predicted price
         'last_known_price': [predictions[dates[0].strftime('%Y-%m-%d')]["last_known_price"]],  # Use the first last known price
@@ -415,13 +443,13 @@ def make_SARIMAX_prediction(model_key, stock_symbol, input_date, hyperparameter_
 #%% TEST FUnction
 
 # Assume necessary imports are in place, including the lambda_handler and make_SARIMAX_prediction functions
-def run_lambda_sarimax_predictions():
+def run_lambda_binary_predictions():
     # Define the model parameters
-    model_key = 'SARIMAX_JNJ_advanced_HIGH_720_30'
-    stock_symbol = 'JNJ'
-    hyperparameter_tuning = 'MEDIUM'
-    feature_set = 'advanced'
-    lookback_period = 720
+    model_key = 'sample_model_002'
+    stock_symbol = 'PG'
+    hyperparameter_tuning = 'HIGH'
+    feature_set = 'basic'
+    lookback_period = 2000
     prediction_horizon = 30
 
     # Define the input date (this will be the end date of our prediction range)
@@ -446,4 +474,4 @@ def run_lambda_sarimax_predictions():
     return result
 
 # Call the function to test
-#response = run_lambda_sarimax_predictions()
+response = run_lambda_binary_predictions()

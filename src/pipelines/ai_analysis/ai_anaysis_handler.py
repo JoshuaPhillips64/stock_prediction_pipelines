@@ -9,7 +9,6 @@ from config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, DB_DATABASE
 # Database connection string
 db_url = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_DATABASE}"
 
-
 def generate_chatgpt_explanation(input_data):
     """
     Generates a detailed explanation for a stock prediction using ChatGPT.
@@ -276,13 +275,8 @@ Please provide a detailed explanation based on the stock prediction data above.
     # Call ChatGPT to generate the explanation
     system_prompt = "You are a financial AI model that provides clear and concise stock analysis explanations based on model outputs and metrics."
     gpt_response = execute_chatgpt_call(user_prompt, system_prompt)
-    parsed_response = parse_response_to_json(gpt_response)
 
-    # Extract explanation from ChatGPT response
-    if parsed_response is None or 'explanation' not in parsed_response:
-        raise ValueError("Failed to generate explanation from ChatGPT")
-
-    return parsed_response['explanation']
+    return gpt_response
 
 
 def process_stock_prediction_from_json(prediction, engine):
@@ -376,7 +370,7 @@ def lambda_handler(event, context):
         }
 
 
-
+#%%
 import pandas as pd  # Ensure pandas is imported for local testing
 
 test_event = {

@@ -1,4 +1,5 @@
 <!-- app/templates/results.html -->
+
 {% extends "base.html" %}
 
 {% block title %}Prediction Results - {{ stock_symbol }}{% endblock %}
@@ -16,6 +17,12 @@
             <div class="card p-3 mb-4">
                 <canvas id="predictionChart"></canvas>
             </div>
+            {% if ai_analysis and ai_analysis.explanation %}
+            <div class="card p-3 mb-4">
+                <h4>AI Analysis</h4>
+                <p>{{ ai_analysis.explanation | safe }}</p>
+            </div>
+            {% endif %}
         </div>
         <div class="col-md-4">
             <div class="card p-3 mb-4">
@@ -26,9 +33,33 @@
                     <li class="list-group-item"><strong>Feature Set:</strong> {{ feature_set }}</li>
                     <li class="list-group-item"><strong>Lookback Period:</strong> {{ lookback_period }} days</li>
                     <li class="list-group-item"><strong>Prediction Horizon:</strong> {{ prediction_horizon }} days</li>
-                    <!-- Add more metrics if available -->
                 </ul>
             </div>
+            {% if performance_metrics %}
+            <div class="card p-3 mb-4">
+                <h4>Performance Metrics</h4>
+                <ul class="list-group list-group-flush">
+                    {% if model_type == 'SARIMAX' %}
+                        <li class="list-group-item"><strong>RMSE:</strong> {{ performance_metrics.prediction_rmse }}</li>
+                        <li class="list-group-item"><strong>MAE:</strong> {{ performance_metrics.prediction_mae }}</li>
+                        <li class="list-group-item"><strong>MAPE:</strong> {{ performance_metrics.prediction_mape }}</li>
+                        <li class="list-group-item"><strong>Confidence Score:</strong> {{ performance_metrics.prediction_confidence_score }}</li>
+                    {% elif model_type == 'BINARY CLASSIFICATION' %}
+                        <li class="list-group-item"><strong>Accuracy:</strong> {{ performance_metrics.prediction_accuracy }}</li>
+                        <li class="list-group-item"><strong>ROC AUC:</strong> {{ performance_metrics.prediction_roc_auc }}</li>
+                        <li class="list-group-item"><strong>Precision:</strong> {{ performance_metrics.prediction_precision }}</li>
+                        <li class="list-group-item"><strong>Recall:</strong> {{ performance_metrics.prediction_recall }}</li>
+                        <li class="list-group-item"><strong>F1 Score:</strong> {{ performance_metrics.prediction_f1_score }}</li>
+                    {% endif %}
+                </ul>
+            </div>
+            {% endif %}
+            {% if performance_metrics.feature_importance %}
+            <div class="card p-3 mb-4">
+                <h4>Feature Importance</h4>
+                <canvas id="featureImportanceChart"></canvas>
+            </div>
+            {% endif %}
         </div>
     </div>
     <a href="{{ url_for('main_bp.index') }}" class="btn btn-secondary mt-4">Back to Model Generator</a>
@@ -37,13 +68,12 @@
 
 {% block scripts %}
 <script>
-    // Data passed from the Flask view
     const labels = {{ prediction_dates | tojson }};
-    const actualPrices = {{ actual_prices | tojson }};
-    const predictedPrices = {{ predicted_prices | tojson }};
+    const actualData = {{ actual_prices | tojson }};
+    const predictedData = {{ predicted_prices | tojson }};
 
-    // Create the chart
     const ctx = document.getElementById('predictionChart').getContext('2d');
+    {% if model_type == 'SARIMAX' %}
     new Chart(ctx, {
         type: 'line',
         data: {
@@ -51,14 +81,14 @@
             datasets: [
                 {
                     label: 'Actual Price',
-                    data: actualPrices,
+                    data: actualData,
                     borderColor: '#3498db',
                     backgroundColor: 'rgba(52, 152, 219, 0.2)',
                     tension: 0.1,
                 },
                 {
                     label: 'Predicted Price',
-                    data: predictedPrices,
+                    data: predictedData,
                     borderColor: '#e74c3c',
                     backgroundColor: 'rgba(231, 76, 60, 0.2)',
                     tension: 0.1,
@@ -74,22 +104,109 @@
                 },
                 legend: {
                     labels: {
-                        color: '#ffffff'
+                        color: '#000000'
                     }
                 }
             },
             scales: {
                 x: {
-                    ticks: { color: '#ffffff' },
-                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                    ticks: { color: '#000000' },
+                    grid: { color: 'rgba(0, 0, 0, 0.1)' }
                 },
                 y: {
                     beginAtZero: false,
-                    ticks: { color: '#ffffff' },
-                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                    ticks: { color: '#000000' },
+                    grid: { color: 'rgba(0, 0, 0, 0.1)' }
                 },
             },
         },
     });
+    {% elif model_type == 'BINARY CLASSIFICATION' %}
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Actual Movement',
+                    data: actualData,
+                    backgroundColor: 'rgba(52, 152, 219, 0.5)',
+                },
+                {
+                    label: 'Predicted Movement',
+                    data: predictedData,
+                    backgroundColor: 'rgba(231, 76, 60, 0.5)',
+                },
+            ],
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Stock Movement Prediction',
+                },
+                legend: {
+                    labels: {
+                        color: '#000000'
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    stacked: true,
+                    ticks: { color: '#000000' },
+                    grid: { color: 'rgba(0, 0, 0, 0.1)' }
+                },
+                y: {
+                    beginAtZero: true,
+                    stacked: true,
+                    ticks: { color: '#000000' },
+                    grid: { color: 'rgba(0, 0, 0, 0.1)' }
+                },
+            },
+        });
+    {% endif %}
+
+    {% if performance_metrics.feature_importance %}
+    const featureImportance = {{ performance_metrics.feature_importance | tojson }};
+    const featureLabels = Object.values(featureImportance.feature);
+    const featureValues = Object.values(featureImportance.importance);
+
+    const ctxFeature = document.getElementById('featureImportanceChart').getContext('2d');
+    new Chart(ctxFeature, {
+        type: 'bar',
+        data: {
+            labels: featureLabels,
+            datasets: [{
+                label: 'Feature Importance',
+                data: featureValues,
+                backgroundColor: 'rgba(46, 204, 113, 0.7)',
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Feature Importance',
+                },
+                legend: {
+                    display: false,
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: '#000000' },
+                    grid: { color: 'rgba(0, 0, 0, 0.1)' }
+                },
+                y: {
+                    ticks: { color: '#000000' },
+                    grid: { color: 'rgba(0, 0, 0, 0.1)' }
+                },
+            },
+        },
+    });
+    {% endif %}
 </script>
 {% endblock %}

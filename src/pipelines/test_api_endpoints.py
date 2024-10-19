@@ -143,58 +143,59 @@ make_sarimax_response = make_sarimax_prediction(
 print("Make Sarimax Prediction Response:", make_sarimax_response)
 
 #%%
-# Example prediction data (replace with your actual data)
+# Example prediction data (cleaned up, without `json.dumps()` where not needed)
 prediction_data = [
     {
-        'model_key': 'model_123',
-        'symbol': 'KO',
-        'prediction_date': '2024-11-01',
-        'prediction_explanation': 'Binary Classification Based on XGBoostClassifier with feature engineering and SMOTE',
-        'prediction_accuracy': 0.89,
-        'prediction_precision': 0.88,
-        'prediction_recall': 0.87,
-        'prediction_f1_score': 0.87,
-        'prediction_roc_auc': 0.9,
-        'confusion_matrix': json.dumps([[50, 10], [5, 35]]),
-        'feature_importance': json.dumps({'Volume': 0.3, 'Moving Average': 0.2}),
-        'model_parameters': json.dumps({'n_estimators': 100, 'max_depth': 5}),
-        'predicted_movement': 'Up',
-        'predicted_price': 55.3,
-        'prediction_probability': 0.78,
-        'last_known_price': 52.1,
-        'predicted_amount': None,  # Not applicable for classification
-        'predictions_json': '{"predictions":[...]}',
-        'model_location': 's3://trained-models-stock-prediction/xgboost_model_123.pkl',
-        'date_created': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        "model_key": "model_123",
+        "symbol": "KO",
+        "prediction_date": "2024-11-01",
+        "prediction_explanation": "Binary Classification Based on XGBoostClassifier with feature engineering and SMOTE",
+        "prediction_accuracy": 0.89,
+        "prediction_precision": 0.88,
+        "prediction_recall": 0.87,
+        "prediction_f1_score": 0.87,
+        "prediction_roc_auc": 0.9,
+        "confusion_matrix": [[50, 10], [5, 35]],  # No need for json.dumps()
+        "feature_importance": {"Volume": 0.3, "Moving Average": 0.2},  # Keep as a dictionary
+        "model_parameters": {"n_estimators": 100, "max_depth": 5},
+        "predicted_movement": "Up",
+        "predicted_price": 55.3,
+        "prediction_probability": 0.78,
+        "last_known_price": 52.1,
+        "predicted_amount": None,  # Use None for null values
+        "predictions_json": '{"predictions":[...]}',
+        "model_location": "s3://trained-models-stock-prediction/xgboost_model_123.pkl",
+        "date_created": datetime.now().strftime('%Y-%m-%d %H:%M:%S')  # Already serialized as string
     },
-    # Regression Model Example
     {
-        'model_key': 'model_456',
-        'symbol': 'AAPL',
-        'prediction_date': '2024-12-01',
-        'prediction_explanation': 'Regression Prediction Based on SARIMAX model with feature engineering',
-        'prediction_rmse': 1.2,
-        'prediction_mae': 0.9,
-        'prediction_mape': 5.0,
-        'prediction_confidence_score': 0.45,
-        'confusion_matrix': json.dumps([]),  # Not applicable for regression
-        'feature_importance': json.dumps({'Price Lag': 0.4, 'Volume': 0.35}),
-        'model_parameters': json.dumps({
-            'order': [1, 1, 1],
-            'seasonal_order': [1, 1, 1, 12],
-            'hyperparameter_tuning': 'Grid Search',
-            'feature_set': 'Price Lag, Volume',
-            'prediction_horizon': '30 days'
-        }),
-        'predicted_movement': None,  # Not applicable for regression
-        'predicted_price': None,  # Not directly applicable
-        'prediction_probability': None,  # Not applicable for regression
-        'last_known_price': 150.0,
-        'predicted_amount': 155.5,
-        'predictions_json': '{"predictions":[...]}',
-        'model_location': 's3://trained-models-stock-prediction/sarimax_model_456.pkl',
-        'date_created': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        "model_key": "model_456",
+        "symbol": "AAPL",
+        "prediction_date": "2024-12-01",
+        "prediction_explanation": "Regression Prediction Based on SARIMAX model with feature engineering",
+        "prediction_rmse": 1.2,
+        "prediction_mae": 0.9,
+        "prediction_mape": 5.0,
+        "prediction_confidence_score": 0.45,
+        "confusion_matrix": [],  # Empty list for regression
+        "feature_importance": {"Price Lag": 0.4, "Volume": 0.35},  # Keep as a dictionary
+        "model_parameters": {
+            "order": [1, 1, 1],
+            "seasonal_order": [1, 1, 1, 12],
+            "hyperparameter_tuning": "Grid Search",
+            "feature_set": "Price Lag, Volume",
+            "prediction_horizon": "30 days"
+        },
+        "predicted_movement": None,  # Regression doesn't need predicted_movement
+        "predicted_price": None,  # Not applicable for regression
+        "prediction_probability": None,  # Not applicable for regression
+        "last_known_price": 150.0,
+        "predicted_amount": 155.5,  # Use predicted_amount instead of predicted_price
+        "predictions_json": '{"predictions":[...]}',
+        "model_location": "s3://trained-models-stock-prediction/sarimax_model_456.pkl",
+        "date_created": datetime.now().strftime('%Y-%m-%d %H:%M:%S')  # Already serialized as string
     }
 ]
+
+# Trigger the analysis
 ai_analysis_response = trigger_ai_analysis(prediction_data)
 print("AI Analysis Response:", ai_analysis_response)

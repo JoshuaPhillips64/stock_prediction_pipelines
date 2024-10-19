@@ -68,8 +68,6 @@ def train_binary_classification_model(model_key: str, stock_symbol: str, input_d
     }
     return call_api("train-binary-classification-model", payload)
 
-
-
 def make_sarimax_prediction(model_key: str, stock_symbol: str, input_date: str, hyperparameter_tuning: str = 'MEDIUM',
                              feature_set: str = 'basic', lookback_period: int = 720, prediction_horizon: int = 30):
     payload = {
@@ -82,6 +80,16 @@ def make_sarimax_prediction(model_key: str, stock_symbol: str, input_date: str, 
         "prediction_horizon": prediction_horizon
     }
     return call_api("make-sarimax-prediction", payload)
+
+#%% NOT IMPLEMENTED YET
+def make_binary_prediction(model_key: str, stock_symbol: str, input_date: str, feature_set: str = 'basic'):
+    payload = {
+        "model_key": model_key,
+        "stock_symbol": stock_symbol,
+        "input_date": input_date,
+        "feature_set": feature_set
+    }
+    return call_api("make-binary-prediction", payload)
 
 
 def train_sarimax_model(model_key: str, stock_symbol: str, input_date: str, hyperparameter_tuning: str = 'MEDIUM',
@@ -104,6 +112,7 @@ def trigger_ai_analysis(predictions: List[Dict[str, Any]]):
     return call_api("ai-analysis", payload)
 
 #%% Example Usage
+"""
 ingest_response = ingest_stock_data(["PG"], "2024-01-01", "2024-10-10")
 print("Ingest Stock Data Response:", ingest_response)
 
@@ -197,3 +206,4 @@ prediction_data = [
 ]
 ai_analysis_response = trigger_ai_analysis(prediction_data)
 print("AI Analysis Response:", ai_analysis_response)
+"""

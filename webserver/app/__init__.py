@@ -14,8 +14,20 @@ def create_app(config_class=Config):
     migrate.init_app(app, db)
 
     with app.app_context():
-        from app.models import create_ai_stock_predictions_model
-        app.AiStockPredictions = create_ai_stock_predictions_model()
+        from app.models import (
+            create_ai_analysis_model,
+            create_trained_models_model,
+            create_trained_models_binary_model,
+            create_predictions_log_model,
+            create_basic_stock_data_model,
+            create_enriched_stock_data_model
+        )
+        app.AIAnalysis = create_ai_analysis_model()
+        app.TrainedModels = create_trained_models_model()
+        app.TrainedModelsBinary = create_trained_models_binary_model()
+        app.PredictionsLog = create_predictions_log_model()
+        app.BasicStockData = create_basic_stock_data_model()
+        app.EnrichedStockData = create_enriched_stock_data_model()
 
         from app.routes import main_bp
         app.register_blueprint(main_bp)
