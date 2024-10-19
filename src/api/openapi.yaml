@@ -1033,3 +1033,112 @@ paths:
           description: >
             Internal Server Error - An error occurred during AI analysis or while logging the results to the database.
             This could be due to issues with the ChatGPT API call, database connection, or data processing.
+  /make-binary-classification-prediction:
+    post:
+      summary: Generate a binary classification prediction for a given stock.
+      description: >
+        Uses a pre-trained XGBoost binary classification model to predict whether a stock's price will increase (1) or decrease (0) within a specified horizon.
+        The model takes into account historical stock data and technical indicators.
+        The prediction includes the predicted price movement, price, and associated confidence probability.
+      security:
+        - ApiKeyAuth: [ ]
+      tags:
+        - Prediction
+      requestBody:
+        description: Request body for making a binary classification prediction.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                model_key:
+                  type: string
+                  description: >
+                    The unique identifier of the model used for prediction.
+                stock_symbol:
+                  type: string
+                  description: Stock symbol for which the prediction is made.
+                input_date:
+                  type: string
+                  format: date
+                  description: >
+                    The date of the last known stock price (YYYY-MM-DD) before prediction.
+                lookback_period:
+                  type: integer
+                  default: 720
+                  description: >
+                    Number of days of historical data to use for feature engineering.
+                prediction_horizon:
+                  type: integer
+                  default: 30
+                  description: >
+                    Number of days into the future to predict.
+                feature_set:
+                  type: string
+                  enum: [ 'basic', 'advanced' ]
+                  default: 'advanced'
+                  description: >
+                    Feature set to use for prediction ('basic' includes simpler features, 'advanced' includes all available features).
+              required:
+                - model_key
+                - stock_symbol
+                - input_date
+                - feature_set
+              example:
+                model_key: 'XGBoost_AAPL_advanced_HIGH_720_30'
+                stock_symbol: 'AAPL'
+                input_date: '2024-10-01'
+                lookback_period: 720
+                prediction_horizon: 30
+                feature_set: 'advanced'
+      responses:
+        '200':
+          description: Prediction completed successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  prediction_date:
+                    type: string
+                    format: date
+                    description: The date for which the prediction is made.
+                  predicted_movement:
+                    type: string
+                    enum: [ 'Up', 'Down' ]
+                    description: Predicted direction of price movement.
+                  predicted_price:
+                    type: number
+                    format: float
+                    description: The predicted stock price.
+                  prediction_probability:
+                    type: number
+                    format: float
+                    description: Probability associated with the predicted outcome.
+                  last_known_price:
+                    type: number
+                    format: float
+                    description: The last known price of the stock before the prediction date.
+                  predictions_json:
+                    type: string
+                    description: >
+                      JSON string containing the full list of predictions, including details for each date in the prediction horizon.
+              required:
+                - prediction_date
+                - predicted_movement
+                - predicted_price
+                - prediction_probability
+                - last_known_price
+                - predictions_json
+              example:
+                prediction_date: '2024-10-31'
+                predicted_movement: 'Up'
+                predicted_price: 155.3
+                prediction_probability: 0.78
+                last_known_price: 152.1
+                predictions_json: '{"predictions":[{"date":"2024-10-31","predicted_movement":"Up"}]}'
+        '400':
+          description: Bad Request - Invalid input parameters.
+        '500':
+          description: Internal Server Error - Error during prediction.

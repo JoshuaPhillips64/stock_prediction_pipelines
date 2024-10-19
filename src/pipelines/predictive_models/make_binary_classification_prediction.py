@@ -93,9 +93,16 @@ def load_model_from_s3(model_key, s3_bucket_name, s3_folder=''):
         logging.error(f"Error loading model from S3: {e}")
         return None
 
+
 def check_stationarity(df, column='log_return_1', alpha=0.05):
     from statsmodels.tsa.stattools import adfuller
     logging.info("Checking stationarity of the time series...")
+
+    # Ensure the column is not empty after dropping NaNs
+    if df[column].dropna().empty:
+        logging.error(f"Column {column} is empty after dropping NaNs. Skipping stationarity check.")
+        return False  # Return False indicating the series is non-stationary or invalid
+
     result = adfuller(df[column].dropna())
     p_value = result[1]
     logging.info(f"ADF Statistic: {result[0]}, p-value: {p_value}")
@@ -348,13 +355,14 @@ def make_binary_classification_prediction(model_key, stock_symbol, input_date, h
 
     predictions = {}
     for prediction_date in dates:
+        # Adjust current_end_date and current_start_date as per your existing logic
         current_end_date = prediction_date - timedelta(days=prediction_horizon)
-        current_start_date = current_end_date - timedelta(days=prediction_horizon)
+        current_start_date = current_end_date - timedelta(days=lookback_period)
 
         current_data = historical_data[
             (historical_data['date'] >= current_start_date) &
             (historical_data['date'] <= current_end_date)
-        ]
+            ]
 
         # Preprocess the data
         preprocessed_data = preprocess_data(current_data, prediction_horizon)
@@ -388,7 +396,7 @@ def make_binary_classification_prediction(model_key, stock_symbol, input_date, h
         logging.info(f"Predicted class: {y_pred_future[0]} with probability: {y_proba_future[0]}")
 
         # Convert prediction to price movement
-        last_known_price = original_data['close'].values[-1]
+        last_known_price = historical_data['close'].values[-1]
         if y_pred_future[0] == 1:
             predicted_price = last_known_price * 1.02  # Example: 2% increase
         else:
@@ -397,17 +405,12 @@ def make_binary_classification_prediction(model_key, stock_symbol, input_date, h
         logging.info(
             f"Predicted future price movement: {'Increase' if y_pred_future[0] == 1 else 'Decrease'} to {predicted_price}")
 
-        # Create a dataframe with the result
-        future_date = end_date + pd.Timedelta(days=prediction_horizon)
-        results_df = pd.DataFrame({
-            'date': [future_date],
-            'predicted_movement': [int(y_pred_future[0])],
-            'predicted_price': [predicted_price],
-            'prediction_probability': [float(y_proba_future[0])]
-        })
-
-        # Convert the df to a dictionary and append it to the predictions dictionary
-        predictions[future_date.strftime('%Y-%m-%d')] = results_df.to_dict(orient='records')[0]
+        # Store the predictions for the current date
+        predictions[prediction_date.strftime('%Y-%m-%d')] = {
+            'predicted_movement': int(y_pred_future[0]),
+            'predicted_price': predicted_price,
+            'prediction_probability': float(y_proba_future[0])
+        }
 
     logging.info(f"Predictions generated for {stock_symbol} from {dates[0].strftime('%Y-%m-%d')} to {dates[-1].strftime('%Y-%m-%d')}")
 
@@ -415,15 +418,27 @@ def make_binary_classification_prediction(model_key, stock_symbol, input_date, h
     model_file_name = f'xgb_classifier_model_{model_key}.pkl'
     model_location = f's3://{s3_bucket_name}/{s3_folder}/{model_file_name}'
 
-    # Log the prediction to the database
+    # Safely retrieve the last known price and predicted price if the keys exist in the predictions dictionary
+    first_date = dates[0].strftime('%Y-%m-%d')
+    last_date = dates[-1].strftime('%Y-%m-%d')
+
+    # Check if the first date and last date exist in the predictions dictionary
+    last_known_price = predictions[first_date].get("last_known_price") if first_date in predictions else None
+    predicted_price = predictions[last_date].get("predicted_price") if last_date in predictions else None
+
+    # Ensure last_known_price and predicted_price are not None before converting to float
+    last_known_price = float(
+        last_known_price) if last_known_price is not None else 0.0  # Use default value of 0.0 if None
+    predicted_price = float(predicted_price) if predicted_price is not None else 0.0  # Use default value of 0.0 if None
+
     log_data = pd.DataFrame({
         'model_key': [model_key],
         'symbol': [stock_symbol],
         'date': [input_date],
         'model': ['BINARY'],
-        'prediction_date': [dates[-1].strftime('%Y-%m-%d')],  # Use the last date in the prediction range
-        'predicted_price': [predictions[dates[-1].strftime('%Y-%m-%d')]["predicted_price"]],  # Use the last predicted price
-        'last_known_price': [predictions[dates[0].strftime('%Y-%m-%d')]["last_known_price"]],  # Use the first last known price
+        'prediction_date': [last_date],  # Use the last date in the prediction range
+        'predicted_price': [predicted_price],  # Use the last predicted price
+        'last_known_price': [last_known_price],  # Use the first last known price
         'model_parameters': [json.dumps({
             'hyperparameter_tuning': hyperparameter_tuning,
             'feature_set': feature_set,
@@ -474,4 +489,4 @@ def run_lambda_binary_predictions():
     return result
 
 # Call the function to test
-response = run_lambda_binary_predictions()
+#response = run_lambda_binary_predictions()

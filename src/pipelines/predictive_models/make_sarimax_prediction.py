@@ -345,7 +345,7 @@ def make_SARIMAX_prediction(model_key, stock_symbol, input_date, hyperparameter_
     predictions = {}
     for prediction_date in dates:
         current_end_date = prediction_date - timedelta(days=prediction_horizon)
-        current_start_date = current_end_date - timedelta(days=prediction_horizon)
+        current_start_date = current_end_date - timedelta(days=lookback_period)
 
         current_data = historical_data[
             (historical_data['date'] >= current_start_date) &
