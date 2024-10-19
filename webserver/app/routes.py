@@ -1,123 +1,100 @@
-from datetime import datetime, timedelta
-from flask import Blueprint, render_template, jsonify, current_app
-from sqlalchemy import func
-from app import db
-from app.models import EnrichedStockData, CompanyOverview
-from config import Config
+from flask import Blueprint, render_template, request, redirect, url_for, session
+from .forms import PredictionForm
+from .models import db, PredictionResult
+from .generate_stock_prediction import generate_stock_prediction  # Updated import
+import datetime
 import json
 
-bp = Blueprint("main", __name__)
+main_bp = Blueprint('main_bp', __name__)
 
-@bp.route("/")
-@bp.route("/index")
+@main_bp.route('/', methods=['GET', 'POST'])
 def index():
-    stocks = []
-    today = db.session.query(func.max(EnrichedStockData.date)).scalar()
-    thirty_days_ago = today - timedelta(days=30)
+    form = PredictionForm()
+    if form.validate_on_submit():
+        # Save form data to session
+        session['form_data'] = request.form
+        return redirect(url_for('main_bp.loading'))
+    return render_template('index.html', form=form)
 
-    for symbol in Config.STOCKS:
-        latest_data = (
-            EnrichedStockData.query.filter_by(symbol=symbol)
-                .order_by(EnrichedStockData.date.desc())
-                .first()
-        )
+@main_bp.route('/loading')
+def loading():
+    return render_template('loading.html')
 
-        historical_data = (
-            EnrichedStockData.query.filter(
-                EnrichedStockData.symbol == symbol,
-                EnrichedStockData.date >= thirty_days_ago
-            )
-                .order_by(EnrichedStockData.date)
-                .all()
-        )
+@main_bp.route('/results')
+def results():
+    # Retrieve form data from session
+    # Retrieve form data from session
+    form_data = session.get('form_data', {})
+    if not form_data:
+        return redirect(url_for('main_bp.index'))
 
-        prediction = (
-            current_app.AiStockPredictions.query.filter_by(symbol=symbol)
-                .order_by(current_app.AiStockPredictions.prediction_date.desc())
-                .first()
-        )
+    # Debugging statement
+    print(f"form_data: {form_data}")
 
-        if latest_data and historical_data and prediction:
-            stocks.append({
-                "symbol": symbol,
-                "current_price": latest_data.close,
-                "prediction": prediction.predicted_amount,
-                "historical_data": [
-                    {
-                        "date": data.date.isoformat(),
-                        "open": data.open,
-                        "high": data.high,
-                        "low": data.low,
-                        "close": data.close
-                    } for data in historical_data
-                ],
-            })
+    # Call the generate_stock_prediction function
+    result = generate_stock_prediction(
+        model_type=form_data.get('model_type'),
+        stock_symbol=form_data.get('stock_symbol'),
+        input_date=form_data.get('input_date'),
+        hyperparameter_tuning=form_data.get('hyperparameter_tuning'),
+        feature_set=form_data.get('feature_set'),
+        lookback_period=int(form_data.get('lookback_period')),
+        prediction_horizon=int(form_data.get('prediction_horizon'))
+    )
 
-    return render_template("index.html", stocks=stocks)
+    # Debugging statement
+    print(f"result: {result}")
 
-@bp.route("/ai-prediction")
-def ai_prediction():
-    stocks_data = []
-    today = db.session.query(func.max(EnrichedStockData.date)).scalar()
-    ninety_days_ago = today - timedelta(days=90)
-    one_twenty_days_ago = today - timedelta(days=120)
+    if not result:
+        error_message = 'Prediction generation failed.'
+        return render_template('error.html', error_message=error_message)
 
-    for symbol in Config.STOCKS:
-        stock_data = (
-            EnrichedStockData.query.filter(
-                EnrichedStockData.symbol == symbol,
-                EnrichedStockData.date >= ninety_days_ago
-            )
-            .order_by(EnrichedStockData.date)
-            .all()
-        )
+    # Check for errors in result
+    if 'error' in result:
+        error_message = result['error']
+        return render_template('error.html', error_message=error_message)
 
-        chart_data = {
-            'x': [data.date.strftime('%Y-%m-%d') for data in stock_data],
-            'open': [float(data.open) for data in stock_data],
-            'high': [float(data.high) for data in stock_data],
-            'low': [float(data.low) for data in stock_data],
-            'close': [float(data.close) for data in stock_data],
-            'volume': [float(data.volume) for data in stock_data],
-        }
+    # Save result to database
+    prediction_result = PredictionResult(
+        model_key=result['model_key'],
+        model_type=result['model_type'],
+        stock_symbol=result['stock_symbol'],
+        input_date=datetime.datetime.strptime(result['input_date'], '%Y-%m-%d'),
+        hyperparameter_tuning=result['hyperparameter_tuning'],
+        feature_set=result['feature_set'],
+        lookback_period=result['lookback_period'],
+        prediction_horizon=result['prediction_horizon'],
+        prediction_data=json.dumps(result['prediction_result']),
+        date_created=datetime.datetime.utcnow()
+    )
+    db.session.add(prediction_result)
+    db.session.commit()
 
-        prediction_data = (
-            current_app.AiStockPredictions.query.filter(
-                current_app.AiStockPredictions.symbol == symbol,
-                current_app.AiStockPredictions.prediction_date >= one_twenty_days_ago
-            )
-            .order_by(current_app.AiStockPredictions.prediction_date)
-            .all()
-        )
+    # Extract data for charting
+    prediction_dates = [item['date'] for item in result['prediction_result']['predictions']]
+    actual_prices = [item['actual_price'] for item in result['prediction_result']['predictions']]
+    predicted_prices = [item['predicted_price'] for item in result['prediction_result']['predictions']]
 
-        prediction_chart_data = []
-        for prediction in prediction_data:
-            if isinstance(prediction.feature_importance, str):
-                feature_importance = json.loads(prediction.feature_importance)
-            else:
-                feature_importance = prediction.feature_importance
+    return render_template('results.html',
+                           stock_symbol=result['stock_symbol'],
+                           model_type=result['model_type'],
+                           hyperparameter_tuning=result['hyperparameter_tuning'],
+                           feature_set=result['feature_set'],
+                           lookback_period=result['lookback_period'],
+                           prediction_horizon=result['prediction_horizon'],
+                           prediction_dates=prediction_dates,
+                           actual_prices=actual_prices,
+                           predicted_prices=predicted_prices)
 
-            prediction_chart_data.append({
-                'date': prediction.prediction_date.strftime('%Y-%m-%d'),
-                'predicted_amount': float(prediction.predicted_amount),
-                'prediction_confidence_score': float(prediction.prediction_confidence_score),
-                'prediction_rmse': float(prediction.prediction_rmse),
-                'up_or_down': prediction.up_or_down,
-                'prediction_explanation': prediction.prediction_explanation,
-                'feature_importance': feature_importance
-            })
-
-        company_overview = CompanyOverview.query.filter_by(symbol=symbol).order_by(CompanyOverview.last_updated.desc()).first()
-
-        stocks_data.append({
-            'symbol': symbol,
-            'chart_data': chart_data,
-            'prediction_chart_data': prediction_chart_data,
-            'company_overview': company_overview.data if company_overview else None
-        })
-
-    return render_template("ai-prediction.html", stocks_data=stocks_data)
-
-@bp.route("/about")
+# Add these routes for 'about' and 'contact' pages
+@main_bp.route('/about')
 def about():
-    return render_template("about.html")
+    return render_template('about.html')
+
+@main_bp.route('/contact', methods=['GET', 'POST'])
+def contact():
+    if request.method == 'POST':
+        # Handle form submission if needed
+        # For now, we'll just redirect back to the contact page
+        return redirect(url_for('main_bp.contact'))
+    return render_template('contact.html')

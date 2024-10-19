@@ -17,7 +17,7 @@ def create_app(config_class=Config):
         from app.models import create_ai_stock_predictions_model
         app.AiStockPredictions = create_ai_stock_predictions_model()
 
-        from app.routes import bp as main_bp
+        from app.routes import main_bp
         app.register_blueprint(main_bp)
 
     return app

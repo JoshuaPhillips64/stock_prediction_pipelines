@@ -1,0 +1,12 @@
+<!-- app/templates/500.html -->
+{% extends "base.html" %}
+
+{% block title %}500 Internal Server Error - SmartStockPredictor{% endblock %}
+
+{% block content %}
+<div class="container my-5 text-center">
+    <h1 class="display-4">500</h1>
+    <p class="lead">An unexpected error has occurred.</p>
+    <a href="{{ url_for('main_bp.index') }}" class="btn btn-primary mt-4">Back to Home</a>
+</div>
+{% endblock %}

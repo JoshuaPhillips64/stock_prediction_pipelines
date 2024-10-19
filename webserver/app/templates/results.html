@@ -1,0 +1,95 @@
+<!-- app/templates/results.html -->
+{% extends "base.html" %}
+
+{% block title %}Prediction Results - {{ stock_symbol }}{% endblock %}
+
+{% block head %}
+<!-- Include Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <h2 class="mb-4">Prediction Results for {{ stock_symbol }}</h2>
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card p-3 mb-4">
+                <canvas id="predictionChart"></canvas>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card p-3 mb-4">
+                <h4>Model Metrics</h4>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item"><strong>Model Type:</strong> {{ model_type }}</li>
+                    <li class="list-group-item"><strong>Hyperparameter Tuning:</strong> {{ hyperparameter_tuning }}</li>
+                    <li class="list-group-item"><strong>Feature Set:</strong> {{ feature_set }}</li>
+                    <li class="list-group-item"><strong>Lookback Period:</strong> {{ lookback_period }} days</li>
+                    <li class="list-group-item"><strong>Prediction Horizon:</strong> {{ prediction_horizon }} days</li>
+                    <!-- Add more metrics if available -->
+                </ul>
+            </div>
+        </div>
+    </div>
+    <a href="{{ url_for('main_bp.index') }}" class="btn btn-secondary mt-4">Back to Model Generator</a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Data passed from the Flask view
+    const labels = {{ prediction_dates | tojson }};
+    const actualPrices = {{ actual_prices | tojson }};
+    const predictedPrices = {{ predicted_prices | tojson }};
+
+    // Create the chart
+    const ctx = document.getElementById('predictionChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Actual Price',
+                    data: actualPrices,
+                    borderColor: '#3498db',
+                    backgroundColor: 'rgba(52, 152, 219, 0.2)',
+                    tension: 0.1,
+                },
+                {
+                    label: 'Predicted Price',
+                    data: predictedPrices,
+                    borderColor: '#e74c3c',
+                    backgroundColor: 'rgba(231, 76, 60, 0.2)',
+                    tension: 0.1,
+                },
+            ],
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Stock Price Prediction',
+                },
+                legend: {
+                    labels: {
+                        color: '#ffffff'
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: '#ffffff' },
+                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                },
+                y: {
+                    beginAtZero: false,
+                    ticks: { color: '#ffffff' },
+                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                },
+            },
+        },
+    });
+</script>
+{% endblock %}

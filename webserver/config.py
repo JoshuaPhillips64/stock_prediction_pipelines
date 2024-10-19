@@ -16,8 +16,10 @@ class Config:
     DB_PASSWORD = os.getenv('DB_PASSWORD')
     SQLALCHEMY_DATABASE_URI = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    ALPHA_VANTAGE_API_KEY = os.environ.get('ALPHA_VANTAGE_API_KEY')
-    STOCKS = ['KO', 'JNJ', 'PG', 'PEP', 'WMT', 'XOM', 'GIS', 'MCD', 'CL', 'MMM']
+
+    # API Endpoints for generate_stock_prediction.py
+    API_URL = os.getenv('API_URL')
+    ADMIN_API_KEY = os.getenv('ADMIN_API_KEY')
 
 #%% Print the contents of the above class
 #print(Config.__dict__)

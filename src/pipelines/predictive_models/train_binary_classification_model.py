@@ -759,11 +759,11 @@ def main():
     context = {}
 
     # Invoke the lambda_handler
-    #response = lambda_handler(event, context)
+    response = lambda_handler(event, context)
 
     # Print the response
-    #print("Lambda Response:")
-    #print(json.dumps(response, indent=4))
+    print("Lambda Response:")
+    print(json.dumps(response, indent=4))
     #%%
 
-#main()
+main()

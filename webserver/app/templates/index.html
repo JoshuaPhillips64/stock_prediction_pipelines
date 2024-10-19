@@ -1,218 +1,55 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StockVision: 30-Day Market Forecast</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    <style>
-        :root {
-            --primary-color: #ecf0f1;
-            --secondary-color: #3498db;
-            --accent-color: #e74c3c;
-            --background-color: #1e272e;
-            --card-background: #2c3e50;
-            --text-color: #ecf0f1;
-            --chart-background: #34495e;
-        }
+<!-- app/templates/index.html -->
+{% extends "base.html" %}
 
-        body {
-            font-family: 'Roboto', sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: var(--background-color);
-            color: var(--text-color);
-        }
+{% block title %}Stock Prediction Model Generator{% endblock %}
 
-        .container {
-            max-width: 1600px;
-            margin: 0 auto;
-            padding: 40px 20px;
-        }
-
-        h1, h2 {
-            color: var(--primary-color);
-            text-align: center;
-        }
-
-        h1 {
-            font-size: 2.8em;
-            margin-bottom: 40px;
-        }
-
-        h2 {
-            font-size: 2em;
-            margin-top: 40px;
-        }
-
-        .stock-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-            gap: 30px;
-            margin-bottom: 60px;
-        }
-
-        .stock-card {
-            background-color: var(--card-background);
-            border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .stock-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
-        }
-
-        .stock-symbol {
-            font-size: 28px;
-            font-weight: bold;
-            margin-bottom: 15px;
-            color: var(--secondary-color);
-        }
-
-        .stock-price {
-            font-size: 20px;
-            margin-bottom: 10px;
-        }
-
-        .stock-prediction {
-            font-size: 18px;
-            color: var(--accent-color);
-            font-weight: bold;
-        }
-
-        .candlestick-chart {
-            width: 100%;
-            height: 450px;
-            margin-top: 20px;
-        }
-
-        nav {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-
-        nav a {
-            color: var(--secondary-color);
-            text-decoration: none;
-            font-weight: bold;
-            font-size: 18px;
-            margin: 0 15px;
-            transition: color 0.3s ease;
-        }
-
-        nav a:hover {
-            color: var(--accent-color);
-        }
-    </style>
-</head>
-<body>
+{% block content %}
+<!-- Hero Section -->
+<section class="hero text-center py-5">
     <div class="container">
-        <h1>StockVision: 30-Day Market Forecast</h1>
-        <nav>
-            <a href="{{ url_for('main.about') }}">About Our Model</a>
-            <a href="{{ url_for('main.ai_prediction') }}">AI Predictions</a>
-        </nav>
-
-        <div class="stock-grid" id="stockGrid">
-            {% for stock in stocks %}
-                <div class="stock-card">
-                    <div class="stock-symbol">{{ stock.symbol }}</div>
-                    <div class="stock-price">Current: ${{ "{:.2f}".format(stock.current_price) }}</div>
-                    <div class="stock-prediction">Predicted (30d): ${{ "{:.2f}".format(stock.prediction) }}</div>
-                    <div class="candlestick-chart" id="chart-{{ stock.symbol }}"></div>
-                </div>
-                <script>
-                    const stockData = {
-                        symbol: "{{ stock.symbol }}",
-                        currentPrice: {{ stock.current_price }},
-                        prediction: {{ stock.prediction }},
-                        historicalData: {{ stock.historical_data | tojson }}
-                    };
-
-                    createStockChart(stockData);
-
-                    function createStockChart(stockData) {
-                        const chartData = [{
-                            x: stockData.historicalData.map(d => d.date),
-                            close: stockData.historicalData.map(d => d.close),
-                            high: stockData.historicalData.map(d => d.high),
-                            low: stockData.historicalData.map(d => d.low),
-                            open: stockData.historicalData.map(d => d.open),
-                            type: 'candlestick',
-                            xaxis: 'x',
-                            yaxis: 'y',
-                            name: 'Historical',
-                            increasing: {line: {color: '#26a69a'}},
-                            decreasing: {line: {color: '#ef5350'}}
-                        }];
-
-                        // Add prediction line
-                        const lastDate = new Date(stockData.historicalData[stockData.historicalData.length - 1].date);
-                        const predictionDate = new Date(lastDate.getTime() + 30 * 24 * 60 * 60 * 1000);
-                        const predictionTrace = {
-                            x: [lastDate.toISOString().split('T')[0], predictionDate.toISOString().split('T')[0]],
-                            y: [stockData.currentPrice, stockData.prediction],
-                            type: 'scatter',
-                            mode: 'lines',
-                            line: {
-                                dash: 'dot',
-                                width: 3,
-                                color: '#e74c3c'
-                            },
-                            name: 'Prediction'
-                        };
-                        chartData.push(predictionTrace);
-
-                        const layout = {
-                            dragmode: 'zoom',
-                            showlegend: true,
-                            legend: {
-                                x: 0,
-                                y: 1,
-                                bgcolor: 'rgba(44, 62, 80, 0.8)',
-                                font: {color: '#ecf0f1'}
-                            },
-                            xaxis: {
-                                rangeslider: {visible: false},
-                                title: 'Date',
-                                tickformat: '%b %d',
-                                color: '#ecf0f1'
-                            },
-                            yaxis: {
-                                title: 'Price ($)',
-                                tickformat: '$.2f',
-                                color: '#ecf0f1'
-                            },
-                            margin: {
-                                l: 50,
-                                r: 20,
-                                t: 40,
-                                b: 40
-                            },
-                            height: 450,
-                            plot_bgcolor: '#34495e',
-                            paper_bgcolor: '#2c3e50',
-                            font: {
-                                color: '#ecf0f1'
-                            },
-                            title: {
-                                text: `${stockData.symbol} Stock Price`,
-                                font: {
-                                    size: 24,
-                                    color: '#ecf0f1'
-                                }
-                            }
-                        };
-
-                        Plotly.newPlot(`chart-${stockData.symbol}`, chartData, layout, {responsive: true});
-                    }
-                </script>
-            {% endfor %}
-        </div>
+        <h1 class="display-4">Advanced Stock Prediction Model Generator</h1>
+        <p class="lead">Create your customized predictive stock model in a few simple steps.</p>
     </div>
-</body>
-</html>
+</section>
+
+<!-- Parameter Selection Form -->
+<div class="container my-5">
+    <h2 class="mb-4">Customize Your Prediction Model</h2>
+    <form method="POST">
+        {{ form.hidden_tag() }}
+        <div class="row g-3">
+            <div class="col-md-6">
+                {{ form.model_type.label(class="form-label") }}
+                {{ form.model_type(class="form-select") }}
+            </div>
+            <div class="col-md-6">
+                {{ form.stock_symbol.label(class="form-label") }}
+                {{ form.stock_symbol(class="form-control") }}
+            </div>
+            <div class="col-md-6">
+                {{ form.input_date.label(class="form-label") }}
+                {{ form.input_date(class="form-control") }}
+            </div>
+            <div class="col-md-6">
+                {{ form.hyperparameter_tuning.label(class="form-label") }}
+                {{ form.hyperparameter_tuning(class="form-select") }}
+            </div>
+            <div class="col-md-6">
+                {{ form.feature_set.label(class="form-label") }}
+                {{ form.feature_set(class="form-select") }}
+            </div>
+            <div class="col-md-6">
+                {{ form.lookback_period.label(class="form-label") }}
+                {{ form.lookback_period(class="form-control") }}
+            </div>
+            <div class="col-md-6">
+                {{ form.prediction_horizon.label(class="form-label") }}
+                {{ form.prediction_horizon(class="form-control") }}
+            </div>
+            <div class="col-12">
+                {{ form.submit(class="btn btn-primary btn-lg mt-3") }}
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

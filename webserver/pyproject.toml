@@ -20,6 +20,8 @@ openai = "1.39.0"
 flask = "2.2.5"
 flask-sqlalchemy = "2.5.1"
 flask-migrate = "^3.1.0"
+WTForms = "3.0.1"
+Flask-WTF = "1.0.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.2"

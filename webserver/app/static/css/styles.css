@@ -1,0 +1,84 @@
+/* app/static/css/styles.css */
+body {
+    background-color: #1e1e1e;
+    color: #ffffff;
+}
+
+.navbar {
+    background-color: #2c2c2c;
+}
+
+.navbar-brand, .navbar-nav .nav-link {
+    color: #ffffff !important;
+}
+
+.navbar-nav .nav-link:hover {
+    color: #3498db !important;
+}
+
+.hero {
+    background: linear-gradient(135deg, #2c3e50, #3498db);
+    color: white;
+    padding: 60px 0;
+}
+
+.form-control,
+.form-select {
+    background-color: #2c2c2c;
+    color: #ffffff;
+    border: 1px solid #444444;
+}
+
+.form-control:focus,
+.form-select:focus {
+    background-color: #2c2c2c;
+    color: #ffffff;
+    border-color: #555555;
+    box-shadow: none;
+}
+
+.btn-primary {
+    background-color: #3498db;
+    border-color: #3498db;
+}
+
+.btn-primary:hover {
+    background-color: #2980b9;
+    border-color: #2980b9;
+}
+
+.card {
+    background-color: #2c2c2c;
+    border: none;
+}
+
+.card h4 {
+    color: #ffffff;
+}
+
+.list-group-item {
+    background-color: #2c2c2c;
+    border: none;
+}
+
+footer {
+    background-color: #2c2c2c;
+}
+
+footer p {
+    color: #ffffff;
+}
+
+.alert {
+    background-color: #e74c3c;
+    color: #ffffff;
+    border: none;
+}
+
+.spinner-border {
+    color: #3498db;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: #ffffff;
+}

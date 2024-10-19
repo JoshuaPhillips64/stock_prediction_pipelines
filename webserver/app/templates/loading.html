@@ -1,0 +1,19 @@
+<!-- app/templates/loading.html -->
+{% extends "base.html" %}
+
+{% block title %}Loading...{% endblock %}
+
+{% block content %}
+<div class="container text-center my-5">
+    <h2>Please wait while we generate your prediction...</h2>
+    <div class="spinner-border text-primary my-5" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+</div>
+<script>
+    // Automatically redirect to results after a delay
+    setTimeout(function() {
+        window.location.href = "{{ url_for('main_bp.results') }}";
+    }, 2000); // Adjust the delay as needed
+</script>
+{% endblock %}

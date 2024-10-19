@@ -1,6 +1,7 @@
 from sqlalchemy import String, Date, Float, Numeric, MetaData
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.dialects.postgresql import JSON
+from datetime import datetime, date
 
 db = SQLAlchemy()
 
@@ -85,3 +86,19 @@ def create_ai_stock_predictions_model():
         def __repr__(self):
             return f"<AiStockPredictions {self.symbol} {self.date}>"
     return AiStockPredictions
+
+class PredictionResult(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    model_key = db.Column(db.String(128), unique=True, nullable=False)
+    model_type = db.Column(db.String(64), nullable=False)
+    stock_symbol = db.Column(db.String(16), nullable=False)
+    input_date = db.Column(db.Date, nullable=False)
+    hyperparameter_tuning = db.Column(db.String(16), nullable=False)
+    feature_set = db.Column(db.String(64), nullable=False)
+    lookback_period = db.Column(db.Integer, nullable=False)
+    prediction_horizon = db.Column(db.Integer, nullable=False)
+    prediction_data = db.Column(db.Text, nullable=False)
+    date_created = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<PredictionResult {self.model_key}>'

@@ -1,0 +1,14 @@
+<!-- app/templates/error.html -->
+{% extends "base.html" %}
+
+{% block title %}Error - SmartStockPredictor{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <h2 class="mb-4">An Error Occurred</h2>
+    <div class="alert alert-danger">
+        <p>{{ error_message }}</p>
+    </div>
+    <a href="{{ url_for('main_bp.index') }}" class="btn btn-secondary mt-4">Back to Model Generator</a>
+</div>
+{% endblock %}
