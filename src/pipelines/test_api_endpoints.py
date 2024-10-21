@@ -47,7 +47,7 @@ def ingest_stock_data(stocks: List[str], start_date: str, end_date: str, feature
         "stocks": stocks,
         "start_date": start_date,
         "end_date": end_date,
-        "feature_set": feature_set
+        "feature_set": feature_set,
     }
     return call_api("ingest-stock-data", payload)
 
@@ -65,6 +65,19 @@ def train_binary_classification_model(model_key: str, stock_symbol: str, input_d
         "prediction_horizon": prediction_horizon
     }
     return call_api("train-binary-classification-model", payload)
+
+def make_binary_prediction(model_key: str, stock_symbol: str, input_date: str, hyperparameter_tuning: str = 'LOW', feature_set: str = 'basic', lookback_period: int = 720, prediction_horizon: int = 30):
+    payload = {
+        "model_key": model_key,
+        "stock_symbol": stock_symbol,
+        "input_date": input_date,
+        "hyperparameter_tuning": hyperparameter_tuning,
+        "feature_set": feature_set,
+        "lookback_period": lookback_period,
+        "prediction_horizon": prediction_horizon
+
+    }
+    return call_api("make-binary-classification-prediction", payload)
 
 
 
@@ -109,7 +122,7 @@ print("Ingest Stock Data Response:", ingest_response)
 
 #%%
 train_binary_response = train_binary_classification_model(
-    model_key="test_model3",
+    model_key="test_model4",
     stock_symbol="PG",
     input_date="2024-10-01",
     hyperparameter_tuning="LOW",
@@ -118,6 +131,18 @@ train_binary_response = train_binary_classification_model(
     prediction_horizon=30
 )
 print("Train Binary Classification Model Response:", train_binary_response)
+
+make_binary_response = make_binary_prediction(
+    model_key="test_model4",
+    stock_symbol="PG",
+    input_date="2024-10-01",
+    hyperparameter_tuning="LOW",
+    feature_set="basic",
+    lookback_period=1000,
+    prediction_horizon=30
+)
+print("Make Binary Prediction Response:", make_binary_response)
+
 
 #%%
 train_sarimax_response = train_sarimax_model(

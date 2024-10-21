@@ -82,14 +82,18 @@ def make_sarimax_prediction(model_key: str, stock_symbol: str, input_date: str, 
     return call_api("make-sarimax-prediction", payload)
 
 #%% NOT IMPLEMENTED YET
-def make_binary_prediction(model_key: str, stock_symbol: str, input_date: str, feature_set: str = 'basic'):
+def make_binary_prediction(model_key: str, stock_symbol: str, input_date: str, hyperparameter_tuning: str = 'LOW', feature_set: str = 'basic', lookback_period: int = 720, prediction_horizon: int = 30):
     payload = {
         "model_key": model_key,
         "stock_symbol": stock_symbol,
         "input_date": input_date,
-        "feature_set": feature_set
+        "hyperparameter_tuning": hyperparameter_tuning,
+        "feature_set": feature_set,
+        "lookback_period": lookback_period,
+        "prediction_horizon": prediction_horizon
+
     }
-    return call_api("make-binary-prediction", payload)
+    return call_api("make-binary-classification-prediction", payload)
 
 
 def train_sarimax_model(model_key: str, stock_symbol: str, input_date: str, hyperparameter_tuning: str = 'MEDIUM',
@@ -126,6 +130,17 @@ train_binary_response = train_binary_classification_model(
     prediction_horizon=30
 )
 print("Train Binary Classification Model Response:", train_binary_response)
+
+make_binary_response = make_binary_prediction(
+    model_key="test_model4",
+    stock_symbol="PG",
+    input_date="2024-10-01",
+    hyperparameter_tuning="LOW",
+    feature_set="basic",
+    lookback_period=1000,
+    prediction_horizon=30
+)
+print("Make Binary Prediction Response:", make_binary_response)
 
 #%%
 train_sarimax_response = train_sarimax_model(
