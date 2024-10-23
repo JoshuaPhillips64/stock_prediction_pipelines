@@ -346,7 +346,17 @@ def lambda_handler(event, context):
     engine = create_engine_from_url(db_url)
 
     try:
-        predictions = event.get('predictions', [])
+        # Handle both API Gateway and local invocations
+        if 'body' in event:  # Case when invoked through API Gateway
+            # Parse the body if it's a string (API Gateway sends body as string)
+            if isinstance(event['body'], str):
+                event_body = json.loads(event['body'])
+            else:
+                event_body = event['body']
+        else:  # Case when running locally
+            event_body = event
+
+        predictions = event_body.get('predictions', [])
         if not predictions:
             raise ValueError("No predictions provided in the input event")
 

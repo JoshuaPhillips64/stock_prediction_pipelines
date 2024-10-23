@@ -18,4 +18,4 @@
 
 #9 Make an architecture diagram of the project
 
-# 10 Make a high score list of the best predictions, rank off $ made if followed during test period.
+# 10 Make a high score list of the best predictions, rank off $ made (% return) if followed during test period.

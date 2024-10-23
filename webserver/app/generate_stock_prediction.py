@@ -40,8 +40,7 @@ def generate_stock_prediction(
     hyperparameter_tuning: str = 'MEDIUM',
     feature_set: str = 'basic',
     lookback_period: int = 720,
-    prediction_horizon: int = 30,
-    make_prediction_step: bool = True
+    prediction_horizon: int = 30
 ):
     try:
         model_key = generate_model_key(model_type, stock_symbol, feature_set, hyperparameter_tuning, lookback_period, prediction_horizon)
@@ -91,38 +90,32 @@ def generate_stock_prediction(
         if not train_response or train_response.get('status') != 'success':
             raise Exception(f"Model training failed: {train_response.get('message', 'Unknown error')}")
 
-        # Step 4: Optionally call the make prediction API for each date from input_date +/- prediction_horizon
-        if make_prediction_step:
-            prediction_dates = [
-                (input_date_dt + timedelta(days=offset)).strftime('%Y-%m-%d')
-                for offset in range(-prediction_horizon, prediction_horizon + 1)
-            ]
+        # Step 4: Call the make prediction API to receive predictions for values after the test period
 
-            for date_str in prediction_dates:
-                if model_type == 'SARIMAX':
-                    prediction_response = make_sarimax_prediction(
-                        model_key=model_key,
-                        stock_symbol=stock_symbol,
-                        input_date=date_str,
-                        hyperparameter_tuning=hyperparameter_tuning,
-                        feature_set=feature_set,
-                        lookback_period=lookback_period,
-                        prediction_horizon=prediction_horizon
-                    )
-                elif model_type == 'BINARY CLASSIFICATION':
-                    prediction_response = make_binary_prediction(
-                        model_key=model_key,
-                        stock_symbol=stock_symbol,
-                        input_date=date_str,
-                        feature_set=feature_set
-                    )
-                else:
-                    raise Exception("Invalid model type")
+        if model_type == 'SARIMAX':
+            prediction_response = make_sarimax_prediction(
+                model_key=model_key,
+                stock_symbol=stock_symbol,
+                input_date=date_str,
+                hyperparameter_tuning=hyperparameter_tuning,
+                feature_set=feature_set,
+                lookback_period=lookback_period,
+                prediction_horizon=prediction_horizon
+            )
+        elif model_type == 'BINARY CLASSIFICATION':
+            prediction_response = make_binary_prediction(
+                model_key=model_key,
+                stock_symbol=stock_symbol,
+                input_date=date_str,
+                feature_set=feature_set
+            )
+        else:
+            raise Exception("Invalid model type")
 
-                if not prediction_response or prediction_response.get('status') != 'success':
-                    raise Exception(f"Prediction failed for date {date_str}: {prediction_response.get('message', 'Unknown error')}")
+        if not prediction_response or prediction_response.get('status') != 'success':
+            raise Exception(f"Prediction failed for date {date_str}: {prediction_response.get('message', 'Unknown error')}")
 
-                # The predictions are saved to the database by the API; no need to collect them here
+        # The predictions are saved to the database by the API; no need to collect them here
 
         # Step 5: Trigger AI analysis
         ai_analysis_response = trigger_ai_analysis(model_key)

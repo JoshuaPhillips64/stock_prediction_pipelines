@@ -60,8 +60,8 @@ def create_repo_text(root_path):
 # Usage
 if __name__ == "__main__":
     # Use the current working directory (cwd)
-    #repo_path = os.getcwd()
+    repo_path = os.getcwd()
     # USe the folder src or another folder
-    repo_path = os.path.join(os.getcwd(), 'webserver')
+    #repo_path = os.path.join(os.getcwd(), 'webserver')
 
     create_repo_text(repo_path)

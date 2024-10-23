@@ -14,11 +14,7 @@ The **Stock Prediction Pipelines** project utilizes a combination of AWS service
 - **Setup**: The Airflow environment is deployed using AWS MWAA (Managed Workflows for Apache Airflow), ensuring scalability and fault tolerance.
 - **DAGs**: DAGs are responsible for scheduling tasks such as data ingestion, transformation, and predictive modeling.
 
-### AWS EMR (Elastic MapReduce)
-- **Purpose**: Processes large datasets using PySpark jobs to run predictive models for stock price forecasting.
-- **Configuration**: The EMR cluster is configured using Terraform to spin up multiple instances to handle the data processing load efficiently. The results of the model are stored in PostgreSQL for further use.
-
-### Data Lineage
+### Data Lineage - TODO
 - **OpenLineage and Marquez**: These tools are integrated to track and visualize the flow of data through the various stages of the pipeline. This helps in auditing, debugging, and ensuring data integrity throughout the pipeline.
   
 ### Database
@@ -33,9 +29,9 @@ The architecture can be visualized as follows:
 
 1. **Data Ingestion**: Alpha Vantage API -> Lambda -> PostgreSQL/S3.
 2. **Orchestration**: Apache Airflow triggers DAGs that control data ingestion and model execution.
-3. **Data Processing**: PySpark on AWS EMR -> Model results stored in PostgreSQL.
+3. **Data Processing**: AIRFLOW DAGs -> Lambda -> PostgreSQL/S3.
 4. **Data Lineage Tracking**: OpenLineage and Marquez monitor data flow between components.
 
 ## Conclusion
 
-This architecture ensures a modular, scalable, and robust pipeline that can handle stock data ingestion, transformation, and predictive modeling in a production-grade environment.
+This architecture ensures a pipeline that can handle stock data ingestion, transformation, and predictive modeling in a production-grade environment.

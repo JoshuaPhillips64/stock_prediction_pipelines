@@ -1,16 +1,19 @@
-# Stock Prediction Pipelines on AWS with Terraform
+# Smartstockpredictor.com
 
-## Overview
+This repository contains a stock prediction system that ingests stock data, enriches it with various features including AI generated market sentiment,
+trains predictive models (SARIMAX and XGBoost), generates AI-powered analysis, and serves predictions through a user-friendly web application.
 
-This repository contains a Python-based ETL pipelines that runs on AWS, utilizing Terraform for infrastructure as code. The pipeline is designed to handle multiple AWS Lambda functions with different layers, support large PySpark jobs on EMR, and orchestrate workflows using Apache Airflow. It also integrates OpenLineage and Marquez for data lineage tracking.
+## Architecture
 
-## Features
+The system is designed with a microservices architecture using Flask, AWS Lambda, Airflow, PostgreSQL, and S3.
 
-- **AWS Lambda Functions**: Modular Lambda functions with shared and individual dependencies managed via Poetry.
-- **AWS EMR**: Scalable EMR clusters running PySpark jobs for heavy data processing.
-- **Apache Airflow**: Workflow orchestration and scheduling.
-- **OpenLineage & Marquez**: Data lineage and metadata management.
-- **CI/CD Pipeline**: Automated deployments using Terraform and GitHub Actions.
+1. **Data Ingestion:** Lambda functions ingest historical stock data from Alpha Vantage and other sources.
+2. **Data Enrichment:** Data is enriched with technical indicators, AI generated market sentiment, economic data, and more.
+3. **Model Training:** SARIMAX and XGBoost models are trained using historical data and tuned with time series cross-validation. Airflow orchestrates daily model retraining.
+4. **AI Analysis:** OpenAI's GPT-4 and Anthropic's Claude generate insightful explanations for predictions, enhancing interpretability.
+5. **Storage:** Processed data and trained models are stored in S3 and PostgreSQL.
+6. **Web Application:** A Flask web application provides a user interface for interacting with the system and visualizing predictions.
+7. **CI/CD:** GitHub Actions automates testing, building, and deployment of Lambda functions and the web application. Terraform manages infrastructure provisioning.
 
 ## Getting Started
 

@@ -4,6 +4,7 @@ import requests
 from typing import List, Dict, Any, Optional
 from config import Config
 from datetime import datetime, timedelta
+import time
 
 # Access Config class attributes using dot notation
 API_URL = Config.API_URL
@@ -81,7 +82,7 @@ def make_sarimax_prediction(model_key: str, stock_symbol: str, input_date: str, 
     }
     return call_api("make-sarimax-prediction", payload)
 
-#%% NOT IMPLEMENTED YET
+#%%
 def make_binary_prediction(model_key: str, stock_symbol: str, input_date: str, hyperparameter_tuning: str = 'LOW', feature_set: str = 'basic', lookback_period: int = 720, prediction_horizon: int = 30):
     payload = {
         "model_key": model_key,
@@ -116,10 +117,10 @@ def trigger_ai_analysis(predictions: List[Dict[str, Any]]):
     return call_api("ai-analysis", payload)
 
 #%% Example Usage
-"""
+
 ingest_response = ingest_stock_data(["PG"], "2024-01-01", "2024-10-10")
 print("Ingest Stock Data Response:", ingest_response)
-
+#%%
 train_binary_response = train_binary_classification_model(
     model_key="test_model3",
     stock_symbol="PG",
@@ -132,7 +133,7 @@ train_binary_response = train_binary_classification_model(
 print("Train Binary Classification Model Response:", train_binary_response)
 
 make_binary_response = make_binary_prediction(
-    model_key="test_model4",
+    model_key="test_model3",
     stock_symbol="PG",
     input_date="2024-10-01",
     hyperparameter_tuning="LOW",
@@ -157,7 +158,7 @@ print("Train Sarimax Model Response:", train_sarimax_response)
 make_sarimax_response = make_sarimax_prediction(
     model_key="sample_model_001",
     stock_symbol="PG",
-    input_date='2024-10-10',
+    input_date='2024-10-01',
     hyperparameter_tuning='LOW',
     feature_set='advanced',
     lookback_period=720,
@@ -221,4 +222,4 @@ prediction_data = [
 ]
 ai_analysis_response = trigger_ai_analysis(prediction_data)
 print("AI Analysis Response:", ai_analysis_response)
-"""
+

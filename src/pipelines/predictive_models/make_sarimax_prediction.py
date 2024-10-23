@@ -339,8 +339,15 @@ def make_SARIMAX_prediction(model_key, stock_symbol, input_date, hyperparameter_
     dates = pd.bdate_range(end=input_date_dt, periods=prediction_horizon).tolist()
 
     # Add the input_date + prediction_horizon to the list of dates
-    final_prediction_date = pd.date_range(start=input_date_dt, periods=prediction_horizon+1)[-1]
-    dates.append(final_prediction_date)
+    final_prediction_date = pd.date_range(start=input_date_dt, periods=prediction_horizon + 1)[-1]
+
+    final_dates = pd.bdate_range(start=input_date_dt, end=final_prediction_date).tolist()
+
+    # Extend the dates list with final_dates, flattening the list
+    dates.extend(final_dates)
+
+    # Remove duplicates (if any) and sort the dates to ensure proper sequence
+    dates = sorted(list(set(dates)))
 
     predictions = {}
     for prediction_date in dates:

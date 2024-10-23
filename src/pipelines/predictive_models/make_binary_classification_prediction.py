@@ -351,10 +351,18 @@ def make_binary_classification_prediction(model_key, stock_symbol, input_date, h
 
     # Add the input_date + prediction_horizon to the list of dates
     final_prediction_date = pd.date_range(start=input_date_dt, periods=prediction_horizon+1)[-1]
-    dates.append(final_prediction_date)
+
+    final_dates = pd.bdate_range(start=input_date_dt, end=final_prediction_date).tolist()
+
+    # Extend the dates list with final_dates, flattening the list
+    dates.extend(final_dates)
+
+    # Remove duplicates (if any) and sort the dates to ensure proper sequence
+    dates = sorted(list(set(dates)))
 
     predictions = {}
     for prediction_date in dates:
+        print(f'starting prediction for {prediction_date}...')
         # Adjust current_end_date and current_start_date as per your existing logic
         current_end_date = prediction_date - timedelta(days=prediction_horizon)
         current_start_date = current_end_date - timedelta(days=lookback_period)
