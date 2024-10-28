@@ -82,3 +82,36 @@ footer p {
 h1, h2, h3, h4, h5, h6 {
     color: #ffffff;
 }
+
+.table-dark {
+    background-color: #2c2c2c;
+}
+
+.table-dark th,
+.table-dark td {
+    border-color: #444444;
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: #1e1e1e;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    color: #ffffff !important;
+    background-color: transparent !important;
+    border: none;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+    background-color: #2c2c2c;
+    color: #ffffff;
+    border: 1px solid #444444;
+}
+
+.dataTables_wrapper .dataTables_filter label {
+    color: #ffffff;
+}
+
+.dataTables_wrapper .dataTables_info {
+    color: #ffffff;
+}

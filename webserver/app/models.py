@@ -15,8 +15,8 @@ def create_dynamic_model(table_name):
             data = {c.name: getattr(self, c.name) for c in self.__table__.columns}
             # Convert JSON fields to dictionaries if necessary
             for col in self.__table__.columns:
-                if str(col.type) == 'JSON' or str(col.type) == 'JSONB':
-                    if data[col.name]:
+                if str(col.type) in ('JSON', 'JSONB'):
+                    if data[col.name] and isinstance(data[col.name], str):
                         data[col.name] = json.loads(data[col.name])
             return data
 

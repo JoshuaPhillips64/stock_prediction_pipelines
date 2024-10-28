@@ -35,14 +35,16 @@ def generate_chatgpt_explanation(input_data):
     example_explanations = {
         'classification': """
 **Conclusion:**
-The model confidently predicts that the stock for {symbol} will **{predicted_movement}** by {prediction_date}.
+The model predicts that the stock for {symbol} will *{predicted_movement}* by {prediction_date}.
+2 Sentence SUMMARY Analysis Looking at performance metrics and price to see if this is a trustworthy model for investment decisions.
+
 
 **Performance Metrics:**
-- **Accuracy:** {prediction_accuracy} ({prediction_accuracy_percentage}%) - Indicates the proportion of correct predictions. A higher value signifies better performance.
-- **Precision:** {prediction_precision} ({prediction_precision_percentage}%) - Measures the accuracy of positive predictions. Higher precision reduces false positives.
-- **Recall:** {prediction_recall} ({prediction_recall_percentage}%) - Assesses the model's ability to identify all relevant instances. Higher recall reduces false negatives.
-- **F1 Score:** {prediction_f1_score} ({prediction_f1_score_percentage}%) - Balances precision and recall. A higher F1 score indicates better model performance.
-- **ROC AUC:** {prediction_roc_auc} - Reflects the model's ability to distinguish between classes. Values closer to 1 indicate excellent performance.
+- **Accuracy:** {prediction_accuracy} ({prediction_accuracy_percentage}%) - 1 Sentence Analysis of if this is a good result for Accuracy goes here
+- **Precision:** {prediction_precision} ({prediction_precision_percentage}%) - 1 Sentence Analysis of if this is a good result for Precision goes here
+- **Recall:** {prediction_recall} ({prediction_recall_percentage}%) - 1 Sentence Analysis of if this is a good result for Recall goes here
+- **F1 Score:** {prediction_f1_score} ({prediction_f1_score_percentage}%) - 1 Sentence Analysis of if this is a good result for F1 goes here
+- **ROC AUC:** {prediction_roc_auc} - 1 Sentence Analysis of if this is a good result for ROC AUC goes here
 
 **Prediction Details:**
 - **Predicted Price:** {predicted_price}
@@ -58,15 +60,16 @@ The model confidently predicts that the stock for {symbol} will **{predicted_mov
 - **False Positives:** {confusion_matrix_fp}
 - **False Negatives:** {confusion_matrix_fn}
 """,
-        'regression': """
+        'regression': f"""
 **Conclusion:**
-The SARIMAX model forecasts the stock price for {symbol} to be **{predicted_amount}** by {prediction_date}.
+The SARIMAX model forecasts the stock price for {symbol} to be ${predicted_amount} by {prediction_date}. 
+2 Sentence SUMMARY Analysis Looking at performance metrics and price to see if this is a trustworthy model for investment decisions.
 
 **Performance Metrics:**
-- **RMSE:** {prediction_rmse} - Measures the model's prediction error. Lower values indicate better performance.
-- **MAE:** {prediction_mae} - Represents the average absolute error. Lower values are preferable.
-- **MAPE:** {prediction_mape}% - Shows the mean absolute percentage error. Values closer to 0% are better.
-- **Confidence Score:** {prediction_confidence_score} - Reflects the model's confidence in its predictions. Higher scores denote higher confidence.
+- **RMSE:** {prediction_rmse} - 1 Sentence Analysis of if this is a good result for RMSE goes here
+- **MAE:** {prediction_mae} - 1 Sentence Analysis of if this is a good result for MAE goes here
+- **MAPE:** {prediction_mape}% - 1 Sentence Analysis of if this is a good result for MAPE goes here
+- **Confidence Score:** {prediction_confidence_score} - 1 Sentence Analysis of if this is a good result for Confidence Score goes here
 
 **Prediction Details:**
 - **Predicted Amount:** {predicted_amount}
@@ -83,6 +86,9 @@ The SARIMAX model forecasts the stock price for {symbol} to be **{predicted_amou
         'general': """
 **Conclusion:**
 The model predicts that the stock for {symbol} will **{predicted_movement_or_details}** by {prediction_date}.
+The model's prediction suggests a positive outlook for PG's stock price in the short term. However, the high MAPE indicates that while the model is confident in its prediction, there may be significant variability in actual outcomes. Investors should consider this forecast alongside other market analyses and economic indicators. The model's reliance on technical indicators and economic factors highlights the importance of both market trends and broader economic conditions in influencing stock prices.
+Investors should consider these insights along with other market factors before making decisions.
+
 
 **Performance Metrics:**
 - {metrics}
@@ -93,9 +99,6 @@ The model predicts that the stock for {symbol} will **{predicted_movement_or_det
 
 **Key Influencing Features:**
 - {important_features}
-
-**Conclusion:**
-The model's prediction suggests **{conclusion}**.
 """
     }
 
@@ -269,11 +272,11 @@ Stock Prediction Details:
 **Example Explanation:**
 {formatted_example}
 
-Please provide a detailed explanation based on the stock prediction data above.
+Please provide a detailed explanation based on the stock prediction data above. Ensure it follows the structure of the example.
 """
 
     # Call ChatGPT to generate the explanation
-    system_prompt = "You are a financial AI model that provides clear and concise stock analysis explanations based on model outputs and metrics."
+    system_prompt = "You are a financial AI model that provides clear and concise stock analysis explanations based on model outputs and metrics. You will be given example formats to follow. You are to follow the structure and provide CONCISE analaysis where needed."
     gpt_response = execute_chatgpt_call(user_prompt, system_prompt)
 
     return gpt_response

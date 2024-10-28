@@ -1,212 +1,375 @@
-<!-- app/templates/results.html -->
-
 {% extends "base.html" %}
 
-{% block title %}Prediction Results - {{ stock_symbol }}{% endblock %}
-
-{% block head %}
-<!-- Include Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-{% endblock %}
+{% block title %}Prediction Results{% endblock %}
 
 {% block content %}
 <div class="container my-5">
-    <h2 class="mb-4">Prediction Results for {{ stock_symbol }}</h2>
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card p-3 mb-4">
-                <canvas id="predictionChart"></canvas>
-            </div>
-            {% if ai_analysis and ai_analysis.explanation %}
-            <div class="card p-3 mb-4">
-                <h4>AI Analysis</h4>
-                <p>{{ ai_analysis.explanation | safe }}</p>
-            </div>
-            {% endif %}
+    <!-- AI Analysis Section -->
+    {% if ai_analysis %}
+    <section class="ai-analysis mb-5">
+        <h2 class="section-title">AI Analysis of Results</h2>
+
+        {% if ai_analysis.conclusion %}
+        <div class="analysis-section">
+            <h4>Conclusion</h4>
+            <p>{{ ai_analysis.conclusion }}</p>
         </div>
-        <div class="col-md-4">
-            <div class="card p-3 mb-4">
-                <h4>Model Metrics</h4>
-                <ul class="list-group list-group-flush">
-                    <li class="list-group-item"><strong>Model Type:</strong> {{ model_type }}</li>
-                    <li class="list-group-item"><strong>Hyperparameter Tuning:</strong> {{ hyperparameter_tuning }}</li>
-                    <li class="list-group-item"><strong>Feature Set:</strong> {{ feature_set }}</li>
-                    <li class="list-group-item"><strong>Lookback Period:</strong> {{ lookback_period }} days</li>
-                    <li class="list-group-item"><strong>Prediction Horizon:</strong> {{ prediction_horizon }} days</li>
-                </ul>
-            </div>
-            {% if performance_metrics %}
-            <div class="card p-3 mb-4">
-                <h4>Performance Metrics</h4>
-                <ul class="list-group list-group-flush">
-                    {% if model_type == 'SARIMAX' %}
-                        <li class="list-group-item"><strong>RMSE:</strong> {{ performance_metrics.prediction_rmse }}</li>
-                        <li class="list-group-item"><strong>MAE:</strong> {{ performance_metrics.prediction_mae }}</li>
-                        <li class="list-group-item"><strong>MAPE:</strong> {{ performance_metrics.prediction_mape }}</li>
-                        <li class="list-group-item"><strong>Confidence Score:</strong> {{ performance_metrics.prediction_confidence_score }}</li>
-                    {% elif model_type == 'BINARY CLASSIFICATION' %}
-                        <li class="list-group-item"><strong>Accuracy:</strong> {{ performance_metrics.prediction_accuracy }}</li>
-                        <li class="list-group-item"><strong>ROC AUC:</strong> {{ performance_metrics.prediction_roc_auc }}</li>
-                        <li class="list-group-item"><strong>Precision:</strong> {{ performance_metrics.prediction_precision }}</li>
-                        <li class="list-group-item"><strong>Recall:</strong> {{ performance_metrics.prediction_recall }}</li>
-                        <li class="list-group-item"><strong>F1 Score:</strong> {{ performance_metrics.prediction_f1_score }}</li>
+        {% endif %}
+
+        {% if ai_analysis.performance_metrics %}
+        <div class="analysis-section">
+            <h4>Performance Metrics</h4>
+            <div class="metrics-grid">
+                {% for metric in ai_analysis.performance_metrics %}
+                <div class="metric-card">
+                    <h5>{{ metric.name }}</h5>
+                    <p class="metric-value">{{ metric.value | default(0) | float | round(2) }}</p>
+                    {% if metric.description %}
+                    <p class="metric-description">{{ metric.description }}</p>
                     {% endif %}
-                </ul>
+                </div>
+                {% endfor %}
             </div>
-            {% endif %}
-            {% if performance_metrics.feature_importance %}
-            <div class="card p-3 mb-4">
-                <h4>Feature Importance</h4>
-                <canvas id="featureImportanceChart"></canvas>
-            </div>
-            {% endif %}
         </div>
-    </div>
-    <a href="{{ url_for('main_bp.index') }}" class="btn btn-secondary mt-4">Back to Model Generator</a>
+        {% endif %}
+
+
+        {% if ai_analysis.additional_notes %}
+        <div class="analysis-section">
+            <h4>Additional Notes</h4>
+            <p>{{ ai_analysis.additional_notes }}</p>
+        </div>
+        {% endif %}
+    </section>
+    {% endif %}
+
+    <!-- Prediction Chart Section -->
+    <section class="chart-container mb-5">
+        <h2 class="section-title">{{ stock_symbol }} Prediction Chart</h2>
+        <div id="predictionChart" class="chart"></div>
+    </section>
+
+    <!-- Feature Importance Chart Section -->
+    {% if feature_importance %}
+    <section class="feature-importance mb-5">
+        <h2 class="section-title">Feature Importance</h2>
+        <div id="featureImportanceChart" class="chart"></div>
+    </section>
+    {% endif %}
 </div>
-{% endblock %}
 
-{% block scripts %}
+<!-- Include Plotly JS -->
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+<!-- Feature Definitions Script -->
 <script>
-    const labels = {{ prediction_dates | tojson }};
-    const actualData = {{ actual_prices | tojson }};
-    const predictedData = {{ predicted_prices | tojson }};
-
-    const ctx = document.getElementById('predictionChart').getContext('2d');
-    {% if model_type == 'SARIMAX' %}
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'Actual Price',
-                    data: actualData,
-                    borderColor: '#3498db',
-                    backgroundColor: 'rgba(52, 152, 219, 0.2)',
-                    tension: 0.1,
-                },
-                {
-                    label: 'Predicted Price',
-                    data: predictedData,
-                    borderColor: '#e74c3c',
-                    backgroundColor: 'rgba(231, 76, 60, 0.2)',
-                    tension: 0.1,
-                },
-            ],
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'Stock Price Prediction',
-                },
-                legend: {
-                    labels: {
-                        color: '#000000'
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    ticks: { color: '#000000' },
-                    grid: { color: 'rgba(0, 0, 0, 0.1)' }
-                },
-                y: {
-                    beginAtZero: false,
-                    ticks: { color: '#000000' },
-                    grid: { color: 'rgba(0, 0, 0, 0.1)' }
-                },
-            },
-        },
-    });
-    {% elif model_type == 'BINARY CLASSIFICATION' %}
-    new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'Actual Movement',
-                    data: actualData,
-                    backgroundColor: 'rgba(52, 152, 219, 0.5)',
-                },
-                {
-                    label: 'Predicted Movement',
-                    data: predictedData,
-                    backgroundColor: 'rgba(231, 76, 60, 0.5)',
-                },
-            ],
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'Stock Movement Prediction',
-                },
-                legend: {
-                    labels: {
-                        color: '#000000'
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    stacked: true,
-                    ticks: { color: '#000000' },
-                    grid: { color: 'rgba(0, 0, 0, 0.1)' }
-                },
-                y: {
-                    beginAtZero: true,
-                    stacked: true,
-                    ticks: { color: '#000000' },
-                    grid: { color: 'rgba(0, 0, 0, 0.1)' }
-                },
-            },
-        });
-    {% endif %}
-
-    {% if performance_metrics.feature_importance %}
-    const featureImportance = {{ performance_metrics.feature_importance | tojson }};
-    const featureLabels = Object.values(featureImportance.feature);
-    const featureValues = Object.values(featureImportance.importance);
-
-    const ctxFeature = document.getElementById('featureImportanceChart').getContext('2d');
-    new Chart(ctxFeature, {
-        type: 'bar',
-        data: {
-            labels: featureLabels,
-            datasets: [{
-                label: 'Feature Importance',
-                data: featureValues,
-                backgroundColor: 'rgba(46, 204, 113, 0.7)',
-            }]
-        },
-        options: {
-            indexAxis: 'y',
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'Feature Importance',
-                },
-                legend: {
-                    display: false,
-                }
-            },
-            scales: {
-                x: {
-                    ticks: { color: '#000000' },
-                    grid: { color: 'rgba(0, 0, 0, 0.1)' }
-                },
-                y: {
-                    ticks: { color: '#000000' },
-                    grid: { color: 'rgba(0, 0, 0, 0.1)' }
-                },
-            },
-        },
-    });
-    {% endif %}
+    const featureDefinitions = {
+        macd: "Moving Average Convergence Divergence: Shows the relationship between two moving averages of prices.",
+        gdp_growth: "The most recent GDP growth rate available up to the given date.",
+        inflation_rate: "The most recent inflation rate available up to the given date.",
+        put_call_ratio: "Put/Call option volume with expiration between 25 and 35 days in future; indicates market sentiment.",
+        sentiment_score: "Average sentiment score from recent news articles about the stock.",
+        sector_performance: "Daily return percentage of the stock's sector ETF.",
+        technical_indicators: "A combination of various technical indicators used to analyze price trends and patterns.",
+        consumer_sentiment: "A measure of consumer confidence in the economy.",
+        rsi: "Relative Strength Index: An oscillator measuring the speed and change of price movements.",
+        macd_signal: "The signal line of the MACD indicator.",
+        macd_hist: "The MACD histogram; difference between MACD and MACD signal.",
+        adx: "Average Directional Index: Measures the strength of a trend.",
+        upper_band: "Upper Bollinger Band; indicates overbought levels.",
+        lower_band: "Lower Bollinger Band; indicates oversold levels.",
+        sp500_return: "Daily return percentage of the S&P 500 index.",
+        nasdaq_return: "Daily return percentage of the NASDAQ index.",
+        implied_volatility: "Average implied volatility from options data; reflects market's forecast of stock volatility.",
+        beta: "A measure of the stock's volatility relative to the market.",
+        pe_ratio: "Price-to-Earnings ratio; stock price divided by earnings per share.",
+        dividend_yield: "Annual dividends per share divided by price per share.",
+        market_capitalization: "The total market value of a company's outstanding shares.",
+        unemployment_rate: "The most recent unemployment rate available up to the given date.",
+        rolling_volatility_60: "Rolling 60-day volatility: Measures the stock's price volatility over the past 60 days.",
+        sma_50: "Simple Moving Average (50-day): Average stock price over the past 50 days.",
+        ema_50: "Exponential Moving Average (50-day): Weighted average stock price over the past 50 days.",
+        '%k': "Stochastic Oscillator %K: Measures the current price relative to the price range over a specified period.",
+        '%d': "Stochastic Oscillator %D: 3-day moving average of %K.",
+        cci: "Commodity Channel Index: Measures the current price level relative to an average price level over a period of time.",
+        momentum_30: "Momentum Indicator over 30 days: Measures the rate of change of price over 30 days.",
+        momentum_60: "Momentum Indicator over 60 days: Measures the rate of change of price over 60 days."
+    };
 </script>
+
+<!-- Chart Rendering Script -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Prepare data
+        const chartData = {{ chart_data | tojson }};
+        const dates = chartData.x;
+        const actualValues = chartData.actual;
+        const predictedValues = chartData.predicted;
+        const modelType = "{{ model_type }}";
+
+        // Define layout common settings
+        const commonLayout = {
+            plot_bgcolor: '#34495e',
+            paper_bgcolor: '#2c3e50',
+            font: { color: '#ecf0f1' },
+            hovermode: 'closest',
+            autosize: true
+        };
+
+        // Initialize data array
+        let data = [];
+        let layout = {};
+
+        if (modelType === 'SARIMAX') {
+            // SARIMAX: Actual vs Predicted Price
+            data = [
+                {
+                    x: dates,
+                    y: actualValues,
+                    mode: 'lines+markers',
+                    name: 'Actual Price',
+                    line: { color: '#1f77b4' },
+                    marker: { size: 6 }
+                },
+                {
+                    x: dates,
+                    y: predictedValues,
+                    mode: 'lines+markers',
+                    name: 'Predicted Price',
+                    line: { color: '#ff7f0e', dash: 'dot' },
+                    marker: { size: 6 }
+                }
+            ];
+
+            layout = {
+                title: '{{ stock_symbol }} Predicted vs Actual Prices',
+                xaxis: { title: 'Date' },
+                yaxis: { title: 'Price ($)' },
+                ...commonLayout
+            };
+        } else if (modelType === 'BINARY CLASSIFICATION') {
+            // BINARY CLASSIFICATION: Actual vs Predicted Movement
+            data = [
+                {
+                    x: dates,
+                    y: actualValues.map(value => (value === 1 ? 1 : 0)),
+                    mode: 'markers',
+                    name: 'Actual Movement',
+                    marker: { color: '#1f77b4', symbol: 'circle', size: 8 },
+                    hovertemplate: 'Date: %{x}<br>Actual Movement: %{y === 1 ? "Up" : "Down"}<extra></extra>'
+                },
+                {
+                    x: dates,
+                    y: predictedValues.map(value => (value === 1 ? 1 : 0)),
+                    mode: 'markers',
+                    name: 'Predicted Movement',
+                    marker: { color: '#ff7f0e', symbol: 'x', size: 8 },
+                    hovertemplate: 'Date: %{x}<br>Predicted Movement: %{y === 1 ? "Up" : "Down"}<extra></extra>'
+                }
+            ];
+
+            layout = {
+                title: '{{ stock_symbol }} Predicted vs Actual Movements',
+                xaxis: { title: 'Date' },
+                yaxis: {
+                    title: 'Movement',
+                    tickvals: [0, 1],
+                    ticktext: ['Down', 'Up']
+                },
+                ...commonLayout
+            };
+        }
+
+        // Render Prediction Chart
+        Plotly.newPlot('predictionChart', data, layout);
+
+        <!-- Feature Importance Chart -->
+        {% if feature_importance %}
+        const features = {{ feature_importance.feature | tojson }};
+        const importances = {{ feature_importance.importance | tojson }};
+
+        // Combine features with their importances
+        const featureImportancePairs = features.map((feature, index) => ({
+            feature: feature,
+            importance: importances[index]
+        }));
+
+        // Sort the pairs in descending order of importance
+        featureImportancePairs.sort((a, b) => a.importance - b.importance);
+
+        // Select the top N features, e.g., top 6
+        const topN = 6;
+        const topFeatureImportance = featureImportancePairs.slice(0, topN);
+
+        // Separate the sorted features and importances
+        const sortedFeatures = topFeatureImportance.map(item => item.feature);
+        const sortedImportances = topFeatureImportance.map(item => item.importance);
+
+        // Normalize importances for consistent scaling
+        const maxImportance = Math.max(...sortedImportances);
+        const normalizedImportances = sortedImportances.map(imp => imp / maxImportance);
+
+        const featureTrace = {
+            x: normalizedImportances.map(val => parseFloat(val.toFixed(4))), // Ensure numerical precision
+            y: sortedFeatures, // Sorted in descending order
+            type: 'bar',
+            orientation: 'h',
+            marker: { color: '#3498db' },
+            hovertemplate: '<b>%{y}</b><br>Importance: %{x:.2%}<br>%{customdata}<extra></extra>',
+            customdata: sortedFeatures.map(feature => featureDefinitions[feature.toLowerCase()] || "No definition available")
+        };
+
+        const featureLayout = {
+            title: 'Top 6 Feature Importances',
+            xaxis: {
+                title: 'Normalized Importance',
+                tickformat: '.0%',
+                color: '#ecf0f1'
+            },
+            yaxis: {
+                automargin: true,
+                color: '#ecf0f1',
+                categoryorder: 'total descending' // Ensures highest importance at the top
+            },
+            ...commonLayout,
+            margin: { l: 200, r: 50, t: 50, b: 50 },
+            hoverlabel: {
+                bgcolor: '#2c3e50',
+                font: { color: '#ecf0f1', size: 14 },
+                bordercolor: '#3498db'
+            }
+        };
+
+        // Render Feature Importance Chart
+        Plotly.newPlot('featureImportanceChart', [featureTrace], featureLayout);
+        {% endif %}
+    });
+</script>
+
+<!-- Stylesheet -->
+<style>
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 40px 20px;
+        color: #ecf0f1;
+    }
+
+    .section-title {
+        color: #ecf0f1;
+        text-align: center;
+        margin-bottom: 1.5rem;
+    }
+
+    section {
+        background-color: #2c3e50;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .analysis-section {
+        margin-bottom: 2rem;
+        padding: 1rem;
+        background-color: rgba(52, 73, 94, 0.5);
+        border-radius: 8px;
+    }
+
+    .analysis-section h4 {
+        color: #3498db;
+        margin-bottom: 1rem;
+    }
+
+    .metrics-grid,
+    .features-grid,
+    .params-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .metric-card,
+    .feature-card,
+    .param-card {
+        background-color: rgba(41, 128, 185, 0.1);
+        border-radius: 8px;
+        padding: 1rem;
+        border: 1px solid rgba(52, 152, 219, 0.2);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .metric-card:hover,
+    .feature-card:hover,
+    .param-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    .metric-card h5,
+    .feature-card h5,
+    .param-card h5 {
+        color: #3498db;
+        margin-bottom: 0.5rem;
+    }
+
+    .metric-value,
+    .feature-value,
+    .param-value {
+        font-size: 1.2rem;
+        color: #fff;
+        margin-bottom: 0.5rem;
+    }
+
+    .metric-description,
+    .feature-description,
+    .param-description {
+        font-size: 0.9rem;
+        color: #bdc3c7;
+        line-height: 1.4;
+    }
+
+    /* Chart Styling */
+    .chart-container,
+    .feature-importance {
+        margin-bottom: 2rem;
+    }
+
+    .chart {
+        width: 100%;
+        height: 500px;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .container {
+            padding: 20px 15px;
+        }
+
+        .metrics-grid,
+        .features-grid,
+        .params-grid {
+            grid-template-columns: 1fr;
+        }
+
+        section {
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+        }
+
+        .metric-value,
+        .feature-value,
+        .param-value {
+            font-size: 1.1rem;
+        }
+
+        .chart {
+            height: 400px;
+        }
+    }
+</style>
 {% endblock %}

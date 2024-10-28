@@ -1,4 +1,3 @@
-<!-- app/templates/loading.html -->
 {% extends "base.html" %}
 
 {% block title %}Loading...{% endblock %}
@@ -6,14 +5,62 @@
 {% block content %}
 <div class="container text-center my-5">
     <h2>Please wait while we generate your prediction...</h2>
+
+    <!-- Loading Spinner -->
     <div class="spinner-border text-primary my-5" role="status">
         <span class="visually-hidden">Loading...</span>
     </div>
+
+    <!-- Status Updates -->
+    <div id="statusUpdates" class="mt-4">
+        <p id="statusText">Initializing the prediction pipeline...</p>
+    </div>
 </div>
+
 <script>
-    // Automatically redirect to results after a delay
+    // Status update messages with variable time durations (in milliseconds)
+    const statusUpdates = [
+        { message: "Retrieving historical stock data...", delay: 5000 },
+        { message: "Validating data completeness and integrity...", delay: 3000 },
+        { message: "Preprocessing data...", delay: 5000 },
+        { message: "Selecting features for model input...", delay: 4000 },
+        { message: "Splitting data into training and validation sets...", delay: 4000 },
+        { message: "Initiating model configuration: setup in progress...", delay: 4000 },
+        { message: "Running hyperparameter tuning for optimal performance...", delay: 10000 },
+        { message: "Training model on selected data...", delay: 10000 },
+        { message: "Evaluating model performance on validation set...", delay: 10000 },
+        { message: "Performing cross-validation to ensure model generalization...", delay: 10000 },
+        { message: "Finalizing model training...", delay: 10000 },
+        { message: "Generating stock price predictions for the specified horizon...", delay: 10000 },
+        { message: "Performing AI-based analysis for prediction explanations...", delay: 10000 },
+        { message: "Running diagnostic checks on the predictions...", delay: 8000 },
+        { message: "Optimizing output for performance...", delay: 7000 },
+        { message: "Compiling results and preparing output...", delay: 6000 },
+        { message: "Prediction generation complete. Finalizing the report...", delay: 5000 }
+    ];
+
+    // Function to update status messages with variable timing
+    let statusIndex = 0;
+    function updateStatus() {
+        if (statusIndex < statusUpdates.length) {
+            document.getElementById('statusText').textContent = statusUpdates[statusIndex].message;
+            setTimeout(updateStatus, statusUpdates[statusIndex].delay);
+            statusIndex++;
+        }
+    }
+
+    // Start the first status update
+    updateStatus();
+
+    // Automatically redirect to results after the full loading process (4 minutes = 240000 ms)
     setTimeout(function() {
         window.location.href = "{{ url_for('main_bp.results') }}";
-    }, 2000); // Adjust the delay as needed
+    }, 1000);
+
+    // Prevent "site can't be reached" errors by ensuring the page stays active while things load
+    window.addEventListener('beforeunload', function(event) {
+        event.preventDefault();
+        event.returnValue = '';
+    });
 </script>
 {% endblock %}

@@ -36,8 +36,8 @@ def call_api(endpoint: str, payload: Optional[Dict[str, Any]] = None, method: st
         elif response.status_code == 504:
             retry_count += 1
             if retry_count <= max_retries:
-                print(f"Received 504 Gateway Timeout. Perceived root cause is lambda cold starting. Retrying {retry_count}/{max_retries} after 5 seconds...")
-                time.sleep(5)
+                print(f"Received 504 Gateway Timeout. Perceived root cause is lambda cold starting. Retrying {retry_count}/{max_retries} after 10 seconds...")
+                time.sleep(10)
             else:
                 print(f"Max retries reached ({max_retries}). Aborting.")
                 return None
@@ -118,6 +118,7 @@ def trigger_ai_analysis(predictions: List[Dict[str, Any]]):
 
 #%% Example Usage
 
+"""
 ingest_response = ingest_stock_data(["PG"], "2024-01-01", "2024-10-10")
 print("Ingest Stock Data Response:", ingest_response)
 #%%
@@ -222,4 +223,5 @@ prediction_data = [
 ]
 ai_analysis_response = trigger_ai_analysis(prediction_data)
 print("AI Analysis Response:", ai_analysis_response)
+"""
 

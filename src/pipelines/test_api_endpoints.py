@@ -114,6 +114,7 @@ def trigger_ai_analysis(predictions: List[Dict[str, Any]]):
     payload = {"predictions": predictions}
     return call_api("ai-analysis", payload)
 
+
 #%% Example Usage
 ingest_response = ingest_stock_data(["PG"],
                                     "2024-01-01",
@@ -171,7 +172,7 @@ print("Make Sarimax Prediction Response:", make_sarimax_response)
 # Example prediction data (cleaned up, without `json.dumps()` where not needed)
 prediction_data = [
     {
-        "model_key": "model_123",
+        "model_key": "model_562",
         "symbol": "KO",
         "prediction_date": "2024-11-01",
         "prediction_explanation": "Binary Classification Based on XGBoostClassifier with feature engineering and SMOTE",
@@ -193,7 +194,7 @@ prediction_data = [
         "date_created": datetime.now().strftime('%Y-%m-%d %H:%M:%S')  # Already serialized as string
     },
     {
-        "model_key": "model_456",
+        "model_key": "model_952",
         "symbol": "AAPL",
         "prediction_date": "2024-12-01",
         "prediction_explanation": "Regression Prediction Based on SARIMAX model with feature engineering",
