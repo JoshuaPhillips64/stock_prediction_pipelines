@@ -36,7 +36,7 @@ def generate_chatgpt_explanation(input_data):
         'classification': """
 **Conclusion:**
 The model predicts that the stock for {symbol} will *{predicted_movement}* by {prediction_date}.
-2 Sentence SUMMARY Analysis Looking at performance metrics and price to see if this is a trustworthy model for investment decisions.
+(2 Sentence SUMMARY Analysis Looking at performance metrics and price to see if this is a trustworthy model for investment decisions. Use specific metrics to justify your conclusion.)
 
 
 **Performance Metrics:**
@@ -60,13 +60,13 @@ The model predicts that the stock for {symbol} will *{predicted_movement}* by {p
 - **False Positives:** {confusion_matrix_fp}
 - **False Negatives:** {confusion_matrix_fn}
 """,
-        'regression': f"""
+        'regression': """
 **Conclusion:**
 The SARIMAX model forecasts the stock price for {symbol} to be ${predicted_amount} by {prediction_date}. 
-2 Sentence SUMMARY Analysis Looking at performance metrics and price to see if this is a trustworthy model for investment decisions.
+(2 Sentence SUMMARY Analysis Looking at performance metrics and price to see if this is a trustworthy model for investment decisions. Use specific metrics to justify your conclusion.)
 
 **Performance Metrics:**
-- **RMSE:** {prediction_rmse} - 1 Sentence Analysis of if this is a good result for RMSE goes here
+- **RMSE:** {prediction_rmse} - 1 Sentence Analysis of if this is a good result for RMSE goes here 
 - **MAE:** {prediction_mae} - 1 Sentence Analysis of if this is a good result for MAE goes here
 - **MAPE:** {prediction_mape}% - 1 Sentence Analysis of if this is a good result for MAPE goes here
 - **Confidence Score:** {prediction_confidence_score} - 1 Sentence Analysis of if this is a good result for Confidence Score goes here
@@ -86,9 +86,7 @@ The SARIMAX model forecasts the stock price for {symbol} to be ${predicted_amoun
         'general': """
 **Conclusion:**
 The model predicts that the stock for {symbol} will **{predicted_movement_or_details}** by {prediction_date}.
-The model's prediction suggests a positive outlook for PG's stock price in the short term. However, the high MAPE indicates that while the model is confident in its prediction, there may be significant variability in actual outcomes. Investors should consider this forecast alongside other market analyses and economic indicators. The model's reliance on technical indicators and economic factors highlights the importance of both market trends and broader economic conditions in influencing stock prices.
-Investors should consider these insights along with other market factors before making decisions.
-
+(2 Sentence SUMMARY Analysis Looking at performance metrics and price to see if this is a trustworthy model for investment decisions. Use specific metrics to justify your conclusion.)
 
 **Performance Metrics:**
 - {metrics}
@@ -419,7 +417,7 @@ test_event = {
             'prediction_explanation': 'Regression Prediction Based on SARIMAX model with feature engineering',
             'prediction_rmse': 1.2,
             'prediction_mae': 0.9,
-            'prediction_mape': 5.0,
+            'prediction_mape': 0.2,
             'prediction_confidence_score': 0.45,
             'confusion_matrix': json.dumps([]),  # Not applicable for regression
             'feature_importance': json.dumps({'Price Lag': 0.4, 'Volume': 0.35}),

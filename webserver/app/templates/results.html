@@ -23,7 +23,7 @@
                 {% for metric in ai_analysis.performance_metrics %}
                 <div class="metric-card">
                     <h5>{{ metric.name }}</h5>
-                    <p class="metric-value">{{ metric.value | default(0) | float | round(2) }}</p>
+                    <p class="metric-value">{{ "%.2f" | format(metric.value|float) }}</p>
                     {% if metric.description %}
                     <p class="metric-description">{{ metric.description }}</p>
                     {% endif %}
@@ -32,7 +32,6 @@
             </div>
         </div>
         {% endif %}
-
 
         {% if ai_analysis.additional_notes %}
         <div class="analysis-section">
@@ -54,6 +53,14 @@
     <section class="feature-importance mb-5">
         <h2 class="section-title">Feature Importance</h2>
         <div id="featureImportanceChart" class="chart"></div>
+    </section>
+    {% endif %}
+
+    <!-- Confusion Matrix Chart Section -->
+    {% if performance_metrics.confusion_matrix %}
+    <section class="confusion-matrix mb-5">
+        <h2 class="section-title">Confusion Matrix</h2>
+        <div id="confusionMatrixChart" class="chart"></div>
     </section>
     {% endif %}
 </div>
@@ -146,42 +153,93 @@
                 xaxis: { title: 'Date' },
                 yaxis: { title: 'Price ($)' },
                 ...commonLayout
-            };
+            }
+            Plotly.newPlot('predictionChart', data, layout);
+
         } else if (modelType === 'BINARY CLASSIFICATION') {
-            // BINARY CLASSIFICATION: Actual vs Predicted Movement
-            data = [
-                {
-                    x: dates,
-                    y: actualValues.map(value => (value === 1 ? 1 : 0)),
-                    mode: 'markers',
-                    name: 'Actual Movement',
-                    marker: { color: '#1f77b4', symbol: 'circle', size: 8 },
-                    hovertemplate: 'Date: %{x}<br>Actual Movement: %{y === 1 ? "Up" : "Down"}<extra></extra>'
-                },
-                {
-                    x: dates,
-                    y: predictedValues.map(value => (value === 1 ? 1 : 0)),
-                    mode: 'markers',
-                    name: 'Predicted Movement',
-                    marker: { color: '#ff7f0e', symbol: 'x', size: 8 },
-                    hovertemplate: 'Date: %{x}<br>Predicted Movement: %{y === 1 ? "Up" : "Down"}<extra></extra>'
+            // Convert date strings to Date objects for Plotly
+            const dateObjects = dates.map(date => new Date(date));
+
+            // Convert actual and predicted values to numbers
+            const actualY = actualValues.map(value => value !== null ? Number(value) : null);
+            const predictedY = predictedValues.map(value => value !== null ? Number(value) : null);
+
+            // Create shapes for background shading based on actual movement
+            const shapes = [];
+            let currentMovement = actualY[0];
+            let shapeStart = 0;
+
+            for (let i = 1; i <= actualY.length; i++) {
+                const movement = actualY[i];
+                if (movement !== currentMovement || i === actualY.length) {
+                    shapes.push({
+                        type: 'rect',
+                        xref: 'x',
+                        yref: 'paper',
+                        x0: dates[shapeStart],
+                        x1: dates[i - 1],
+                        y0: 0,
+                        y1: 1,
+                        fillcolor: currentMovement == 1 ? 'rgba(0, 255, 0, 0.1)' : 'rgba(255, 0, 0, 0.1)',
+                        line: { width: 0 }
+                    });
+                    shapeStart = i;
+                    currentMovement = movement;
                 }
-            ];
+            }
+
+            // Prepare predicted movement markers
+            const predictedTrace = {
+                x: dates,
+                y: predictedY,
+                mode: 'markers',
+                name: 'Predicted Movement',
+                marker: {
+                    size: 8,
+                    color: predictedY.map(value => value === 1 ? '#00FF00' : '#FF0000'),
+                    symbol: 'triangle-up'
+                },
+                hovertemplate: 'Date: %{x}<br>Predicted Movement: %{text}<extra></extra>',
+                text: predictedY.map(value => value === 1 ? 'Up' : 'Down')
+            };
 
             layout = {
-                title: '{{ stock_symbol }} Predicted vs Actual Movements',
+                title: '{{ stock_symbol }} Predicted Movements Over Time',
                 xaxis: { title: 'Date' },
-                yaxis: {
-                    title: 'Movement',
-                    tickvals: [0, 1],
-                    ticktext: ['Down', 'Up']
-                },
+                yaxis: { visible: false },
+                shapes: shapes,
                 ...commonLayout
             };
-        }
+
+            data = [predictedTrace];
 
         // Render Prediction Chart
         Plotly.newPlot('predictionChart', data, layout);
+
+         // Confusion Matrix Data
+        {% if performance_metrics.confusion_matrix %}
+        const confusionMatrix = {{ performance_metrics.confusion_matrix | tojson }};
+        const cmData = [
+            {
+                x: ['Predicted Down', 'Predicted Up'],
+                y: ['Actual Down', 'Actual Up'],
+                z: confusionMatrix,
+                type: 'heatmap',
+                colorscale: 'Blues',
+                hovertemplate: 'Actual: %{y}<br>Predicted: %{x}<br>Count: %{z}<extra></extra>'
+            }
+        ];
+
+        const cmLayout = {
+            title: 'Confusion Matrix',
+            xaxis: { title: 'Predicted Label' },
+            yaxis: { title: 'Actual Label' },
+            ...commonLayout
+        };
+
+        Plotly.newPlot('confusionMatrixChart', cmData, cmLayout);
+        {% endif %}
+    }
 
         <!-- Feature Importance Chart -->
         {% if feature_importance %}

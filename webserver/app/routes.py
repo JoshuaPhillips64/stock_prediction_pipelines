@@ -5,6 +5,7 @@ import datetime
 import json
 import logging
 from datetime import timedelta
+import re
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -198,12 +199,20 @@ def _prepare_chart_data(model_type, combined_predictions):
         if model_type == 'BINARY CLASSIFICATION':
             # Binary classification: 1 for 'Up', 0 for 'Down'
             predicted_movement = prediction.get('predicted_movement')
-            chart_data['predicted'].append(int(predicted_movement) if predicted_movement is not None else None)
+            try:
+                predicted_value = int(predicted_movement) if predicted_movement is not None else None
+            except (ValueError, TypeError):
+                predicted_value = None
+            chart_data['predicted'].append(predicted_value)
 
             # Include actual movement only for historical dates
             if current_date <= today:
                 actual_movement = prediction.get('actual_movement')
-                chart_data['actual'].append(int(actual_movement) if actual_movement is not None else None)
+                try:
+                    actual_value = int(actual_movement) if actual_movement is not None else None
+                except (ValueError, TypeError):
+                    actual_value = None
+                chart_data['actual'].append(actual_value)
             else:
                 chart_data['actual'].append(None)
         else:
@@ -291,11 +300,17 @@ def _parse_bullet_point(line):
     try:
         line = line.lstrip('- ').replace('**', '')
         name, rest = line.split(':', 1)
-        value, *description = rest.split('-', 1)
+        value_part, *description = rest.split('-', 1)
+        value_str = value_part.strip()
+        # Extract numeric value using regex (if needed)
+        numeric_match = re.search(r'[\d.]+', value_str)
+        numeric_value = float(numeric_match.group()) if numeric_match else None
+        description = description[0].strip() if description else ''
         return {
             'name': name.strip(),
-            'value': value.strip(),
-            'description': description[0].strip() if description else ''
+            'value': value_str,
+            'numeric_value': numeric_value,
+            'description': description
         }
     except ValueError:
         logger.warning(f"Failed to parse bullet point: {line}")
