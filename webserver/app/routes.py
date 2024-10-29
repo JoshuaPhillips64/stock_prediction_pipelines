@@ -1,11 +1,12 @@
-from flask import Blueprint, render_template, request, redirect, url_for, session, current_app as app
-from .forms import PredictionForm
+from flask import Blueprint, render_template, request, redirect, url_for, session, current_app as app, flash
+from .forms import PredictionForm, ContactForm
 from .generate_stock_prediction import generate_stock_prediction, generate_model_key
 import datetime
 import json
 import logging
 from datetime import timedelta
 import re
+import requests
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -13,13 +14,51 @@ logger = logging.getLogger(__name__)
 
 main_bp = Blueprint('main_bp', __name__)
 
+
+def verify_recaptcha(recaptcha_token, action):
+    recaptcha_secret = app.config.get('RECAPTCHA_SECRET_KEY')
+    recaptcha_response = requests.post(
+        'https://www.google.com/recaptcha/api/siteverify',
+        data={
+            'secret': recaptcha_secret,
+            'response': recaptcha_token
+        }
+    )
+    recaptcha_result = recaptcha_response.json()
+    logger.info(f"reCAPTCHA verification result: {recaptcha_result}")
+
+    # Check the success key
+    if not recaptcha_result.get('success'):
+        logger.warning(f"reCAPTCHA verification failed: {recaptcha_result.get('error-codes')}")
+        return False
+
+    # Verify the action matches
+    if recaptcha_result.get('action') != action:
+        logger.warning(f"reCAPTCHA action mismatch: expected '{action}', got '{recaptcha_result.get('action')}'")
+        return False
+
+    # Check the score threshold
+    if recaptcha_result.get('score', 0.0) < 0.5:
+        logger.warning(f"reCAPTCHA score too low: {recaptcha_result.get('score')}")
+        return False
+
+    return True
+
 @main_bp.route('/', methods=['GET', 'POST'])
 def index():
     form = PredictionForm()
     if form.validate_on_submit():
+        recaptcha_token = request.form.get('recaptcha_token')
+        if not recaptcha_token:
+            flash('reCAPTCHA token missing. Please try again.', 'danger')
+            return redirect(url_for('main_bp.index'))
+
+        if not verify_recaptcha(recaptcha_token, 'prediction'):
+            flash('reCAPTCHA verification failed. Please try again.', 'danger')
+            return redirect(url_for('main_bp.index'))
+
         # Save form data to session
         session['form_data'] = request.form
-        logger.info(f"Form data saved to session: {session['form_data']}")
         return redirect(url_for('main_bp.loading'))
     return render_template('index.html', form=form)
 
@@ -408,11 +447,28 @@ def about():
 
 @main_bp.route('/contact', methods=['GET', 'POST'])
 def contact():
-    if request.method == 'POST':
-        # Handle form submission if needed
-        # For now, we'll just redirect back to the contact page
+    form = ContactForm()
+    if form.validate_on_submit():
+        recaptcha_token = request.form.get('recaptcha_token')
+        if not recaptcha_token:
+            flash('reCAPTCHA token missing. Please try again.', 'danger')
+            return redirect(url_for('main_bp.contact'))
+
+        if not verify_recaptcha(recaptcha_token, 'contact'):
+            flash('reCAPTCHA verification failed. Please try again.', 'danger')
+            return redirect(url_for('main_bp.contact'))
+
+        # Save to the database
+        contact_message = app.ContactMessage(
+            name=form.name.data,
+            email=form.email.data,
+            message=form.message.data
+        )
+        db.session.add(contact_message)
+        db.session.commit()
+        flash('Your message has been sent successfully!', 'success')
         return redirect(url_for('main_bp.contact'))
-    return render_template('contact.html')
+    return render_template('contact.html', form=form)
 
 @main_bp.route('/api-docs')
 def api_docs():

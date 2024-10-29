@@ -21,5 +21,9 @@ class Config:
     API_URL = os.getenv('API_URL')
     ADMIN_API_KEY = os.getenv('ADMIN_API_KEY')
 
+    # reCAPTCHA Configuration
+    RECAPTCHA_SITE_KEY = os.environ.get('RECAPTCHA_SITE_KEY')
+    RECAPTCHA_SECRET_KEY = os.environ.get('RECAPTCHA_SECRET_KEY')
+
 #%% Print the contents of the above class
 #print(Config.__dict__)

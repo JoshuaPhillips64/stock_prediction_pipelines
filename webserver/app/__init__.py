@@ -13,6 +13,10 @@ def create_app(config_class=Config):
     db.init_app(app)
     migrate.init_app(app, db)
 
+    @app.context_processor
+    def inject_recaptcha_site_key():
+        return dict(recaptcha_site_key=app.config.get('RECAPTCHA_SITE_KEY'))
+
     with app.app_context():
         from app.models import (
             create_ai_analysis_model,
@@ -20,7 +24,8 @@ def create_app(config_class=Config):
             create_trained_models_binary_model,
             create_predictions_log_model,
             create_basic_stock_data_model,
-            create_enriched_stock_data_model
+            create_enriched_stock_data_model,
+            create_contact_messages_model
         )
         app.AIAnalysis = create_ai_analysis_model()
         app.TrainedModels = create_trained_models_model()
@@ -28,6 +33,7 @@ def create_app(config_class=Config):
         app.PredictionsLog = create_predictions_log_model()
         app.BasicStockData = create_basic_stock_data_model()
         app.EnrichedStockData = create_enriched_stock_data_model()
+        app.ContactMessage = create_contact_messages_model()
 
         from app.routes import main_bp
         app.register_blueprint(main_bp)

@@ -15,8 +15,18 @@
 <!-- Parameter Selection Form -->
 <div class="container my-5">
     <h2 class="mb-4">Customize Your Prediction</h2>
-    <form method="POST">
-        {{ form.hidden_tag() }}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+    {% endwith %}
+   <form id="predictionForm" method="POST">
+    {{ form.hidden_tag() }}
+    <input type="hidden" name="recaptcha_token" id="recaptcha_token">
         <div class="row g-3">
             <div class="col-md-6">
                 {{ form.stock_symbol.label(class="form-label") }}
@@ -47,9 +57,24 @@
                 {{ form.input_date(class="form-control") }}
             </div>
             <div class="col-12">
-                {{ form.submit(class="btn btn-primary btn-lg mt-3") }}
             </div>
         </div>
+       {{ form.submit_button(class="btn btn-primary btn-lg mt-3") }}
     </form>
 </div>
+
+{% block scripts %}
+{{ super() }}
+<script>
+    document.getElementById('predictionForm').addEventListener('submit', function(event) {
+        event.preventDefault(); // Prevent form from submitting immediately
+        grecaptcha.ready(function() {
+            grecaptcha.execute('{{ recaptcha_site_key }}', {action: 'prediction'}).then(function(token) {
+                document.getElementById('recaptcha_token').value = token;
+                document.getElementById('predictionForm').submit();
+            });
+        });
+    });
+</script>
+{% endblock %}
 {% endblock %}

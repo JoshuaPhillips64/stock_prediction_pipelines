@@ -1,7 +1,7 @@
 # app/forms.py
 from flask_wtf import FlaskForm
-from wtforms import StringField, SelectField, DateField, IntegerField, SubmitField
-from wtforms.validators import DataRequired, Length, NumberRange
+from wtforms import StringField, SelectField, DateField, IntegerField, SubmitField, TextAreaField, EmailField
+from wtforms.validators import DataRequired, Length, NumberRange, Email
 from datetime import datetime, timedelta
 
 class PredictionForm(FlaskForm):
@@ -12,4 +12,10 @@ class PredictionForm(FlaskForm):
     feature_set = SelectField('Feature Set', choices=[('basic', 'Basic'), ('advanced', 'Advanced')], default='basic', validators=[DataRequired()])
     lookback_period = IntegerField('Lookback Period (days)', default=720, validators=[DataRequired(), NumberRange(min=365, max=2000, message="Lookback period must be between 365 and 2000")])
     prediction_horizon = IntegerField('Prediction Horizon (days)', default=30, validators=[DataRequired(), NumberRange(min=7, max=60, message="Prediction horizon must be between 7 and 60")])
-    submit = SubmitField('Generate Prediction')
+    submit_button = SubmitField('Generate Prediction')
+
+class ContactForm(FlaskForm):
+    name = StringField('Name', validators=[DataRequired(), Length(min=1, max=100)])
+    email = EmailField('Email', validators=[DataRequired(), Email(), Length(max=100)])
+    message = TextAreaField('Message', validators=[DataRequired(), Length(min=1, max=2000)])
+    submit_button = SubmitField('Send Message')

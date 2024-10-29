@@ -1,6 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import MetaData, Table
 import json
+from datetime import datetime
 
 db = SQLAlchemy()
 metadata = MetaData()
@@ -43,3 +44,6 @@ def create_basic_stock_data_model():
 
 def create_enriched_stock_data_model():
     return create_dynamic_model('enriched_stock_data')
+
+def create_contact_messages_model():
+    return create_dynamic_model('contact_messages')

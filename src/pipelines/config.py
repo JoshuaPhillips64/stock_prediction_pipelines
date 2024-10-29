@@ -43,4 +43,4 @@ ENVIRONMENT = os.getenv('ENVIRONMENT', 'local')
 LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
 
 # Timeout settings for API calls
-API_CALL_TIMEOUT = int(os.getenv('API_CALL_TIMEOUT', 30)) 
+API_CALL_TIMEOUT = int(os.getenv('API_CALL_TIMEOUT', 30))

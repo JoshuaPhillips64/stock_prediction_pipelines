@@ -6,20 +6,47 @@
 {% block content %}
 <div class="container my-5">
     <h2 class="mb-4">Contact Us</h2>
-    <form method="POST" action="#">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+    {% endwith %}
+    <form id="contactForm" form method="POST" action="#">
+        {{ form.hidden_tag() }}
+        <input type="hidden" name="recaptcha_token" id="recaptcha_token">
         <div class="mb-3">
-            <label for="name" class="form-label">Name</label>
-            <input type="text" class="form-control" id="name" required>
+            {{ form.name.label(class="form-label") }}
+            {{ form.name(class="form-control") }}
         </div>
         <div class="mb-3">
-            <label for="email" class="form-label">Email</label>
-            <input type="email" class="form-control" id="email" required>
+            {{ form.email.label(class="form-label") }}
+            {{ form.email(class="form-control") }}
         </div>
         <div class="mb-3">
-            <label for="message" class="form-label">Message</label>
-            <textarea class="form-control" id="message" rows="6" required></textarea>
+            {{ form.message.label(class="form-label") }}
+            {{ form.message(class="form-control", rows="6") }}
         </div>
-        <button type="submit" class="btn btn-primary">Send Message</button>
+        {{ form.submit_button(class="btn btn-primary") }}
     </form>
 </div>
+
+{% block scripts %}
+{{ super() }}
+
+<script>
+document.getElementById('contactForm').addEventListener('submit', function(event) {
+    event.preventDefault(); // Prevent form from submitting immediately
+    grecaptcha.ready(function() {
+        grecaptcha.execute('{{ recaptcha_site_key }}', {action: 'contact'}).then(function(token) {
+            document.getElementById('recaptcha_token').value = token;
+            document.getElementById('contactForm').submit();
+        });
+    });
+});
+</script>
+{% endblock %}
 {% endblock %}
