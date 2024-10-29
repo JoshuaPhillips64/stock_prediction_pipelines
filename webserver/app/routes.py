@@ -280,13 +280,21 @@ def _parse_ai_explanation(raw_explanation):
 
         if current_section == 'conclusion':
             sections['conclusion'] += line + ' '
-        elif current_section in ['performance_metrics', 'key_features', 'model_params']:
+        elif current_section == 'additional_notes':
+            sections['additional_notes'] += line + ' '
+        elif current_section in ['performance_metrics', 'model_params']:
             if line.startswith('-'):
                 item = _parse_bullet_point(line)
                 if item:
                     sections[current_section].append(item)
-        elif current_section == 'additional_notes':
-            sections['additional_notes'] += line + ' '
+        elif current_section == 'key_features':
+            # For key_features, process any line to extract features and their importances
+            features = _parse_feature_line(line)
+            if features:
+                sections['key_features'].extend(features)
+            else:
+                # If no features found, treat it as additional notes
+                sections['additional_notes'] += line + ' '
 
     # Trim trailing spaces
     for key, value in sections.items():
@@ -295,25 +303,51 @@ def _parse_ai_explanation(raw_explanation):
 
     return sections
 
+def _parse_feature_line(line):
+    """Parse a line containing features and their importances."""
+    pattern = r"'([^']+)'\s*\(([\d.]+)\)"
+    matches = re.findall(pattern, line)
+    if matches:
+        features = []
+        for feature_name, importance in matches:
+            features.append({
+                'name': feature_name.strip(),
+                'value': importance.strip(),
+                'numeric_value': float(importance.strip()),
+                'description': ''
+            })
+        return features
+    else:
+        return None
+
 def _parse_bullet_point(line):
     """Parse a bullet point line into a dictionary with name, value, and description."""
     try:
-        line = line.lstrip('- ').replace('**', '')
-        name, rest = line.split(':', 1)
-        value_part, *description = rest.split('-', 1)
-        value_str = value_part.strip()
-        # Extract numeric value using regex (if needed)
-        numeric_match = re.search(r'[\d.]+', value_str)
-        numeric_value = float(numeric_match.group()) if numeric_match else None
-        description = description[0].strip() if description else ''
-        return {
-            'name': name.strip(),
-            'value': value_str,
-            'numeric_value': numeric_value,
-            'description': description
-        }
-    except ValueError:
-        logger.warning(f"Failed to parse bullet point: {line}")
+        line = line.lstrip('- ').replace('**', '').strip()
+        if ':' in line:
+            name, rest = line.split(':', 1)
+            value_part, *description = rest.split('-', 1)
+            value_str = value_part.strip()
+            # Extract numeric value using regex (if needed)
+            numeric_match = re.search(r'[\d.]+', value_str)
+            numeric_value = float(numeric_match.group()) if numeric_match else None
+            description = description[0].strip() if description else ''
+            return {
+                'name': name.strip(),
+                'value': value_str,
+                'numeric_value': numeric_value,
+                'description': description
+            }
+        else:
+            # If there's no colon, treat the entire line as a description
+            return {
+                'name': '',
+                'value': '',
+                'numeric_value': None,
+                'description': line
+            }
+    except Exception as e:
+        logger.warning(f"Failed to parse bullet point: {line}, Error: {e}")
         return None
 
 def _extract_performance_metrics(model_type, trained_model_data):
