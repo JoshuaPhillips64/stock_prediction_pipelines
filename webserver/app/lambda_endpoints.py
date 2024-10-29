@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Create a Lambda client
-lambda_client = boto3.client('lambda')
+lambda_client = boto3.client('lambda', region_name=Config.AWS_REGION)
 
 #%%
 def call_lambda(function_name: str, payload: Optional[Dict[str, Any]] = None):

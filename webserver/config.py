@@ -25,5 +25,10 @@ class Config:
     RECAPTCHA_SITE_KEY = os.environ.get('RECAPTCHA_SITE_KEY')
     RECAPTCHA_SECRET_KEY = os.environ.get('RECAPTCHA_SECRET_KEY')
 
+    # AWS Configuration
+    AWS_ACCESS_KEY = os.getenv('AWS_ACCESS_KEY')
+    AWS_SECRET_KEY = os.getenv('AWS_SECRET_KEY')
+    AWS_REGION = os.getenv('AWS_REGION')
+
 #%% Print the contents of the above class
 #print(Config.__dict__)
