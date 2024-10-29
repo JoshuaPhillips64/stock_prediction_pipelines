@@ -129,7 +129,7 @@ git reset --hard origin/main
 
 git pull origin main
 
-docker-compose build
+docker-compose build --no-cache
 
 docker-compose down
 
