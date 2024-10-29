@@ -23,5 +23,5 @@ EXPOSE 7237
 # Install Gunicorn
 RUN pip install gunicorn
 
-# Command to run your Flask app using Gunicorn
-CMD ["gunicorn", "--workers 3", "--bind", "0.0.0.0:7237", "run:app"]
+# Command to run your Flask app using Gunicorn with increased timeout
+CMD ["gunicorn", "--workers", "3", "--bind", "0.0.0.0:7237", "--timeout", "140", "run:app"]
