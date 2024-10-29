@@ -1,12 +1,13 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, current_app as app, flash
 from .forms import PredictionForm, ContactForm
 from .generate_stock_prediction import generate_stock_prediction, generate_model_key
-import datetime
+from datetime import datetime
 import json
 import logging
 from datetime import timedelta
 import re
 import requests
+from app import db
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -38,7 +39,7 @@ def verify_recaptcha(recaptcha_token, action):
         return False
 
     # Check the score threshold
-    if recaptcha_result.get('score', 0.0) < 0.5:
+    if recaptcha_result.get('score', 0.0) < 0.3:
         logger.warning(f"reCAPTCHA score too low: {recaptcha_result.get('score')}")
         return False
 
@@ -462,7 +463,8 @@ def contact():
         contact_message = app.ContactMessage(
             name=form.name.data,
             email=form.email.data,
-            message=form.message.data
+            message=form.message.data,
+            date_submitted=datetime.now()
         )
         db.session.add(contact_message)
         db.session.commit()
