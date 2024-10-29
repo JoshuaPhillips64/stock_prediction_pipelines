@@ -32,7 +32,6 @@ lightgbm = "4.5.0"
 imblearn = "0.0"
 
 
-
 # The second file doesn't specify a version for flask so using the first file's version
 flask = "2.2.5"
 flask-sqlalchemy = "2.5.1"

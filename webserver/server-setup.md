@@ -4,6 +4,16 @@ This guide provides step-by-step instructions to set up Docker, Docker Compose, 
 
 Once the EC2 Instance is running and Inbound Rules are set correctly. Can SSH in and run below.
 
+###Prerequisites
+- AWS Account: Access to an AWS account with permissions to create EC2 instances, manage Route 53, and access Certificate Manager.
+
+- Domain Name: is set up in AWS Route 53. Need to add DNS A routes for www. and @ to the EC2 instance's public IP OR Elastic IP.
+
+- SSL Certificate: An SSL certificate exists in AWS Certificate Manager and has been validated for the domain name. 
+Note: ACM certificates cannot be directly used with Nginx on EC2 instances. We will obtain SSL certificates using Let's Encrypt.
+
+- SSH Key Pair: An SSH key pair to securely access your EC2 instance.
+
 ### 1. Configure Security Groups (Optional)
 
 Ensure that your EC2 instance's security group allows inbound traffic on:
@@ -66,7 +76,7 @@ sudo yum install git -y
 git clone https://github.com/JoshuaPhillips64/stock_prediction_pipelines.git
 
 # Navigate to the Airflow folder inside the cloned repository
-cd stock_prediction_pipelines/src/airflow
+cd stock_prediction_pipelines/webserver
 ```
 
 ### 4. Copy the `.env` File
@@ -103,6 +113,29 @@ docker-compose up -d --build
 
 # Check the status of the Docker containers
 docker-compose ps
+```
+
+### Deployment Commands:
+
+```bash
+#Connect to Airflow container
+ssh -i "XXX.pem" XXX.us-east-2.compute.amazonaws.com
+
+#Navigate to the folder inside the cloned repository
+cd stock_prediction_pipelines/webserver
+
+#Pull the latest changes from the repository
+git reset --hard origin/main
+
+git pull origin main
+
+docker-compose build
+
+docker-compose down
+
+docker-compose up -d
+
+docker-compose logs -f
 ```
 
 
