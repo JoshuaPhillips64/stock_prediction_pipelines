@@ -36,7 +36,7 @@ def generate_chatgpt_explanation(input_data):
         'classification': """
 **Conclusion:**
 The model predicts that the stock for {symbol} will *{predicted_movement}* by {prediction_date}.
-(2 Sentence SUMMARY Analysis Looking at performance metrics and price to see if this is a trustworthy model for investment decisions. Use specific metrics to justify your conclusion.)
+(3 Sentence SUMMARY Analysis Looking at performance metrics and price to see if this is a trustworthy model for investment decisions. Be descriptive and use specific metrics to justify your conclusion.)
 
 
 **Performance Metrics:**
@@ -63,7 +63,7 @@ The model predicts that the stock for {symbol} will *{predicted_movement}* by {p
         'regression': """
 **Conclusion:**
 The SARIMAX model forecasts the stock price for {symbol} to be ${predicted_amount} by {prediction_date}. 
-(2 Sentence SUMMARY Analysis Looking at performance metrics and price to see if this is a trustworthy model for investment decisions. Use specific metrics to justify your conclusion.)
+3 Sentence SUMMARY Analysis Looking at performance metrics and price to see if this is a trustworthy model for investment decisions. Be descriptive and use specific metrics to justify your conclusion.)
 
 **Performance Metrics:**
 - **RMSE:** {prediction_rmse} - 1 Sentence Analysis of if this is a good result for RMSE goes here 
@@ -86,7 +86,7 @@ The SARIMAX model forecasts the stock price for {symbol} to be ${predicted_amoun
         'general': """
 **Conclusion:**
 The model predicts that the stock for {symbol} will **{predicted_movement_or_details}** by {prediction_date}.
-(2 Sentence SUMMARY Analysis Looking at performance metrics and price to see if this is a trustworthy model for investment decisions. Use specific metrics to justify your conclusion.)
+3 Sentence SUMMARY Analysis Looking at performance metrics and price to see if this is a trustworthy model for investment decisions. Be descriptive and use specific metrics to justify your conclusion.)
 
 **Performance Metrics:**
 - {metrics}

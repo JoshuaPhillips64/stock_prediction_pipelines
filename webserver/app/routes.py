@@ -380,6 +380,10 @@ def contact():
         return redirect(url_for('main_bp.contact'))
     return render_template('contact.html')
 
+@main_bp.route('/api-docs')
+def api_docs():
+    return render_template('api_docs.html')
+
 @main_bp.route('/test_sarimax_results')
 def test_results():
     # Define Test Data

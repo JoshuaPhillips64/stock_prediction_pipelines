@@ -23,7 +23,17 @@
                 {% for metric in ai_analysis.performance_metrics %}
                 <div class="metric-card">
                     <h5>{{ metric.name }}</h5>
-                    <p class="metric-value">{{ "%.2f" | format(metric.value|float) }}</p>
+                    <p class="metric-value">
+                        {% if metric.numeric_value is not none %}
+                            {% if 'MAPE' in metric.name or '%' in metric.value %}
+                                {{ "%.2f" | format(metric.numeric_value) }}
+                            {% else %}
+                                {{ "%.2f" | format(metric.numeric_value) }}
+                            {% endif %}
+                        {% else %}
+                            {{ metric.value }}
+                        {% endif %}
+                    </p>
                     {% if metric.description %}
                     <p class="metric-description">{{ metric.description }}</p>
                     {% endif %}

@@ -5,22 +5,218 @@
 
 {% block content %}
 <div class="container my-5">
-    <h2 class="mb-4">About SmartStockPredictor</h2>
-    <p>
-        SmartStockPredictor leverages advanced machine learning algorithms to provide accurate stock predictions.
-        Our models incorporate a variety of features, including technical indicators, market sentiment, and macroeconomic factors.
+    <h2 class="mb-4 text-center">About SmartStockPredictor</h2>
+    <p class="lead text-center">
+        Empowering users with data-driven insights using advanced machine learning and comprehensive data analysis.
     </p>
-    <h4>Key Features:</h4>
-    <ul>
-        <li>Ensemble learning with Random Forests and Gradient Boosting</li>
-        <li>Technical analysis indicators (RSI, MACD, Bollinger Bands)</li>
-        <li>Sentiment analysis from news and social media</li>
-        <li>Macroeconomic indicators (GDP growth, inflation rate)</li>
-    </ul>
-    <h4>Disclaimer:</h4>
+    <hr class="my-5">
+
+    <!-- Recommended Stock Choices -->
+    <h3 class="mb-3">Recommended Stock Choices</h3>
     <p>
-        Our predictions are based on historical data and are not guarantees of future performance.
-        Always consult with a financial advisor before making investment decisions.
+        While our APIs are flexible for all stocks, we recommend focusing on stocks within the consumer goods sector, such as <strong>Procter & Gamble (PG)</strong>, <strong>Johnson & Johnson (JNJ)</strong>, <strong>Coca-Cola (KO)</strong>, and <strong>Walmart (WMT)</strong>. These companies tend to follow macroeconomic indicators and exhibit consistent performance patterns, making them ideal candidates for predictive models.
+    </p>
+
+    <!-- Features Used in Our Models -->
+    <h3>Features Used in Our Models</h3>
+    <p>
+        Our predictive models incorporate a wide array of features to capture various factors influencing stock performance:
+    </p>
+    <ul>
+        <li><strong>Stock Prices:</strong> Open, High, Low, Close, Volume</li>
+        <li><strong>Technical Indicators:</strong> RSI, MACD, MACD Signal, MACD Histogram, ADX, Bollinger Bands (Upper and Lower Bands)</li>
+        <li><strong>Market Performance:</strong> S&P 500 Return, NASDAQ Return</li>
+        <li><strong>Economic Indicators:</strong> GDP Growth, Inflation Rate, Unemployment Rate</li>
+        <li><strong>Company Financials:</strong> Market Capitalization, P/E Ratio, Dividend Yield, Beta</li>
+        <li><strong>Options Data:</strong> Put/Call Ratio, Implied Volatility</li>
+        <li><strong>Market Sentiment:</strong> Sentiment Scores derived from AI-generated news analysis</li>
+    </ul>
+    <h3>Incorporating Market Sentiment</h3>
+    <p>
+        Market sentiment plays a crucial role in stock price movements. We incorporate sentiment scores derived from AI-powered analysis of financial news and social media as well as Put/Call Ratios. This allows our models to factor in public perception and user mood, which can significantly impact stock performance.
+    </p>
+
+    <!-- Our Predictive Models -->
+    <h3 class="mt-5 mb-3">Our Predictive Models</h3>
+    <div class="accordion" id="modelsAccordion">
+        <!-- Binary Classification with XGBoost -->
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="headingBinary">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#binaryClassification" aria-expanded="false" aria-controls="binaryClassification">
+                    Binary Classification with XGBoost
+                </button>
+            </h2>
+            <div id="binaryClassification" class="accordion-collapse collapse" aria-labelledby="headingBinary" data-bs-parent="#modelsAccordion">
+                <div class="accordion-body">
+                    <p>
+                        We utilize <strong>XGBoost</strong> for binary classification to predict whether a stock's price will increase or decrease over the next <em>X</em> days. XGBoost is chosen for its ability to handle non-linear relationships, robustness to outliers, and exceptional performance on tabular data.
+                    </p>
+                    <h5>Why Binary Classification?</h5>
+                    <ul>
+                        <li>Simplifies investment decisions with clear directional forecasts.</li>
+                        <li>Focuses on price movement direction rather than exact values.</li>
+                    </ul>
+                    <h5>Advantages of XGBoost:</h5>
+                    <ul>
+                        <li>Handles complex, non-linear data effectively.</li>
+                        <li>Provides feature importance for interpretability.</li>
+                        <li>Optimized for speed and performance.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <!-- Regression with SARIMAX -->
+        <div class="accordion-item mt-3">
+            <h2 class="accordion-header" id="headingSARIMAX">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sarimaxModel" aria-expanded="false" aria-controls="sarimaxModel">
+                    Regression with SARIMAX
+                </button>
+            </h2>
+            <div id="sarimaxModel" class="accordion-collapse collapse" aria-labelledby="headingSARIMAX" data-bs-parent="#modelsAccordion">
+                <div class="accordion-body">
+                    <p>
+                        For predicting exact returns <em>X</em> days into the future, we employ the <strong>Seasonal Autoregressive Integrated Moving Average with Exogenous Regressors (SARIMAX)</strong> model.
+                    </p>
+                    <h5>Why SARIMAX?</h5>
+                    <ul>
+                        <li>Incorporates exogenous variables (e.g., economic indicators, technical data) without data leakage.</li>
+                        <li>Captures autocorrelation and seasonality in time series data.</li>
+                        <li>Offers interpretability through model parameters and diagnostics.</li>
+                    </ul>
+                    <h5>Benefits:</h5>
+                    <ul>
+                        <li>Suitable for small to medium datasets.</li>
+                        <li>Avoids overfitting by balancing model complexity.</li>
+                        <li>Efficient and widely accepted in financial forecasting.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Model Evaluation and Validation -->
+    <h3 class="mt-5 mb-3">Model Evaluation and Validation</h3>
+    <p>
+        We understand that users need confidence in the models they rely on. To ensure the reliability and accuracy of our predictions, we employ rigorous model evaluation techniques:
+    </p>
+    <div class="row">
+        <div class="col-md-6">
+            <h5>Cross-Validation</h5>
+            <p>
+                We use cross-validation methods to assess model performance on unseen data, reducing the risk of overfitting.
+            </p>
+            <h5 class="mt-4">Performance Metrics</h5>
+            <p>
+                For classification models, we evaluate:
+            </p>
+            <ul>
+                <li>Accuracy</li>
+                <li>Precision</li>
+                <li>Recall</li>
+                <li>F1-score</li>
+                <li>ROC-AUC</li>
+            </ul>
+            <p>
+                For regression models, we assess:
+            </p>
+            <ul>
+                <li>RMSE</li>
+                <li>MAE</li>
+                <li>MAPE</li>
+                <li>Confidence Scores</li>
+            </ul>
+        </div>
+        <div class="col-md-6">
+            <h5>Feature Importance Analysis</h5>
+            <p>
+                By analyzing feature importance, we ensure that our models make decisions based on meaningful predictors, enhancing interpretability.
+            </p>
+            <h5 class="mt-4">Preventing Data Leakage</h5>
+            <p>
+                We strictly separate training and testing datasets in time series to prevent future information from influencing model training.
+            </p>
+        </div>
+    </div>
+
+    <!-- User Insights and FAQs -->
+    <h3 class="mt-5 mb-3">User Insights</h3>
+    <p>
+        We anticipate that users may have questions about the robustness of our models and the strategies employed to ensure their reliability. Our commitment to transparency means we provide detailed insights into our modeling process, including the features used, model selection rationale, and evaluation methods. This allows users to make informed decisions based on our predictions.
+    </p>
+
+    <h4 class="mt-4">Frequently Asked Questions</h4>
+    <div class="accordion" id="faqAccordion">
+        <!-- FAQ 1 -->
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="faqOne">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapseOne" aria-expanded="false" aria-controls="faqCollapseOne">
+                    How accurate are your models?
+                </button>
+            </h2>
+            <div id="faqCollapseOne" class="accordion-collapse collapse" aria-labelledby="faqOne" data-bs-parent="#faqAccordion">
+                <div class="accordion-body">
+                    Our models undergo extensive testing and validation. Performance metrics are provided alongside predictions to give users a clear understanding of model accuracy.
+                </div>
+            </div>
+        </div>
+        <!-- FAQ 2 -->
+        <div class="accordion-item mt-3">
+            <h2 class="accordion-header" id="faqTwo">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapseTwo" aria-expanded="false" aria-controls="faqCollapseTwo">
+                    How do you prevent overfitting?
+                </button>
+            </h2>
+            <div id="faqCollapseTwo" class="accordion-collapse collapse" aria-labelledby="faqTwo" data-bs-parent="#faqAccordion">
+                <div class="accordion-body">
+                    We use techniques like cross-validation and regularization to prevent overfitting. Additionally, model complexity is carefully managed to balance bias and variance.
+                </div>
+            </div>
+        </div>
+        <!-- FAQ 3 -->
+        <div class="accordion-item mt-3">
+            <h2 class="accordion-header" id="faqThree">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapseThree" aria-expanded="false" aria-controls="faqCollapseThree">
+                    Why do you recommend focusing on the consumer goods sector?
+                </button>
+            </h2>
+            <div id="faqCollapseThree" class="accordion-collapse collapse" aria-labelledby="faqThree" data-bs-parent="#faqAccordion">
+                <div class="accordion-body">
+                    These stocks exhibit stable performance and are influenced by macroeconomic indicators, making them suitable for our predictive models and enhancing forecast reliability.
+                </div>
+            </div>
+        </div>
+        <!-- FAQ 4 -->
+        <div class="accordion-item mt-3">
+            <h2 class="accordion-header" id="faqFour">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapseFour" aria-expanded="false" aria-controls="faqCollapseFour">
+                    How do you handle data updates and new information?
+                </button>
+            </h2>
+            <div id="faqCollapseFour" class="accordion-collapse collapse" aria-labelledby="faqFour" data-bs-parent="#faqAccordion">
+                <div class="accordion-body">
+                    Our models are regularly retrained with the latest data to ensure that predictions reflect current market conditions.
+                </div>
+            </div>
+        </div>
+        <!-- FAQ 5 -->
+        <div class="accordion-item mt-3">
+            <h2 class="accordion-header" id="faqFive">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqCollapseFive" aria-expanded="false" aria-controls="faqCollapseFive">
+                    Can I see the performance metrics of your models?
+                </button>
+            </h2>
+            <div id="faqCollapseFive" class="accordion-collapse collapse" aria-labelledby="faqFive" data-bs-parent="#faqAccordion">
+                <div class="accordion-body">
+                    Yes, we provide performance metrics and explanations for each model to maintain transparency and help users understand the predictions.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Disclaimer -->
+    <h3 class="mt-5 mb-3">Disclaimer</h3>
+    <p>
+        While our models are built on robust statistical methods and comprehensive data, they are predictive tools and not guarantees of future performance. Users should consider multiple sources of information and consult with financial advisors before making investment decisions.
     </p>
 </div>
 {% endblock %}
