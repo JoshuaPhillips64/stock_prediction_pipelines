@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 class PredictionForm(FlaskForm):
     model_type = SelectField('Model Type', choices=[('SARIMAX', 'Sarimax'), ('BINARY CLASSIFICATION', 'Binary Classification')], validators=[DataRequired()])
-    stock_symbol = StringField('Stock Symbol', validators=[DataRequired(), Length(min=1, max=6, message="Symbol must be between 1 and 6 characters")], render_kw={"placeholder": "e.g., AAPL"})
+    stock_symbol = StringField('Stock Symbol', validators=[DataRequired(), Length(min=1, max=6, message="Symbol must be between 1 and 6 characters")], render_kw={"placeholder": "e.g., PG"})
     input_date = DateField('Input Date', validators=[DataRequired()], format='%Y-%m-%d', default=datetime.now() - timedelta(days=1))
     hyperparameter_tuning = SelectField('Hyperparameter Tuning', choices=[('LOW', 'Low'), ('MEDIUM', 'Medium'), ('HIGH', 'High')], default='LOW', validators=[DataRequired()])
     feature_set = SelectField('Feature Set', choices=[('basic', 'Basic'), ('advanced', 'Advanced')], default='basic', validators=[DataRequired()])
