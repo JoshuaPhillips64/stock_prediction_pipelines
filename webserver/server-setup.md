@@ -105,6 +105,22 @@ Certificates Location:
 
 Certificates will be stored in /etc/letsencrypt/live/smartstockpredictor.com/.
 
+### 6. Create a Docker Volume for Certificates
+
+Create a Docker volume to store the SSL certificates.
+
+```bash
+# Create a Docker volume for the certificates
+docker volume create --name letsencrypt-certs
+
+# Copy the SSL certificates to the Docker volume
+docker run --rm \
+  -v letsencrypt-certs:/data \
+  -v /etc/letsencrypt:/source \
+  alpine \
+  sh -c "cp -r /source/* /data/"
+```
+
 ### 6. Start Docker Compose
 
 ```bash
