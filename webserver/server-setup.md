@@ -79,7 +79,33 @@ nano .env
 
 Add the Required Environment Variables . Save and Exit (Ctrl + O, Enter, Ctrl + X).
 
-###
+### 5. Install Certbot and Obtain SSL Certificates
+
+```bash
+# Install Certbot
+sudo yum install -y certbot
+
+# Stop Any Services Using Port 80
+sudo systemctl stop nginx
+
+# Obtain SSL Certificates Using Certbot
+sudo certbot certonly --standalone -d smartstockpredictor.com -d www.smartstockpredictor.com
+```
+Certificates Location:
+
+Certificates will be stored in /etc/letsencrypt/live/smartstockpredictor.com/.
+
+### 6. Start Docker Compose
+
+```bash
+# Start Docker Compose
+docker-compose up -d --build
+
+# Check the status of the Docker containers
+docker-compose ps
+```
+
+
 
 
 
