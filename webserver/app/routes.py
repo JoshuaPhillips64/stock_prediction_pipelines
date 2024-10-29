@@ -1,10 +1,9 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, current_app as app, flash
 from .forms import PredictionForm, ContactForm
 from .generate_stock_prediction import generate_stock_prediction, generate_model_key
-from datetime import datetime
+from datetime import datetime, timedelta, date
 import json
 import logging
-from datetime import timedelta
 import re
 import requests
 from app import db
@@ -86,7 +85,7 @@ def results():
     input_date_str = form_data.get('input_date')
 
     #change input_date_str string to be in the format of 'YYYY-MM-DD'
-    input_date_str_updated = datetime.datetime.strptime(input_date_str, '%Y-%m-%d').strftime('%Y-%m-%d')
+    input_date_str_updated = datetime.strptime(input_date_str, '%Y-%m-%d').strftime('%Y-%m-%d')
 
     if not all([model_type, stock_symbol, feature_set, hyperparameter_tuning, lookback_period, prediction_horizon, input_date_str]):
         logger.error("Incomplete form data provided.")
@@ -226,13 +225,13 @@ def _prepare_chart_data(model_type, combined_predictions):
         'predicted': []
     }
 
-    today = datetime.datetime.now().date()
+    today = datetime.now().date()
     sorted_dates = sorted(combined_predictions.keys())
     logger.info(f"Processing {len(sorted_dates)} dates from combined predictions")
 
     for date_str in sorted_dates:
         prediction = combined_predictions[date_str]
-        current_date = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
+        current_date = datetime.strptime(date_str, '%Y-%m-%d').date()
 
         chart_data['x'].append(date_str)
 
@@ -573,7 +572,7 @@ def test_results():
 
     performance_metrics = {
         'symbol': 'PG',
-        'prediction_date': datetime.date(2024, 11, 23),
+        'prediction_date': date(2024, 11, 23),
         'prediction_explanation': 'Regression Prediction Based on SARIMAX model with feature engineering',
         'prediction_rmse': '0.03917068745089896',
         'prediction_mae': '0.03421618231720002',
