@@ -1,7 +1,7 @@
 import requests
 from datetime import datetime, timedelta
 from config import Config
-from app.api_endpoints import (
+from app.lambda_endpoints import (
     ingest_stock_data,
     train_sarimax_model,
     train_binary_classification_model,

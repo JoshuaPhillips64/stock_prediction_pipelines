@@ -119,7 +119,7 @@ def train_sarimax_model(model_key: str, stock_symbol: str, input_date: str, hype
 def trigger_ai_analysis(predictions: List[Dict[str, Any]]):
     payload = {"predictions": predictions}
     return call_lambda("ai_analysis", payload)
-
+"""
 #%%
 
 ingest_response = ingest_stock_data(["PG"], "2024-01-01", "2024-10-10")
