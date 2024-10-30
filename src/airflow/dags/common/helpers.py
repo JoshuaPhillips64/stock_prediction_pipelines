@@ -4,6 +4,7 @@ from airflow.hooks.base_hook import BaseHook
 import boto3
 import json
 import logging
+from botocore.config import Config
 from datetime import datetime, timedelta
 from .config import LAMBDA_FUNCTION_NAME, TOP_50_TICKERS, POSTGRES_CONN_ID
 
@@ -53,10 +54,7 @@ def invoke_lambda_function(lambda_name: str, payload: dict,invocation_type='Even
         aws_access_key_id=connection.login,
         aws_secret_access_key=connection.password,
         region_name='us-east-1',  # Adjust region as needed
-        config={
-            'read_timeout': 900,  # 15 minutes
-            'connect_timeout': 30  # 30 seconds
-        }
+        config=Config(read_timeout=900, connect_timeout=30)
     )
 
     try:
