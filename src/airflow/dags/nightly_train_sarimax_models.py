@@ -48,25 +48,15 @@ def generate_model_key(model_type, stock_symbol, feature_set, hyperparameter_tun
     return model_key
 
 
-def prepare_parameters(model_type: str, **kwargs):
-    """
-    Prepares and pushes the randomly selected parameters to XCom.
-    """
-    params = get_random_parameters(model_type)
-    kwargs['ti'].xcom_push(key='model_parameters', value=params)
-
-
 def invoke_sarimax_lambda(stock_ticker: str, input_date: str, **kwargs):
     """
     Invokes the train_sarimax_model lambda with the provided parameters.
     """
-    # Retrieve parameters from XCom
-    ti = kwargs['ti']
-    params = ti.xcom_pull(key='model_parameters', task_ids='prepare_parameters')
+    params = get_random_parameters('SARIMAX')
 
     # Generate model_key using the provided function
     model_key = generate_model_key(
-        model_type="sarimax",
+        model_type="SARIMAX",
         stock_symbol=stock_ticker,
         feature_set=params['feature_set'],
         hyperparameter_tuning=params['hyperparameter_tuning'],
@@ -101,13 +91,13 @@ with DAG(
     prepare_parameters_task = PythonOperator(
         task_id='prepare_parameters',
         python_callable=prepare_parameters,
-        op_kwargs={'model_type': 'sarimax'}
+        op_kwargs={'model_type': 'SARIMAX'}
     )
 
     with TaskGroup('invoke_lambdas') as invoke_lambdas_group:
         for stock in TOP_50_TICKERS:
             invoke_lambda_task = PythonOperator(
-                task_id=f'invoke_lambda_{stock}',
+                task_id=f'invoke_sarimax_train_lambda_{stock}',
                 python_callable=invoke_sarimax_lambda,
                 op_kwargs={
                     'stock_ticker': stock,
@@ -116,4 +106,4 @@ with DAG(
                 provide_context=True
             )
 
-    prepare_parameters_task >> invoke_lambdas_group
+    invoke_lambdas_group

@@ -121,7 +121,7 @@ def get_random_parameters(model_type: str):
     """
     if model_type == 'binary_classification':
         return {
-            'model_key': 'binary_classification',
+            'model_key': 'BINARY CLASSIFICATION',
             'hyperparameter_tuning': get_random_hyperparameter_tuning(),
             'feature_set': get_random_feature_set(),
             'lookback_period': get_random_lookback_period(),
@@ -129,7 +129,7 @@ def get_random_parameters(model_type: str):
         }
     elif model_type == 'sarimax':
         return {
-            'model_key': 'sarimax',
+            'model_key': 'SARIMAX',
             'hyperparameter_tuning': get_random_hyperparameter_tuning(),
             'feature_set': get_random_feature_set(),
             'lookback_period': get_random_lookback_period(),
