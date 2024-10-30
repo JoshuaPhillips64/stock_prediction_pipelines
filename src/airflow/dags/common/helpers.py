@@ -140,7 +140,7 @@ def get_random_parameters(model_type: str):
     Returns:
         dict: A dictionary of parameters.
     """
-    if model_type == 'binary_classification':
+    if model_type == 'BINARY CLASSIFICATION':
         return {
             'model_key': 'BINARY CLASSIFICATION',
             'hyperparameter_tuning': get_random_hyperparameter_tuning(),

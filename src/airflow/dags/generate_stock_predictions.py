@@ -157,7 +157,7 @@ with DAG(
         for stock in TOP_50_TICKERS:
             stock_task_group = TaskGroup(group_id=f'generate_full_pipeline_{stock}')
 
-            choose_model_type = random.choice(['SARIMAX', 'BINARY CLASSIFICATION'])
+            choose_model_type = random.choice(['SARIMAX','BINARY CLASSIFICATION'])
             params = get_random_parameters(choose_model_type)
 
             # Ingest Data
