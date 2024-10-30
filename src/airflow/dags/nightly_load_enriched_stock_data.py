@@ -3,7 +3,7 @@ from airflow.operators.python import PythonOperator
 from airflow.utils.task_group import TaskGroup
 from airflow.utils.dates import days_ago
 from datetime import datetime, timedelta
-from common.config import TOP_50_TICKERS,LAMBDA_FUNCTION_NAME,
+from common.config import TOP_50_TICKERS,LAMBDA_FUNCTION_NAME
 from common.helpers import invoke_lambda_function, monitor_lambdas_completion
 import json
 

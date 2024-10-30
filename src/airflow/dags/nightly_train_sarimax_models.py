@@ -88,12 +88,6 @@ with DAG(
         max_active_runs=1,
         concurrency=4,
 ) as dag:
-    prepare_parameters_task = PythonOperator(
-        task_id='prepare_parameters',
-        python_callable=prepare_parameters,
-        op_kwargs={'model_type': 'SARIMAX'}
-    )
-
     with TaskGroup('invoke_lambdas') as invoke_lambdas_group:
         for stock in TOP_50_TICKERS:
             invoke_lambda_task = PythonOperator(
