@@ -29,7 +29,7 @@ def invoke_lambda_task_wrapper(stock_ticker, feature_set, **kwargs):
 
     payload = {
         "body": json.dumps({
-        "stock_symbol": [stock_ticker],
+        "stocks": [stock_ticker],
         'start_date': start_date_range,
         'end_date': end_date_range,
         "feature_set": feature_set
