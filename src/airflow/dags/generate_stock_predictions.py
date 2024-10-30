@@ -166,7 +166,7 @@ with DAG(
                 python_callable=invoke_lambda_ingest,
                 op_kwargs={
                     'stock_symbol': stock,
-                    'start_date': (datetime.strptime('{{ ds }}', '%Y-%m-%d') - timedelta(
+                    'start_date': (datetime.now() - timedelta(
                         days=params['lookback_period'])).strftime('%Y-%m-%d'),
                     'end_date': '{{ yesterday_ds }}',
                     'feature_set': params['feature_set']
