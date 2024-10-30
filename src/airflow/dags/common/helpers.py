@@ -6,7 +6,7 @@ import json
 import logging
 from botocore.config import Config
 from datetime import datetime, timedelta
-from .config import LAMBDA_FUNCTION_NAME, TOP_50_TICKERS, POSTGRES_CONN_ID
+from .config import TOP_50_TICKERS, POSTGRES_CONN_ID
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -163,3 +163,310 @@ def get_random_parameters(model_type: str):
         }
     else:
         raise ValueError("Invalid model_type. Choose 'BINARY CLASSIFICATION' or 'SARIMAX'.")
+
+def invoke_lambda_ingest(stock_symbol: str, start_date, end_date, feature_set: str, **kwargs):
+    """
+    Invokes the ingest_stock_data Lambda function.
+    """
+    payload = {
+        "body": json.dumps({
+            "stocks": [stock_symbol],
+            "start_date": start_date,  # Adjust based on requirements or randomize
+            "end_date": end_date,
+            "feature_set": feature_set
+        })
+    }
+
+    # Log the exact payload
+    logger.info(f"Invoking ingest_stock_data Lambda for {stock_symbol} with payload: {json.dumps(payload, indent=2)}")
+
+    response = invoke_lambda_function("ingest_stock_data", payload,invocation_type='RequestResponse')
+    return response
+
+def invoke_lambda_train(model_type: str, stock_symbol: str, input_date: str, hyperparameter_tuning: str, feature_set: str, lookback_period: int, prediction_horizon: int, **kwargs):
+    """
+    Invokes the train_* Lambda function based on model type.
+    """
+    if model_type == 'SARIMAX':
+        lambda_name = "train_sarimax_model"
+    elif model_type == 'BINARY CLASSIFICATION':
+        lambda_name = "train_binary_classification_model"
+    else:
+        raise ValueError(f"Unsupported model type: {model_type}")
+
+    model_key = generate_model_key(
+        model_type=model_type,
+        stock_symbol=stock_symbol,
+        feature_set=feature_set,
+        hyperparameter_tuning=hyperparameter_tuning,
+        lookback_period=lookback_period,
+        prediction_horizon=prediction_horizon,
+        formatted_date=input_date
+    )
+
+    payload = {
+        "body": json.dumps({
+            "model_key": model_key,
+            "stock_symbol": stock_symbol,
+            "input_date": input_date,
+            "hyperparameter_tuning": hyperparameter_tuning,
+            "feature_set": feature_set,
+            "lookback_period": lookback_period,
+            "prediction_horizon": prediction_horizon
+        })
+    }
+
+    # Log the exact payload
+    logger.info(f"Invoking {lambda_name} Lambda for {stock_symbol} with payload: {json.dumps(payload, indent=2)}")
+
+    response = invoke_lambda_function(lambda_name, payload,invocation_type='RequestResponse')
+    return response
+
+def invoke_lambda_predict(model_type: str, stock_symbol: str, input_date: str, hyperparameter_tuning: str, feature_set: str, lookback_period: int, prediction_horizon: int, **kwargs):
+    """
+    Invokes the make_*_prediction Lambda function based on model type.
+    """
+    if model_type == 'SARIMAX':
+        lambda_name = "make_sarimax_prediction"
+    elif model_type == 'BINARY CLASSIFICATION':
+        lambda_name = "make_binary_prediction"
+    else:
+        raise ValueError(f"Unsupported model type: {model_type}")
+
+    model_key = generate_model_key(
+        model_type=model_type,
+        stock_symbol=stock_symbol,
+        feature_set=feature_set,
+        hyperparameter_tuning=hyperparameter_tuning,
+        lookback_period=lookback_period,
+        prediction_horizon=prediction_horizon,
+        formatted_date=input_date
+    )
+
+    payload = {
+        "body": json.dumps({
+            "model_key": model_key,
+            "stock_symbol": stock_symbol,
+            "input_date": input_date,
+            "hyperparameter_tuning": hyperparameter_tuning,
+            "feature_set": feature_set,
+            "lookback_period": lookback_period,
+            "prediction_horizon": prediction_horizon
+        })
+    }
+
+    # Log the exact payload
+    logger.info(f"Invoking {lambda_name} Lambda for {stock_symbol} with payload: {json.dumps(payload, indent=2)}")
+
+    response = invoke_lambda_function(lambda_name, payload,invocation_type='RequestResponse')
+    return response
+
+def get_model_data(stock_symbol: str, model_type: str, input_date: str, feature_set: str, hyperparameter_tuning: str, lookback_period: int, prediction_horizon: int):
+    """
+    Retrieves model data from the PostgreSQL database using PostgresHook and constructs prediction_data.
+    """
+    pg_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
+    prediction_data = []
+
+    try:
+        # Generate model_key based on the parameters
+        model_key = generate_model_key(
+            model_type=model_type,
+            stock_symbol=stock_symbol,
+            feature_set=feature_set,
+            hyperparameter_tuning=hyperparameter_tuning,
+            lookback_period=lookback_period,
+            prediction_horizon=prediction_horizon,
+            formatted_date=input_date
+        )
+
+        if model_type == 'SARIMAX':
+            table_name = 'trained_models'  # Replace with your actual table name
+            sql = f"""
+                SELECT 
+                    model_key,
+                    prediction_explanation,
+                    prediction_rmse,
+                    prediction_mae,
+                    prediction_mape,
+                    prediction_confidence_score,
+                    feature_importance,
+                    model_parameters,
+                    last_known_price,
+                    predicted_amount,
+                    predictions_json,
+                    model_location,
+                    date_created,
+                    prediction_horizon
+                FROM {table_name}
+                WHERE model_key = %s
+                LIMIT 1;
+            """
+
+            result = pg_hook.get_first(sql, parameters=(model_key,))
+            if not result:
+                raise Exception(f"Trained SARIMAX model with key {model_key} not found.")
+
+            (
+                db_model_key,
+                prediction_explanation,
+                prediction_rmse,
+                prediction_mae,
+                prediction_mape,
+                prediction_confidence_score,
+                feature_importance,
+                model_parameters,
+                last_known_price,
+                predicted_amount,
+                predictions_json,
+                model_location,
+                date_created,
+                prediction_horizon_db
+            ) = result
+
+            # Calculate prediction_date
+            prediction_date = (datetime.strptime(input_date, '%Y-%m-%d') + timedelta(days=prediction_horizon_db)).strftime('%Y-%m-%d')
+
+            prediction_data.append({
+                'model_key': db_model_key,
+                'symbol': stock_symbol,
+                'prediction_date': prediction_date,
+                'prediction_explanation': prediction_explanation or '',
+                'prediction_rmse': prediction_rmse,
+                'prediction_mae': prediction_mae,
+                'prediction_mape': prediction_mape,
+                'prediction_confidence_score': prediction_confidence_score,
+                'confusion_matrix': json.dumps([]),  # Not applicable for regression
+                'feature_importance': json.dumps(feature_importance or {}),
+                'model_parameters': json.dumps(model_parameters or {}),
+                'predicted_movement': None,  # Not applicable for regression
+                'predicted_price': None,  # Not directly applicable
+                'prediction_probability': None,  # Not applicable for regression
+                'last_known_price': last_known_price,
+                'predicted_amount': predicted_amount,
+                'predictions_json': json.dumps(predictions_json or {}),
+                'model_location': model_location,
+                'date_created': date_created.strftime('%Y-%m-%d %H:%M:%S') if date_created else None
+            })
+
+        elif model_type == 'BINARY CLASSIFICATION':
+            table_name = 'trained_models_binary'  # Replace with your actual table name
+            sql = f"""
+                SELECT 
+                    model_key,
+                    prediction_explanation,
+                    prediction_accuracy,
+                    prediction_precision,
+                    prediction_recall,
+                    prediction_f1_score,
+                    prediction_roc_auc,
+                    confusion_matrix,
+                    feature_importance,
+                    model_parameters,
+                    predicted_movement,
+                    predicted_price,
+                    prediction_probability,
+                    last_known_price,
+                    predictions_json,
+                    model_location,
+                    date_created,
+                    prediction_horizon
+                FROM {table_name}
+                WHERE model_key = %s
+                LIMIT 1;
+            """
+
+            result = pg_hook.get_first(sql, parameters=(model_key,))
+            if not result:
+                raise Exception(f"Trained Binary Classification model with key {model_key} not found.")
+
+            (
+                db_model_key,
+                prediction_explanation,
+                prediction_accuracy,
+                prediction_precision,
+                prediction_recall,
+                prediction_f1_score,
+                prediction_roc_auc,
+                confusion_matrix,
+                feature_importance,
+                model_parameters,
+                predicted_movement,
+                predicted_price,
+                prediction_probability,
+                last_known_price,
+                predictions_json,
+                model_location,
+                date_created,
+                prediction_horizon_db
+            ) = result
+
+            # Calculate prediction_date
+            prediction_date = (datetime.strptime(input_date, '%Y-%m-%d') + timedelta(days=prediction_horizon_db)).strftime('%Y-%m-%d')
+
+            prediction_data.append({
+                'model_key': db_model_key,
+                'symbol': stock_symbol,
+                'prediction_date': prediction_date,
+                'prediction_explanation': prediction_explanation or '',
+                'prediction_accuracy': prediction_accuracy,
+                'prediction_precision': prediction_precision,
+                'prediction_recall': prediction_recall,
+                'prediction_f1_score': prediction_f1_score,
+                'prediction_roc_auc': prediction_roc_auc,
+                'confusion_matrix': json.dumps(confusion_matrix or []),
+                'feature_importance': json.dumps(feature_importance or {}),
+                'model_parameters': json.dumps(model_parameters or {}),
+                'predicted_movement': predicted_movement,
+                'predicted_price': predicted_price,
+                'prediction_probability': prediction_probability,
+                'last_known_price': last_known_price,
+                'predicted_amount': None,  # Not applicable for classification
+                'predictions_json': json.dumps(predictions_json or {}),
+                'model_location': model_location,
+                'date_created': date_created.strftime('%Y-%m-%d %H:%M:%S') if date_created else None
+            })
+
+        else:
+            raise ValueError(f"Unsupported model type: {model_type}")
+
+        logger.info(f"Prediction data for {stock_symbol}: {json.dumps(prediction_data, indent=2)}")
+        return prediction_data
+
+    except Exception as e:
+        logger.error(f"Error retrieving model data for {stock_symbol}: {str(e)}")
+        raise
+
+def invoke_lambda_ai_analysis(stock_symbol: str, model_type: str, input_date: str, feature_set: str, hyperparameter_tuning: str, lookback_period: int, prediction_horizon: int, **kwargs):
+    """
+    Retrieves prediction data from the database and invokes the AI analysis Lambda function.
+    """
+    try:
+        prediction_data = get_model_data(
+            stock_symbol=stock_symbol,
+            model_type=model_type,
+            input_date=input_date,
+            feature_set=feature_set,
+            hyperparameter_tuning=hyperparameter_tuning,
+            lookback_period=lookback_period,
+            prediction_horizon=prediction_horizon
+        )
+        if not prediction_data:
+            raise Exception(f"No prediction data available for stock {stock_symbol}.")
+
+        payload = {
+            "body": json.dumps({
+                "predictions": prediction_data
+            })
+        }
+
+        # Log the exact payload
+        logger.info(f"Invoking trigger_ai_analysis Lambda for {stock_symbol} with payload: {json.dumps(payload, indent=2)}")
+
+        response = invoke_lambda_function("trigger_ai_analysis", payload, invocation_type='RequestResponse')
+        logger.info(f"AI Analysis response for {stock_symbol}: {response}")
+        return response
+
+    except Exception as e:
+        logger.error(f"Failed to invoke AI analysis for {stock_symbol}: {str(e)}")
+        raise
