@@ -154,6 +154,7 @@ with DAG(
     concurrency=4,  # Adjust based on your Airflow setup and AWS Lambda concurrency
 ) as dag:
     with TaskGroup('process_stocks') as process_stocks_group:
+        previous_task_group = None
         for stock in TOP_50_TICKERS:
             stock_task_group = TaskGroup(group_id=f'generate_full_pipeline_{stock}')
 
@@ -220,6 +221,11 @@ with DAG(
 
             # Define task dependencies within the stock's TaskGroup
             ingest_task >> train_task >> predict_task >> ai_analysis_task
+
+            # Set cross-task-group dependencies (ensuring sequential stock execution)
+            if previous_task_group:
+                previous_task_group >> stock_task_group
+            previous_task_group = stock_task_group
 
     # Define DAG dependencies
     process_stocks_group
