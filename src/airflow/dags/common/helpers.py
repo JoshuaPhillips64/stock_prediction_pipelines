@@ -104,10 +104,10 @@ def get_random_feature_set():
     return random.choice(['basic', 'advanced'])
 
 def get_random_lookback_period():
-    return random.randint(500, 730, 1000)
+    return random.randint(700,1500)
 
 def get_random_prediction_horizon():
-    return random.randint(7,14,30,60)
+    return random.randint(7,60)
 
 def get_random_parameters(model_type: str):
     """
