@@ -20,7 +20,7 @@ def invoke_lambda_function(lambda_name: str, payload: dict):
         payload (dict): The payload to send to the Lambda function.
 
     Returns:
-        dict: The response from the Lambda invocation.
+        dict: A simplified response containing only serializable data.
     """
     # Fetching AWS credentials from Airflow 'aws_default' connection
     connection = BaseHook.get_connection('aws_default')
@@ -30,7 +30,7 @@ def invoke_lambda_function(lambda_name: str, payload: dict):
         'lambda',
         aws_access_key_id=connection.login,
         aws_secret_access_key=connection.password,
-        region_name='us-east-1'
+        region_name='us-east-1'  # Adjust region as needed
     )
 
     try:
@@ -44,14 +44,18 @@ def invoke_lambda_function(lambda_name: str, payload: dict):
             Payload=serialized_payload
         )
 
-        # Check if the invocation was accepted
-        status_code = response['StatusCode']
-        if status_code == 202:
+        # Extract only serializable parts of the response
+        serializable_response = {
+            "StatusCode": response.get('StatusCode'),
+            "RequestId": response.get('ResponseMetadata', {}).get('RequestId')
+        }
+
+        if serializable_response['StatusCode'] == 202:
             logger.info(f'Lambda "{lambda_name}" invoked asynchronously with payload: {payload}')
         else:
-            logger.error(f'Lambda invocation failed for "{lambda_name}" with status code {status_code}')
+            logger.error(f'Lambda invocation failed for "{lambda_name}" with status code {serializable_response["StatusCode"]}')
 
-        return response
+        return serializable_response
 
     except Exception as e:
         logger.error(f"Error invoking Lambda '{lambda_name}': {e}")
