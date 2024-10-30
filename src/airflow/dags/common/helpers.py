@@ -33,13 +33,15 @@ def invoke_lambda_function(lambda_name: str, payload: dict):
         region_name='us-east-1'
     )
 
-
     try:
+        # Serialize payload to JSON and encode to bytes
+        serialized_payload = json.dumps(payload).encode('utf-8')
+
         # Invoke the Lambda function asynchronously
         response = client.invoke(
             FunctionName=lambda_name,
             InvocationType='Event',  # Asynchronous invocation
-            Payload= {'body': json.dumps(payload)}
+            Payload=serialized_payload
         )
 
         # Check if the invocation was accepted

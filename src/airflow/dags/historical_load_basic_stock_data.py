@@ -4,6 +4,7 @@ from airflow.utils.task_group import TaskGroup
 from datetime import datetime, timedelta
 from common.config import TOP_50_TICKERS, LAMBDA_FUNCTION_NAME
 from common.helpers import invoke_lambda_function, monitor_lambdas_completion
+import json
 
 default_args = {
     'owner': 'airflow',
@@ -27,10 +28,12 @@ def invoke_lambda_task_wrapper(stock_ticker, feature_set, **kwargs):
     end_date_range = datetime.now().strftime('%Y-%m-%d')
 
     payload = {
+        "body": json.dumps({
         "stock_symbol": stock_ticker,
         'start_date': start_date_range,
         'end_date': end_date_range,
         "feature_set": feature_set
+    })
     }
 
     return invoke_lambda_function(LAMBDA_FUNCTION_NAME, payload)
