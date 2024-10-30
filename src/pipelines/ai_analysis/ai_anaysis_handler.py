@@ -47,7 +47,6 @@ The model predicts that the stock for {symbol} will *{predicted_movement}* by {p
 - **ROC AUC:** {prediction_roc_auc} - 1 Sentence Analysis of if this is a good result for ROC AUC goes here
 
 **Prediction Details:**
-- **Predicted Price:** {predicted_price}
 - **Confidence Level:** {prediction_probability_percentage}%
 - **Last Known Price:** {last_known_price}
 

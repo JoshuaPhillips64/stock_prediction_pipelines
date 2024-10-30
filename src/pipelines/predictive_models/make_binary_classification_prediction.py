@@ -111,8 +111,6 @@ def check_stationarity(df, column='log_return_1', alpha=0.05):
 def preprocess_data(df, prediction_horizon):
     logging.info("Starting data preprocessing with stationarity check...")
     df = df.copy()
-    df.sort_values('date', inplace=True)
-    df.set_index('date', inplace=True)
     df.replace([np.inf, -np.inf], np.nan, inplace=True)
     df.dropna(subset=['close'], inplace=True)
     df.fillna(method='ffill', inplace=True)
@@ -343,34 +341,30 @@ def make_binary_classification_prediction(model_key, stock_symbol, input_date, h
         logging.error(f"No data found for stock symbol {stock_symbol} up to {input_date}.")
         return False
 
-    # Ensure 'date' column is datetime
+    # Ensure 'date' column is datetime and set as index
     historical_data['date'] = pd.to_datetime(historical_data['date'])
+    historical_data.set_index('date', inplace=True)
+    historical_data.sort_index(inplace=True)
 
-    # Generate a list of the last (N) business days before the input date
+    # Generate a list of dates for prediction
     dates = pd.bdate_range(end=input_date_dt, periods=prediction_horizon).tolist()
 
-    # Add the input_date + prediction_horizon to the list of dates
-    final_prediction_date = pd.date_range(start=input_date_dt, periods=prediction_horizon+1)[-1]
-
+    # Extend the dates list to include dates up to the final prediction date
+    final_prediction_date = input_date_dt + timedelta(days=prediction_horizon)
     final_dates = pd.bdate_range(start=input_date_dt, end=final_prediction_date).tolist()
-
-    # Extend the dates list with final_dates, flattening the list
     dates.extend(final_dates)
 
-    # Remove duplicates (if any) and sort the dates to ensure proper sequence
+    # Remove duplicates and sort the dates
     dates = sorted(list(set(dates)))
 
     predictions = {}
     for prediction_date in dates:
         print(f'starting prediction for {prediction_date}...')
-        # Adjust current_end_date and current_start_date as per your existing logic
+        # Adjust current_end_date and current_start_date
         current_end_date = prediction_date - timedelta(days=prediction_horizon)
         current_start_date = current_end_date - timedelta(days=lookback_period)
 
-        current_data = historical_data[
-            (historical_data['date'] >= current_start_date) &
-            (historical_data['date'] <= current_end_date)
-            ]
+        current_data = historical_data.loc[current_start_date:current_end_date]
 
         # Preprocess the data
         preprocessed_data = preprocess_data(current_data, prediction_horizon)
@@ -403,21 +397,28 @@ def make_binary_classification_prediction(model_key, stock_symbol, input_date, h
 
         logging.info(f"Predicted class: {y_pred_future[0]} with probability: {y_proba_future[0]}")
 
-        # Convert prediction to price movement
-        last_known_price = historical_data['close'].values[-1]
-        if y_pred_future[0] == 1:
-            predicted_price = last_known_price * 1.02  # Example: 2% increase
-        else:
-            predicted_price = last_known_price * 0.98  # Example: 2% decrease
+        # Get actual movement
+        try:
+            actual_current_price = historical_data.loc[prediction_date, 'close']
+            future_date = prediction_date + pd.Timedelta(days=prediction_horizon)
 
-        logging.info(
-            f"Predicted future price movement: {'Increase' if y_pred_future[0] == 1 else 'Decrease'} to {predicted_price}")
+            # Find the next available trading day after future_date
+            future_dates = historical_data.index[historical_data.index >= future_date]
+            if len(future_dates) > 0:
+                closest_future_date = future_dates[0]
+                actual_future_price = historical_data.loc[closest_future_date, 'close']
+                actual_movement = 1 if actual_future_price > actual_current_price else 0
+            else:
+                actual_movement = None  # No future date available
+        except KeyError:
+            actual_movement = None  # Current date not in historical data
 
         # Store the predictions for the current date
         predictions[prediction_date.strftime('%Y-%m-%d')] = {
             'predicted_movement': int(y_pred_future[0]),
-            'predicted_price': predicted_price,
-            'prediction_probability': float(y_proba_future[0])
+            'actual_price': float(actual_current_price) if 'actual_current_price' in locals() else None,
+            'prediction_probability': float(y_proba_future[0]),
+            'actual_movement': actual_movement
         }
 
     logging.info(f"Predictions generated for {stock_symbol} from {dates[0].strftime('%Y-%m-%d')} to {dates[-1].strftime('%Y-%m-%d')}")
@@ -430,14 +431,10 @@ def make_binary_classification_prediction(model_key, stock_symbol, input_date, h
     first_date = dates[0].strftime('%Y-%m-%d')
     last_date = dates[-1].strftime('%Y-%m-%d')
 
-    # Check if the first date and last date exist in the predictions dictionary
-    last_known_price = predictions[first_date].get("last_known_price") if first_date in predictions else None
-    predicted_price = predictions[last_date].get("predicted_price") if last_date in predictions else None
-
-    # Ensure last_known_price and predicted_price are not None before converting to float
-    last_known_price = float(
-        last_known_price) if last_known_price is not None else 0.0  # Use default value of 0.0 if None
-    predicted_price = float(predicted_price) if predicted_price is not None else 0.0  # Use default value of 0.0 if None
+    # Ensure last_known_price is not None before converting to float
+    last_known_price = predictions[first_date].get("actual_price") if first_date in predictions else None
+    last_known_price = float(last_known_price) if last_known_price is not None else 0.0  # Use default value if None
+    predicted_price = 0
 
     log_data = pd.DataFrame({
         'model_key': [model_key],
@@ -459,7 +456,7 @@ def make_binary_classification_prediction(model_key, stock_symbol, input_date, h
     })
 
     # Upsert data to the database
-    upsert_df(log_data, 'predictions_log', 'model_key,symbol,date', engine, json_columns=['predictions_json','model_parameters'])
+    upsert_df(log_data, 'predictions_log', 'model_key,symbol,date', engine, json_columns=['predictions_json', 'model_parameters'])
     logging.info("Predictions logged successfully.")
 
     return True

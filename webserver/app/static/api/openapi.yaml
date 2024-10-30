@@ -1,4 +1,4 @@
-openapi: 3.0.0
+openapi: 3.0.1
 info:
   title: Stock Prediction API
   version: 1.0.0
@@ -6,7 +6,7 @@ info:
     This API provides endpoints for ingesting stock data, training and evaluating predictive models (SARIMAX and XGBoost classification),
     making predictions, and generating AI-powered analysis using OpenAI and Anthropic's Claude models.
 servers:
-  - url: https://smartstockpredictor.com/api/ # Replace with your actual API Gateway URL
+  - url: https://smartstockpredictor.com/api/
 components:
   securitySchemes:
     ApiKeyAuth:
@@ -16,13 +16,22 @@ components:
       description: >
         API Key needed to access the endpoints.
         Provide it in the `X-API-KEY` header.
+  responses:
+    BadRequest:
+      description: Bad Request - Invalid input parameters.
+    Unauthorized:
+      description: Unauthorized - API Key is missing or invalid.
+    NotFound:
+      description: Not Found - Resource not found.
+    InternalServerError:
+      description: Internal Server Error - An unexpected error occurred.
 security:
   - ApiKeyAuth: [] # Apply API Key security globally to all operations
 tags:
   - name: Data Ingestion
-    description: Endpoints related to ingesting and enriching stock data.
+    description: Endpoints related to ingesting and retrieving stock data.
   - name: Model Training
-    description: Endpoints for training predictive models.
+    description: Endpoints for training and retrieving predictive models.
   - name: Prediction
     description: Endpoints for making predictions using trained models.
   - name: AI Analysis
@@ -32,8 +41,9 @@ paths:
     post:
       summary: Ingest and enrich stock data into the database.
       description: >
-        Fetches historical daily adjusted time series data, technical indicators, company overview, and earnings data from Alpha Vantage for specified stocks and a date range.
+        Initiates a job to fetch historical daily adjusted time series data, technical indicators, company overview, and earnings data from Alpha Vantage for specified stocks and a date range.
         Enriches it with market index performance, economic indicators (GDP, inflation, unemployment), AI Generated news sentiment scores, and options data.
+        Returns a `model_key` and `job_id` to track the ingestion job status.
       security:
         - ApiKeyAuth: []
       tags:
@@ -80,7 +90,79 @@ paths:
                 feature_set: 'basic'
       responses:
         '200':
-          description: Stock data ingested successfully.
+          description: Ingestion job started successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  model_key:
+                    type: string
+                    description: Unique key to identify the ingestion job.
+                  job_id:
+                    type: string
+                    description: Unique identifier for tracking the ingestion job status.
+                required:
+                  - model_key
+                  - job_id
+                example:
+                  model_key: 'INGEST_PG_basic_20240101_20241010'
+                  job_id: 'job_12345'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          description: Internal Server Error - Error initiating data ingestion.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error message.
+                example:
+                  error: "Failed to initiate data ingestion job."
+
+  /fetch-stock-data:
+    get:
+      summary: Fetch ingested stock data.
+      description: >
+        Retrieves the historical stock data that has been ingested and stored in the database.
+        You can filter the data by stock symbols and date range.
+      security:
+        - ApiKeyAuth: []
+      tags:
+        - Data Ingestion
+      parameters:
+        - name: stocks
+          in: query
+          description: List of stock symbols to fetch.
+          required: true
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
+        - name: start_date
+          in: query
+          description: Start date for historical data (YYYY-MM-DD).
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          description: End date for historical data (YYYY-MM-DD).
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Stock data retrieved successfully.
           content:
             application/json:
               schema:
@@ -294,24 +376,35 @@ paths:
                       next_earnings_date: '2024-12-15'
                       next_earnings_estimated_eps: 3.1
         '400':
-          description: Bad Request - Invalid input parameters.
+          $ref: '#/components/responses/BadRequest'
         '401':
-          description: Unauthorized - API Key is missing or invalid.
+          $ref: '#/components/responses/Unauthorized'
         '404':
-          description: Not Found - No data found for the specified parameters.
+          $ref: '#/components/responses/NotFound'
         '500':
-          description: Internal Server Error - Error during data ingestion.
+          description: Internal Server Error - Error during data retrieval.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error message.
+                example:
+                  error: "Failed to retrieve stock data."
 
   /train-sarimax-model:
     post:
       summary: Train a SARIMAX model for a given stock.
       description: >
-        Trains a SARIMAX model using historical stock data and selected features to predict future stock log returns.
+        Initiates a job to train a SARIMAX model using historical stock data and selected features to predict future stock log returns.
         The model uses a TimeSeriesSplit for cross-validation and can perform hyperparameter tuning based on the specified level.
         The trained model is saved as a pickle file to an S3 bucket and training details, including evaluation metrics, feature importance,
         and model parameters, are logged to the database.
+        Returns a `model_key` and `job_id` to track the training job status.
       security:
-        - ApiKeyAuth: [] # Apply API Key security to this operation
+        - ApiKeyAuth: []
       tags:
         - Model Training
       requestBody:
@@ -383,8 +476,7 @@ paths:
                 prediction_horizon: 30
       responses:
         '200':
-          description: >
-            SARIMAX model trained successfully. Returns a JSON object with details about the trained model, evaluation metrics, and prediction results.
+          description: SARIMAX training job started successfully.
           content:
             application/json:
               schema:
@@ -393,106 +485,42 @@ paths:
                   model_key:
                     type: string
                     description: Unique key to identify the trained model.
-                  symbol:
+                  job_id:
                     type: string
-                    description: Stock symbol for which the model was trained.
-                  prediction_date:
-                    type: string
-                    format: date
-                    description: The date for which the prediction is made (input_date + prediction_horizon).
-                  prediction_explanation:
-                    type: string
-                    description: A description of the model and its prediction strategy.
-                  prediction_rmse:
-                    type: string
-                    description: >
-                      Root Mean Squared Error (RMSE) of the model on the test set, representing the average prediction error
-                      in terms of log return.
-                  prediction_mae:
-                    type: string
-                    description: >
-                      Mean Absolute Error (MAE) of the model on the test set, representing the average absolute difference
-                      between predicted and actual log returns.
-                  prediction_mape:
-                    type: string
-                    description: >
-                      Mean Absolute Percentage Error (MAPE) of the model on the test set, representing the average percentage
-                      error in predictions.
-                  prediction_confidence_score:
-                    type: string
-                    description: Confidence score of the model's prediction.
-                  feature_importance:
-                    type: string
-                    description: JSON string representing feature importance scores as determined by a RandomForestRegressor.
-                  model_parameters:
-                    type: string
-                    description: JSON string representing the best SARIMAX order and seasonal order found during hyperparameter tuning.
-                  predicted_amount:
-                    type: number
-                    format: float
-                    description: The predicted stock price for the prediction_date.
-                  last_known_price:
-                    type: number
-                    format: float
-                    description: The last known stock price, which is the closing price on the input_date.
-                  predictions_json:
-                    type: string
-                    description: >
-                      JSON string containing a dictionary of predictions for each date in the prediction horizon,
-                      including both the actual and predicted prices.
-                  date_created:
-                    type: string
-                    format: date-time
-                    description: Timestamp of model creation.
+                    description: Unique identifier for tracking the training job status.
                 required:
                   - model_key
-                  - symbol
-                  - prediction_date
-                  - prediction_explanation
-                  - prediction_rmse
-                  - prediction_mae
-                  - prediction_mape
-                  - prediction_confidence_score
-                  - feature_importance
-                  - model_parameters
-                  - predicted_amount
-                  - last_known_price
-                  - predictions_json
-                  - date_created
+                  - job_id
                 example:
                   model_key: 'SARIMAX_AAPL_advanced_HIGH_720_30'
-                  symbol: 'AAPL'
-                  prediction_date: '2024-11-30'
-                  prediction_explanation: 'SARIMAX Model with seasonal adjustments and exogenous variables.'
-                  prediction_rmse: '0.05'
-                  prediction_mae: '0.04'
-                  prediction_mape: '0.07'
-                  prediction_confidence_score: '0.85'
-                  feature_importance: '{"RSI": 0.25, "MACD": 0.20}'
-                  model_parameters: '{"order": [1,1,1], "seasonal_order": [1,1,1,12]}'
-                  predicted_amount: 150.75
-                  last_known_price: 148.50
-                  predictions_json: '{"predictions":[{"date":"2024-11-30","actual_price":150.0,"predicted_price":150.75}]}'
-                  date_created: '2024-11-15T08:30:00Z'
+                  job_id: 'job_67890'
         '400':
-          description: Bad Request - Invalid input parameters.
+          $ref: '#/components/responses/BadRequest'
         '401':
-          description: Unauthorized - API Key is missing or invalid.
+          $ref: '#/components/responses/Unauthorized'
         '500':
-          description: >
-            Internal Server Error - Error during model training or prediction.
-            This could be due to various reasons like insufficient data, model fitting errors, or problems saving the model.
+          description: Internal Server Error - Error initiating model training.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error message.
+                example:
+                  error: "Failed to initiate SARIMAX training job."
 
   /train-binary-classification-model:
     post:
       summary: Train a binary classification model for a given stock.
       description: >
-        Trains an XGBoost binary classification model for a given stock symbol using a specified feature set, lookback period, and prediction horizon.
+        Initiates a job to train an XGBoost binary classification model for a given stock symbol using a specified feature set, lookback period, and prediction horizon.
         Performs hyperparameter tuning using time series cross-validation and handles class imbalance with SMOTE.
         The trained model, along with relevant information, is saved to S3 and logged to the database.
-        The model predicts whether the stock price will increase (1) or decrease (0) in the future.
+        Returns a `model_key` and `job_id` to track the training job status.
       security:
-        - ApiKeyAuth: [] # Apply API Key security to this operation
+        - ApiKeyAuth: []
       tags:
         - Model Training
       requestBody:
@@ -517,6 +545,7 @@ paths:
                   format: date
                   description: >
                     The input date (YYYY-MM-DD) which is considered the last date of the training data.
+                    The model will make predictions for dates after this input date.
                 hyperparameter_tuning:
                   type: string
                   enum: ['LOW', 'MEDIUM', 'HIGH']
@@ -558,9 +587,187 @@ paths:
                 prediction_horizon: 30
       responses:
         '200':
-          description: >
-            XGBoost classification model trained successfully. Returns a JSON object containing details about the trained model,
-            evaluation metrics, and predictions.
+          description: Binary classification training job started successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  model_key:
+                    type: string
+                    description: Unique identifier for the trained model.
+                  job_id:
+                    type: string
+                    description: Unique identifier for tracking the training job status.
+                required:
+                  - model_key
+                  - job_id
+                example:
+                  model_key: 'XGBoost_AAPL_advanced_HIGH_720_30'
+                  job_id: 'job_54321'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          description: Internal Server Error - Error initiating model training.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error message.
+                example:
+                  error: "Failed to initiate binary classification training job."
+
+  /fetch-sarimax-model:
+    get:
+      summary: Fetch SARIMAX model details.
+      description: >
+        Retrieves the details of a trained SARIMAX model using the provided `model_key`.
+      security:
+        - ApiKeyAuth: [ ]
+      tags:
+        - Model Training
+      parameters:
+        - name: model_key
+          in: query
+          description: The unique key used to identify the SARIMAX model.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: SARIMAX model details retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  model_key:
+                    type: string
+                    description: Unique key of the SARIMAX model.
+                  symbol:
+                    type: string
+                    description: Stock symbol for which the model was trained.
+                  prediction_date:
+                    type: string
+                    format: date
+                    description: The date for which the prediction is made (input_date + prediction_horizon).
+                  prediction_explanation:
+                    type: string
+                    description: A description of the model and its prediction strategy.
+                  prediction_rmse:
+                    type: string
+                    description: >
+                      Root Mean Squared Error (RMSE) of the model on the test set, representing the average prediction error
+                      in terms of log return.
+                  prediction_mae:
+                    type: string
+                    description: >
+                      Mean Absolute Error (MAE) of the model on the test set, representing the average absolute difference
+                      between predicted and actual log returns.
+                  prediction_mape:
+                    type: string
+                    description: >
+                      Mean Absolute Percentage Error (MAPE) of the model on the test set, representing the average percentage
+                      error in predictions.
+                  prediction_confidence_score:
+                    type: string
+                    description: Confidence score of the model's prediction.
+                  feature_importance:
+                    type: string
+                    description: JSON string representing feature importance scores as determined by a RandomForestRegressor.
+                  model_parameters:
+                    type: string
+                    description: JSON string representing the best SARIMAX order and seasonal order found during hyperparameter tuning.
+                  predicted_amount:
+                    type: number
+                    format: float
+                    description: The predicted stock price for the prediction_date.
+                  last_known_price:
+                    type: number
+                    format: float
+                    description: The last known stock price before the prediction date.
+                  predictions_json:
+                    type: string
+                    description: >
+                      JSON string containing a dictionary of predictions for each date in the prediction horizon,
+                      including both the actual and predicted prices.
+                  date_created:
+                    type: string
+                    format: date-time
+                    description: Timestamp of model creation.
+                required:
+                  - model_key
+                  - symbol
+                  - prediction_date
+                  - prediction_explanation
+                  - prediction_rmse
+                  - prediction_mae
+                  - prediction_mape
+                  - prediction_confidence_score
+                  - feature_importance
+                  - model_parameters
+                  - predicted_amount
+                  - last_known_price
+                  - predictions_json
+                  - date_created
+                example:
+                  model_key: 'SARIMAX_AAPL_advanced_HIGH_720_30'
+                  symbol: 'AAPL'
+                  prediction_date: '2024-11-30'
+                  prediction_explanation: 'SARIMAX Model with seasonal adjustments and exogenous variables.'
+                  prediction_rmse: '0.05'
+                  prediction_mae: '0.04'
+                  prediction_mape: '0.07'
+                  prediction_confidence_score: '0.85'
+                  feature_importance: '{"RSI": 0.25, "MACD": 0.20}'
+                  model_parameters: '{"order": [1,1,1], "seasonal_order": [1,1,1,12]}'
+                  predicted_amount: 150.75
+                  last_known_price: 148.50
+                  predictions_json: '{"predictions":[{"date":"2024-11-30","actual_price":150.0,"predicted_price":150.75}]}'
+                  date_created: '2024-11-15T08:30:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          description: Internal Server Error - Error retrieving SARIMAX model details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error message.
+                example:
+                  error: "SARIMAX model with the specified model_key does not exist."
+
+  /fetch-binary-model:
+    get:
+      summary: Fetch binary classification model details.
+      description: >
+        Retrieves the details of a trained XGBoost binary classification model using the provided `model_key`.
+      security:
+        - ApiKeyAuth: []
+      tags:
+        - Model Training
+      parameters:
+        - name: model_key
+          in: query
+          description: The unique key used to identify the binary classification model.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Binary classification model details retrieved successfully.
           content:
             application/json:
               schema:
@@ -627,7 +834,7 @@ paths:
                   predictions_json:
                     type: string
                     description: >
-                      JSON string containing a dictionary of predictions for each date in the test set,
+                      JSON string containing a dictionary of predictions for each date in the prediction horizon,
                       including the actual movement and the predicted movement.
                   date_created:
                     type: string
@@ -672,13 +879,23 @@ paths:
                   predictions_json: '{"predictions":[{"date":"2024-10-31","actual_movement":"Up","predicted_movement":"Up"}]}'
                   date_created: '2024-10-27T12:00:00Z'
         '400':
-          description: Bad Request - Invalid input parameters.
+          $ref: '#/components/responses/BadRequest'
         '401':
-          description: Unauthorized - API Key is missing or invalid.
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '500':
-          description: >
-            Internal Server Error - Error during model training or prediction.
-            This could be due to issues like insufficient data, model fitting errors, or problems saving the model.
+          description: Internal Server Error - Error retrieving binary classification model details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error message.
+                example:
+                  error: "Binary classification model with the specified model_key does not exist."
 
   /make-sarimax-prediction:
     post:
@@ -690,7 +907,7 @@ paths:
         It preprocesses the data, engineers features, scales the data according to the trained model's scaler, and then uses the model to forecast.
         The prediction result, along with other relevant information, is logged to the database.
       security:
-        - ApiKeyAuth: [] # Apply API Key security to this operation
+        - ApiKeyAuth: []
       tags:
         - Prediction
       requestBody:
@@ -790,12 +1007,21 @@ paths:
                   prediction_explanation: 'SARIMAX Model with seasonal adjustments and exogenous variables.'
                   date_created: '2024-10-15T08:30:00Z'
         '400':
-          description: Bad Request - Invalid input parameters.
+          $ref: '#/components/responses/BadRequest'
         '401':
-          description: Unauthorized - API Key is missing or invalid.
+          $ref: '#/components/responses/Unauthorized'
         '500':
-          description: >
-            Internal Server Error - Prediction failed due to issues like model loading, data retrieval, or prediction calculation.
+          description: Internal Server Error - Prediction failed due to issues like model loading, data retrieval, or prediction calculation.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error message.
+                example:
+                  error: "Failed to generate SARIMAX prediction."
 
   /ai-analysis:
     post:
@@ -806,7 +1032,7 @@ paths:
         feature importance, and other provided information. The generated explanations are then stored in the 'ai_analysis' table in the database,
         associated with their corresponding model keys.
       security:
-        - ApiKeyAuth: [] # Apply API Key security to this operation
+        - ApiKeyAuth: []
       tags:
         - AI Analysis
       requestBody:
@@ -966,29 +1192,6 @@ paths:
                     last_known_price: 52.1
                     predictions_json: '{"predictions":[{"date":"2024-11-01","actual_movement":"Up","predicted_movement":"Up"}]}'
                     date_created: '2024-10-27T12:00:00Z'
-                  - model_key: 'model_456'
-                    symbol: 'AAPL'
-                    prediction_date: '2024-12-01'
-                    prediction_explanation: 'SARIMAX Model with seasonal adjustments and exogenous variables.'
-                    prediction_accuracy: 0.85
-                    prediction_precision: 0.82
-                    prediction_recall: 0.80
-                    prediction_f1_score: 0.81
-                    prediction_roc_auc: 0.88
-                    prediction_rmse: 0.04
-                    prediction_mae: 0.03
-                    prediction_mape: 0.06
-                    prediction_confidence_score: 0.75
-                    confusion_matrix: '[[45, 15], [10, 30]]'
-                    feature_importance: '{"RSI": 0.25, "MACD": 0.20}'
-                    model_parameters: '{"order": [1,1,1], "seasonal_order": [1,1,1,12]}'
-                    predicted_movement: 'Down'
-                    predicted_price: 150.5
-                    prediction_probability: 0.72
-                    predicted_amount: 150.5
-                    last_known_price: 155.0
-                    predictions_json: '{"predictions":[{"date":"2024-12-01","actual_movement":"Down","predicted_movement":"Down"}]}'
-                    date_created: '2024-11-15T08:30:00Z'
       responses:
         '200':
           description: >
@@ -1028,11 +1231,22 @@ paths:
         '400':
           description: Bad Request - No predictions provided in the input event.
         '401':
-          description: Unauthorized - API Key is missing or invalid.
+          $ref: '#/components/responses/Unauthorized'
         '500':
           description: >
             Internal Server Error - An error occurred during AI analysis or while logging the results to the database.
             This could be due to issues with the ChatGPT API call, database connection, or data processing.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error message.
+                example:
+                  error: "Failed to generate AI analysis."
+
   /make-binary-classification-prediction:
     post:
       summary: Generate a binary classification prediction for a given stock.
@@ -1041,7 +1255,7 @@ paths:
         The model takes into account historical stock data and technical indicators.
         The prediction includes the predicted price movement, price, and associated confidence probability.
       security:
-        - ApiKeyAuth: [ ]
+        - ApiKeyAuth: []
       tags:
         - Prediction
       requestBody:
@@ -1124,21 +1338,148 @@ paths:
                     type: string
                     description: >
                       JSON string containing the full list of predictions, including details for each date in the prediction horizon.
-              required:
-                - prediction_date
-                - predicted_movement
-                - predicted_price
-                - prediction_probability
-                - last_known_price
-                - predictions_json
-              example:
-                prediction_date: '2024-10-31'
-                predicted_movement: 'Up'
-                predicted_price: 155.3
-                prediction_probability: 0.78
-                last_known_price: 152.1
-                predictions_json: '{"predictions":[{"date":"2024-10-31","predicted_movement":"Up"}]}'
+                required:
+                  - prediction_date
+                  - predicted_movement
+                  - predicted_price
+                  - prediction_probability
+                  - last_known_price
+                  - predictions_json
+                example:
+                  prediction_date: '2024-10-31'
+                  predicted_movement: 'Up'
+                  predicted_price: 155.3
+                  prediction_probability: 0.78
+                  last_known_price: 152.1
+                  predictions_json: '{"predictions":[{"date":"2024-10-31","predicted_movement":"Up"}]}'
         '400':
-          description: Bad Request - Invalid input parameters.
+          $ref: '#/components/responses/BadRequest'
         '500':
           description: Internal Server Error - Error during prediction.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error message.
+                example:
+                  error: "Failed to generate binary classification prediction."
+
+  /data-status:
+    get:
+      summary: Check if stock data is already ingested.
+      description: >
+        Checks if the historical stock data for the provided stock symbols and date range has already been ingested into the database.
+        Returns a 200 response with `true` if the data is ingested, otherwise `false`.
+      security:
+        - ApiKeyAuth: []
+      tags:
+        - Data Ingestion
+      parameters:
+        - name: stocks
+          in: query
+          description: List of stock symbols to check.
+          required: true
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
+        - name: start_date
+          in: query
+          description: Start date for historical data (YYYY-MM-DD).
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          description: End date for historical data (YYYY-MM-DD).
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Data status check successful.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    description: Indicates if the condition is met.
+                required:
+                  - status
+                example:
+                  status: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          description: Internal Server Error - Error during data status check.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error message.
+                example:
+                  error: "Failed to check data ingestion status."
+
+  /model-status:
+    get:
+      summary: Check if a model is already created.
+      description: >
+        Checks if a model with the provided model key has already been created and is available in the system.
+        Returns a 200 response with `true` if the model is available, otherwise `false`.
+      security:
+        - ApiKeyAuth: []
+      tags:
+        - Model Training
+      parameters:
+        - name: model_key
+          in: query
+          description: The unique key used to identify the model.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Model status check successful.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    description: Indicates if the condition is met.
+                required:
+                  - status
+                example:
+                  status: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          description: Internal Server Error - Error during model status check.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error message.
+                example:
+                  error: "Failed to check model status."
+

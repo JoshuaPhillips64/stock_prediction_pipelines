@@ -427,7 +427,7 @@ def evaluate_model(model_fit, X_test, y_test, original_close_prices, prediction_
     mse = mean_squared_error(y_test, y_pred)
     mae = mean_absolute_error(y_test, y_pred)
     rmse = np.sqrt(mse)
-    mape = np.mean(np.abs((y_test - y_pred) / y_test)) * 100
+    mape = np.mean(np.abs((y_test - y_pred) / y_test))
 
     print(f'Mean Absolute Error: {mae:.6f}')
     print(f'Root Mean Squared Error: {rmse:.6f}')
@@ -546,7 +546,7 @@ def plot_full_stock_prediction(actual_close, predicted_close, future_price, test
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
     )
 
-    #fig.show()
+    fig.show()
     logging.info("Full stock prediction plot completed.")
 
 
@@ -672,7 +672,7 @@ def train_SARIMAX_model(model_key, stock_symbol, input_date, hyperparameter_tuni
 
         # Plotting the actual and predicted prices
         test_start_date = X_test.index.min()
-        plot_full_stock_prediction(actual_close, predicted_close, future_price, test_start_date)
+        #plot_full_stock_prediction(actual_close, predicted_close, future_price, test_start_date)
 
         # Prepare data for logging
         log_data = {
@@ -690,7 +690,9 @@ def train_SARIMAX_model(model_key, stock_symbol, input_date, hyperparameter_tuni
                 'seasonal_order': best_seasonal_order,
                 'hyperparameter_tuning': hyperparameter_tuning,
                 'feature_set': feature_set,
-                'prediction_horizon': prediction_horizon
+                'prediction_horizon': prediction_horizon,
+                'input_date': input_date,
+                'lookback_period': lookback_period
             }),
             'predicted_amount': float(future_price['predicted_price'].iloc[0]),
             'last_known_price': float(original_data['close'].iloc[-1]),

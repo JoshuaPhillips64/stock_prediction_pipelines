@@ -72,6 +72,8 @@ def preprocess_data(df, prediction_horizon):
     # Calculate log return over prediction_horizon days
     df['log_return_future'] = np.log(df['close'].shift(-prediction_horizon) / df['close'])
     df['log_return_1'] = np.log(df['close'] / df['close'].shift(1))
+    # Store future date by shifting the 'date' column
+    # Drop rows where future data is not available
     df.dropna(subset=['log_return_future'], inplace=True)
 
     # Convert to binary target
@@ -458,21 +460,15 @@ def predict_future_class(original_data, final_model, scaler, feature_list, predi
 
         logging.info(f"Predicted class: {y_pred_future[0]} with probability: {y_proba_future[0]}")
 
-        # Convert prediction to price movement
+        # Collect the last known price
         last_known_price = original_data['close'].values[-1]
-        if y_pred_future[0] == 1:
-            predicted_price = last_known_price * 1.02  # Example: 2% increase
-        else:
-            predicted_price = last_known_price * 0.98  # Example: 2% decrease
-
-        logging.info(f"Predicted future price movement: {'Increase' if y_pred_future[0] == 1 else 'Decrease'} to {predicted_price}")
 
         # Create a dataframe with the result
         future_date = last_date + pd.Timedelta(days=prediction_horizon)
         results_df = pd.DataFrame({
             'date': [future_date],
             'predicted_movement': [int(y_pred_future[0])],
-            'predicted_price': [predicted_price],
+            'actual_price': [last_known_price],
             'prediction_probability': [float(y_proba_future[0])]
         })
 
@@ -523,9 +519,9 @@ def plot_full_stock_prediction_classifier(original_data, y_test, y_pred, future_
     # Plot the predicted future price
     fig.add_trace(go.Scatter(
         x=future_prediction['date'],
-        y=future_prediction['predicted_price'],
+        y=future_prediction['actual_price'],
         mode='markers+lines',
-        name='Predicted Future Price',
+        name='Actual Price',
         marker=dict(symbol='star', size=12, color='blue')
     ))
 
@@ -673,22 +669,46 @@ def train_classification_model(event, context):
                                              feature_set)
 
     if future_prediction is not None and not future_prediction.empty:
+        # Limit y_test and X_test_scaled to dates where date + prediction_horizon <= input_date_dt
+        valid_dates = [date for date in y_test.index if date + pd.Timedelta(days=prediction_horizon) <= input_date_dt]
+        y_test = y_test.loc[valid_dates]
+        X_test_scaled = X_test_scaled.loc[valid_dates]
+
+        # Ensure 'date' is the index and sorted
+        original_data.set_index('date', inplace=True)
+        original_data.sort_index(inplace=True)
+
         # Build predictions JSON dictionary
-        predictions_json = {
-            str(date.date()): {
-                'actual_movement': int(y_test.loc[date]) if date in y_test.index else None,
-                'predicted_movement': int(
-                    final_model.predict(X_test_scaled.loc[[date]])[0]) if date in X_test_scaled.index else None
+        predictions_json = {}
+        for date in y_test.index:
+            # Get actual movement
+            actual_current_price = original_data.loc[date, 'close']
+            future_date = date + pd.Timedelta(days=prediction_horizon)
+
+            # Find the closest trading day on or after future_date
+            future_dates = original_data.index[original_data.index >= future_date]
+            if not future_dates.empty:
+                closest_future_date = future_dates[0]
+                actual_future_price = original_data.loc[closest_future_date, 'close']
+                actual_movement = 1 if actual_future_price > actual_current_price else 0
+            else:
+                actual_movement = None  # No future date available
+
+            # Get predicted movement
+            predicted_movement = int(final_model.predict(X_test_scaled.loc[[date]])[0])
+            actual_price = float(actual_current_price)
+
+            predictions_json[str(date.date())] = {
+                'actual_movement': actual_movement,
+                'predicted_movement': predicted_movement,
+                'actual_price': actual_price
             }
-            for date in y_test.index
-        }
 
         # Add the future price prediction
         future_date = future_prediction['date'].iloc[0].strftime('%Y-%m-%d')
         predictions_json[future_date] = {
             'actual_movement': None,  # No actual movement for future dates
             'predicted_movement': int(future_prediction['predicted_movement'].iloc[0]),
-            'predicted_price': future_prediction['predicted_price'].iloc[0],
             'prediction_probability': future_prediction['prediction_probability'].iloc[0]
         }
 
@@ -696,13 +716,13 @@ def train_classification_model(event, context):
         predictions_json_str = json.dumps(predictions_json, default=str)
 
         # Plotting the actual and predicted movements
-        plot_full_stock_prediction_classifier(
-            original_data,
-            y_test,
-            y_pred_raw,  # Use raw predictions here
-            future_prediction,
-            test_start_date=X_test.index.min()
-        )
+        #plot_full_stock_prediction_classifier(
+        #    original_data,
+        #    y_test,
+        #    y_pred_raw,  # Use raw predictions here
+        #    future_prediction,
+        #    test_start_date=X_test.index.min()
+        #)
 
         # Prepare output data
         output = {
@@ -717,9 +737,15 @@ def train_classification_model(event, context):
             'prediction_roc_auc': metrics['roc_auc'],
             'confusion_matrix': json.dumps(metrics['confusion_matrix']),
             'feature_importance': json.dumps(importance_df.to_dict()),
-            'model_parameters': json.dumps(best_params),
+            'model_parameters': json.dumps({
+                'hyperparameter_tuning': hyperparameter_tuning,
+                'feature_set': feature_set,
+                'prediction_horizon': prediction_horizon,
+                'input_date': input_date,
+                'lookback_period': lookback_period
+            }),
             'predicted_movement': 'Down' if future_prediction['predicted_movement'].iloc[0] == 0 else 'Up',
-            'predicted_price': float(future_prediction['predicted_price'].iloc[0]),
+            'predicted_price': float(0),
             'prediction_probability': float(future_prediction['prediction_probability'].iloc[0]),
             'last_known_price': float(original_data['close'].iloc[-1]),
             'predictions_json': predictions_json_str,
