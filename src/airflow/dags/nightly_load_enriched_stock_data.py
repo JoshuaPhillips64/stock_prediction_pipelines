@@ -17,15 +17,23 @@ default_args = {
 
 dag_name = 'nightly_load_enriched_stock_data'
 description = 'Nightly load of top 50 stock tickers into enriched_stock_data table'
-schedule = '0 8 * * *'  # Daily at 1 AM
+schedule = '0 2 * * *'  # Daily at 1 AM
 start_date = days_ago(1)
 catchup = False
 feature_set = 'advanced'
 
 def invoke_lambda_task_wrapper(stock_ticker, feature_set, **kwargs):
-    execution_date = kwargs['execution_date']
-    date_str = (execution_date - timedelta(days=1)).strftime('%Y-%m-%d')
-    return invoke_lambda_function(stock_ticker, date_str, date_str, feature_set)
+    start_date_range = (datetime.now() - timedelta(days=2)).strftime('%Y-%m-%d')
+    end_date_range = datetime.now().strftime('%Y-%m-%d')
+
+    payload = {
+        "stock_symbol": stock_ticker,
+        'start_date': start_date_range,
+        'end_date': end_date_range,
+        "feature_set": feature_set
+    }
+
+    return invoke_lambda_function(LAMBDA_FUNCTION_NAME, payload)
 
 with DAG(
     dag_name,

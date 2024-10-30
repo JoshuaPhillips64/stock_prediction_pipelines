@@ -2,7 +2,7 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.utils.task_group import TaskGroup
 from datetime import datetime, timedelta
-from common.config import TOP_50_TICKERS
+from common.config import TOP_50_TICKERS, LAMBDA_FUNCTION_NAME
 from common.helpers import invoke_lambda_function, monitor_lambdas_completion
 
 default_args = {
@@ -22,9 +22,17 @@ catchup = False
 feature_set = 'advanced'
 
 def invoke_lambda_task_wrapper(stock_ticker, feature_set, **kwargs):
-    start_date_range = '2023-01-01'
+    start_date_range = '2020-01-01'
     end_date_range = datetime.now().strftime('%Y-%m-%d')
-    return invoke_lambda_function(stock_ticker, start_date_range, end_date_range, feature_set)
+
+    payload = {
+        "stock_symbol": stock_ticker,
+        'start_date': start_date_range,
+        'end_date': end_date_range,
+        "feature_set": feature_set
+    }
+
+    return invoke_lambda_function(LAMBDA_FUNCTION_NAME, payload)
 
 with DAG(
     dag_name,

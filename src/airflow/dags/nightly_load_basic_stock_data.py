@@ -3,7 +3,7 @@ from airflow.operators.python import PythonOperator
 from airflow.utils.task_group import TaskGroup
 from airflow.utils.dates import days_ago
 from datetime import datetime, timedelta
-from common.config import TOP_50_TICKERS
+from common.config import TOP_50_TICKERS, LAMBDA_FUNCTION_NAME
 from common.helpers import invoke_lambda_function, monitor_lambdas_completion
 
 default_args = {
@@ -17,15 +17,23 @@ default_args = {
 
 dag_name = 'nightly_load_basic_stock_data'
 description = 'Nightly load of top 50 stock tickers into basic_stock_data table'
-schedule = '0 6 * * *'  # Daily at 1 AM
+schedule = '0 4 * * *'  # Daily at 1 AM
 start_date = days_ago(1)
 catchup = False
 feature_set = 'basic'
 
 def invoke_lambda_task_wrapper(stock_ticker, feature_set, **kwargs):
-    execution_date = kwargs['execution_date']
-    date_str = (execution_date - timedelta(days=1)).strftime('%Y-%m-%d')
-    return invoke_lambda_function(stock_ticker, date_str, date_str, feature_set)
+    start_date_range = (datetime.now() - timedelta(days=2)).strftime('%Y-%m-%d')
+    end_date_range = datetime.now().strftime('%Y-%m-%d')
+
+    payload = {
+        "stock_symbol": stock_ticker,
+        'start_date': start_date_range,
+        'end_date': end_date_range,
+        "feature_set": feature_set
+    }
+
+    return invoke_lambda_function(LAMBDA_FUNCTION_NAME, payload)
 
 with DAG(
     dag_name,

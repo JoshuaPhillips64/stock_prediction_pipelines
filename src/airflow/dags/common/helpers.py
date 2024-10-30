@@ -1,3 +1,4 @@
+import random
 from airflow.hooks.postgres_hook import PostgresHook
 from airflow.hooks.base_hook import BaseHook
 import boto3
@@ -10,8 +11,17 @@ from .config import LAMBDA_FUNCTION_NAME, TOP_50_TICKERS, POSTGRES_CONN_ID
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def invoke_lambda_function(lambda_name: str, payload: dict):
+    """
+    Invokes the specified AWS Lambda function asynchronously with the given payload.
 
-def invoke_lambda_function(stock_ticker, start_date, end_date, feature_set):
+    Args:
+        lambda_name (str): The name of the Lambda function to invoke.
+        payload (dict): The payload to send to the Lambda function.
+
+    Returns:
+        dict: The response from the Lambda invocation.
+    """
     # Fetching AWS credentials from Airflow 'aws_default' connection
     connection = BaseHook.get_connection('aws_default')
 
@@ -23,32 +33,26 @@ def invoke_lambda_function(stock_ticker, start_date, end_date, feature_set):
         region_name='us-east-1'
     )
 
-    payload = {
-        'body': json.dumps({
-            'stocks': [stock_ticker],
-            'start_date': start_date,
-            'end_date': end_date,
-            'feature_set': feature_set
-        })
-    }
 
     try:
         # Invoke the Lambda function asynchronously
         response = client.invoke(
-            FunctionName=LAMBDA_FUNCTION_NAME,
+            FunctionName=lambda_name,
             InvocationType='Event',  # Asynchronous invocation
-            Payload=json.dumps(payload)
+            Payload= {'body': json.dumps(payload)}
         )
 
         # Check if the invocation was accepted
         status_code = response['StatusCode']
         if status_code == 202:
-            logger.info(f'Lambda invoked asynchronously for {stock_ticker}. No immediate result returned.')
+            logger.info(f'Lambda "{lambda_name}" invoked asynchronously with payload: {payload}')
         else:
-            logger.error(f'Lambda invocation failed for {stock_ticker} with status code {status_code}')
+            logger.error(f'Lambda invocation failed for "{lambda_name}" with status code {status_code}')
+
+        return response
 
     except Exception as e:
-        logger.error(f"Error invoking Lambda for {stock_ticker}: {e}")
+        logger.error(f"Error invoking Lambda '{lambda_name}': {e}")
         raise
 
 def monitor_lambdas_completion(feature_set, **kwargs):
@@ -84,3 +88,46 @@ def monitor_lambdas_completion(feature_set, **kwargs):
             logger.info(f"Most recent record for {stock} in {table_name}: {result}")
         else:
             logger.warning(f"No data found for {stock} in {table_name}.")
+
+# New Helper Functions for Random Parameter Selection
+
+def get_random_hyperparameter_tuning():
+    return random.choice(['LOW', 'MEDIUM', 'HIGH'])
+
+def get_random_feature_set():
+    return random.choice(['basic', 'advanced'])
+
+def get_random_lookback_period():
+    return random.randint(500, 730, 1000)
+
+def get_random_prediction_horizon():
+    return random.randint(7,14,30,60)
+
+def get_random_parameters(model_type: str):
+    """
+    Returns a dictionary of randomly selected parameters based on the model type.
+
+    Args:
+        model_type (str): Either 'binary_classification' or 'sarimax'.
+
+    Returns:
+        dict: A dictionary of parameters.
+    """
+    if model_type == 'binary_classification':
+        return {
+            'model_key': 'binary_classification',
+            'hyperparameter_tuning': get_random_hyperparameter_tuning(),
+            'feature_set': get_random_feature_set(),
+            'lookback_period': get_random_lookback_period(),
+            'prediction_horizon': get_random_prediction_horizon()
+        }
+    elif model_type == 'sarimax':
+        return {
+            'model_key': 'sarimax',
+            'hyperparameter_tuning': get_random_hyperparameter_tuning(),
+            'feature_set': get_random_feature_set(),
+            'lookback_period': get_random_lookback_period(),
+            'prediction_horizon': get_random_prediction_horizon()
+        }
+    else:
+        raise ValueError("Invalid model_type. Choose 'binary_classification' or 'sarimax'.")

@@ -145,6 +145,8 @@ git reset --hard origin/main
 
 git pull origin main
 
+docker system prune -f
+
 docker-compose build --no-cache
 
 docker-compose down
