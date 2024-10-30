@@ -22,7 +22,7 @@ default_args = {
 
 dag_name = 'daily_train_binary_classification_model'
 description = 'Daily training of binary classification models for top 50 stock tickers'
-schedule = '0 11 * * *'  # 5 AM CST is 11 AM UTC
+schedule = '0 10 * * *'  # 5 AM CST is 11 AM UTC
 start_date = days_ago(1)
 catchup = False
 

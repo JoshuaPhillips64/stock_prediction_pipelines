@@ -25,7 +25,7 @@ default_args = {
 
 dag_name = 'generate_stock_prediction_dag'
 description = 'Generate stock predictions by cycling through 50 stock tickers with random parameters'
-schedule = '0 11 * * *'  # 5 AM CST is 11 AM UTC  # Adjust schedule as needed
+schedule = '0 6 * * *'  # 5 AM CST is 11 AM UTC  # Adjust schedule as needed
 start_date = days_ago(1)
 catchup = False
 
