@@ -127,7 +127,7 @@ def get_random_parameters(model_type: str):
             'lookback_period': get_random_lookback_period(),
             'prediction_horizon': get_random_prediction_horizon()
         }
-    elif model_type == 'sarimax':
+    elif model_type == 'SARIMAX':
         return {
             'model_key': 'SARIMAX',
             'hyperparameter_tuning': get_random_hyperparameter_tuning(),
@@ -136,4 +136,4 @@ def get_random_parameters(model_type: str):
             'prediction_horizon': get_random_prediction_horizon()
         }
     else:
-        raise ValueError("Invalid model_type. Choose 'binary_classification' or 'sarimax'.")
+        raise ValueError("Invalid model_type. Choose 'BINARY CLASSIFICATION' or 'SARIMAX'.")
