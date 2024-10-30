@@ -3,7 +3,6 @@ from airflow.operators.python import PythonOperator
 from airflow.utils.task_group import TaskGroup
 from airflow.utils.dates import days_ago
 from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo  # Using built-in zoneinfo for timezone handling
 from common.config import TOP_50_TICKERS
 from common.helpers import (
     invoke_lambda_function,
@@ -25,7 +24,6 @@ description = 'Daily training of binary classification models for top 50 stock t
 schedule = '0 11 * * *'  # 5 AM CST is 11 AM UTC
 start_date = days_ago(1)
 catchup = False
-timezone = ZoneInfo("America/Chicago")  # CST/CDT using zoneinfo
 
 
 def generate_model_key(model_type, stock_symbol, feature_set, hyperparameter_tuning, lookback_period,
@@ -98,7 +96,6 @@ with DAG(
         catchup=catchup,
         max_active_runs=1,
         concurrency=4,
-        timezone=timezone
 ) as dag:
     prepare_parameters_task = PythonOperator(
         task_id='prepare_parameters',
