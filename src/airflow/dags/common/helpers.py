@@ -47,11 +47,16 @@ def invoke_lambda_function(lambda_name: str, payload: dict,invocation_type='Even
     connection = BaseHook.get_connection('aws_default')
 
     # Initialize boto3 client with credentials from Airflow connection
+    # Configure timeouts directly in Boto3 client
     client = boto3.client(
         'lambda',
         aws_access_key_id=connection.login,
         aws_secret_access_key=connection.password,
-        region_name='us-east-1'  # Adjust region as needed
+        region_name='us-east-1',  # Adjust region as needed
+        config={
+            'read_timeout': 900,  # 15 minutes
+            'connect_timeout': 30  # 30 seconds
+        }
     )
 
     try:
@@ -73,6 +78,8 @@ def invoke_lambda_function(lambda_name: str, payload: dict,invocation_type='Even
 
         if serializable_response['StatusCode'] == 202:
             logger.info(f'Lambda "{lambda_name}" invoked asynchronously with payload: {payload}')
+        elif serializable_response['StatusCode'] == 200:
+            logger.info(f'Lambda "{lambda_name}" succeeded after waiting with payload: {payload}')
         else:
             logger.error(f'Lambda invocation failed for "{lambda_name}" with status code {serializable_response["StatusCode"]}')
 
