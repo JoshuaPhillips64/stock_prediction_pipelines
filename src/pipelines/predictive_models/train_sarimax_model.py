@@ -427,7 +427,12 @@ def evaluate_model(model_fit, X_test, y_test, original_close_prices, prediction_
     mse = mean_squared_error(y_test, y_pred)
     mae = mean_absolute_error(y_test, y_pred)
     rmse = np.sqrt(mse)
-    mape = np.mean(np.abs((y_test - y_pred) / y_test))
+    mape = np.mean(np.abs((y_test - y_pred) / y_test))*100
+
+    # Handle infinity in MAPE
+    if np.isinf(mape):
+        mape = 9999
+        logging.warning("MAPE is infinity due to division by zero. Setting MAPE to 9999.")
 
     print(f'Mean Absolute Error: {mae:.6f}')
     print(f'Root Mean Squared Error: {rmse:.6f}')
@@ -680,10 +685,10 @@ def train_SARIMAX_model(model_key, stock_symbol, input_date, hyperparameter_tuni
             'symbol': stock_symbol,
             'prediction_date': prediction_date,
             'prediction_explanation': 'Regression Prediction Based on SARIMAX model with feature engineering',
-            'prediction_rmse': str(rmse),
-            'prediction_mae': str(mae),
-            'prediction_mape': str(mape),
-            'prediction_confidence_score': str(1 / (1 + rmse)),  # Simple confidence score
+            'prediction_rmse': rmse,
+            'prediction_mae': mae,
+            'prediction_mape': mape,
+            'prediction_confidence_score': 1 / (1 + rmse),  # Simple confidence score
             'feature_importance': json.dumps(importance_df.to_dict()),
             'model_parameters': json.dumps({
                 'order': best_order,
@@ -698,7 +703,7 @@ def train_SARIMAX_model(model_key, stock_symbol, input_date, hyperparameter_tuni
             'last_known_price': float(original_data['close'].iloc[-1]),
             'predictions_json': predictions_json_str,
             'model_location': f's3://trained-models-stock-prediction/sarimax_model_{model_key}.pkl',
-            'date_created': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            'date_created': datetime.now()
         }
 
         # Convert log_data to DataFrame for database insertion
@@ -706,7 +711,8 @@ def train_SARIMAX_model(model_key, stock_symbol, input_date, hyperparameter_tuni
 
         # Upsert data to the database
         upsert_df(log_df, 'trained_models', 'model_key', engine,
-                  json_columns=['feature_importance', 'model_parameters', 'predictions_json'])
+                  json_columns=['feature_importance', 'model_parameters', 'predictions_json'],
+                  auto_match_schema='public')
         logging.info("Model saved and data logged to the database.")
 
         return log_data

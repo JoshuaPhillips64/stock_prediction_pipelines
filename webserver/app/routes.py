@@ -7,6 +7,7 @@ import logging
 import re
 import requests
 from app import db
+from sqlalchemy import desc
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -47,6 +48,21 @@ def verify_recaptcha(recaptcha_token, action):
 @main_bp.route('/', methods=['GET', 'POST'])
 def index():
     form = PredictionForm()
+
+    # Calculate the date three days ago from today
+    today = datetime.today()
+    three_days_ago = today - timedelta(days=3)
+
+    # Query top 5 Binary Classification models from the last 3 days, sorted by F1 Factor descending
+    top_binary_models = app.TrainedModelsBinary.query.filter(
+        app.TrainedModelsBinary.date_created >= three_days_ago
+    ).order_by(desc(app.TrainedModelsBinary.prediction_f1_score)).limit(5).all()
+
+    # Query top 5 Regression models from the last 3 days, sorted by MAPE ascending (lower is better)
+    top_regression_models = app.TrainedModels.query.filter(
+        app.TrainedModels.date_created >= three_days_ago
+    ).order_by(app.TrainedModels.prediction_mape).limit(5).all()
+
     if form.validate_on_submit():
         recaptcha_token = request.form.get('recaptcha_token')
         if not recaptcha_token:
@@ -60,7 +76,14 @@ def index():
         # Save form data to session
         session['form_data'] = request.form
         return redirect(url_for('main_bp.loading'))
-    return render_template('index.html', form=form)
+
+    return render_template(
+        'index.html',
+        form=form,
+        top_binary_models=top_binary_models,
+        top_regression_models=top_regression_models
+    )
+
 
 @main_bp.route('/loading')
 def loading():
@@ -68,6 +91,63 @@ def loading():
 
 @main_bp.route('/results')
 def results():
+    # Check if model_key and model_type are provided as query parameters
+    model_key = request.args.get('model_key')
+    model_type = request.args.get('model_type')
+
+    if model_key and model_type:
+        try:
+            if model_type == 'BINARY CLASSIFICATION':
+                TrainedModel = app.TrainedModelsBinary
+            elif model_type == 'SARIMAX':
+                TrainedModel = app.TrainedModels
+            else:
+                flash('Invalid model type provided.', 'danger')
+                return redirect(url_for('main_bp.index'))
+
+            # Fetch the trained model from the database
+            trained_model = TrainedModel.query.filter_by(model_key=model_key).first()
+            if not trained_model:
+                flash('Model not found.', 'danger')
+                return redirect(url_for('main_bp.index'))
+
+            trained_model_data = trained_model.to_dict()
+
+            # Fetch combined predictions from the trained model data and PredictionsLog
+            combined_predictions = _get_combined_predictions(model_type, model_key, trained_model)
+
+            # Prepare chart data
+            chart_data = _prepare_chart_data(model_type, combined_predictions)
+
+            # Fetch AI analysis
+            ai_analysis = _fetch_ai_analysis(model_key)
+
+            # Extract performance metrics
+            performance_metrics = _extract_performance_metrics(model_type, trained_model_data)
+
+            # Fetch feature importance
+            feature_importance = _fetch_feature_importance(trained_model_data)
+
+            return render_template(
+                'results.html',
+                stock_symbol=trained_model.symbol,
+                model_type=model_type,
+                hyperparameter_tuning=trained_model_data.get('hyperparameter_tuning'),
+                feature_set=trained_model_data.get('feature_set'),
+                lookback_period=trained_model_data.get('lookback_period'),
+                prediction_horizon=trained_model_data.get('prediction_horizon'),
+                chart_data=chart_data,
+                ai_analysis=ai_analysis,
+                performance_metrics=performance_metrics,
+                feature_importance=feature_importance
+            )
+
+        except Exception as e:
+            logger.error(f"Error fetching model results: {str(e)}")
+            flash('An error occurred while fetching the results.', 'danger')
+            return redirect(url_for('main_bp.index'))
+
+    # Existing /results route logic
     form_data = session.get('form_data', {})
     if not form_data:
         logger.error("No form data found in session.")
@@ -84,7 +164,7 @@ def results():
     prediction_horizon = int(form_data.get('prediction_horizon', 0))
     input_date_str = form_data.get('input_date')
 
-    #change input_date_str string to be in the format of 'YYYY-MM-DD'
+    # Change input_date_str string to be in the format of 'YYYY-MM-DD'
     input_date_str_updated = datetime.strptime(input_date_str, '%Y-%m-%d').strftime('%Y-%m-%d')
 
     if not all([model_type, stock_symbol, feature_set, hyperparameter_tuning, lookback_period, prediction_horizon, input_date_str]):
@@ -138,8 +218,8 @@ def results():
     trained_model_data = trained_model.to_dict()
     logger.info(f"Trained model data retrieved: {trained_model_data}")
 
-    # Fetch and combine predictions
-    combined_predictions = _get_combined_predictions(model_type, model_key)
+    # Fetch combined predictions from the trained model data and PredictionsLog
+    combined_predictions = _get_combined_predictions(model_type, model_key, trained_model)
 
     # Prepare chart data
     chart_data = _prepare_chart_data(model_type, combined_predictions)
@@ -167,12 +247,12 @@ def results():
         feature_importance=feature_importance
     )
 
-def _get_combined_predictions(model_type, model_key):
+def _get_combined_predictions(model_type, model_key, trained_model):
     """Fetch and combine predictions from TrainedModel and PredictionsLog."""
-    TrainedModel = app.TrainedModelsBinary if model_type == 'BINARY CLASSIFICATION' else app.TrainedModels
-    predictions_json = trained_model_to_json(TrainedModel, model_key)
+    TrainedModelClass = app.TrainedModelsBinary if model_type == 'BINARY CLASSIFICATION' else app.TrainedModels
+    predictions_json = trained_model_to_json(TrainedModelClass, model_key)
 
-    PredictionsLog = app.PredictionsLog  # Ensure PredictionsLog is defined in app
+    PredictionsLog = app.PredictionsLog
     predictions_log_predictions = predictions_log_to_json(PredictionsLog, model_key)
 
     combined_predictions = predictions_json.copy()
@@ -185,9 +265,9 @@ def _get_combined_predictions(model_type, model_key):
     logger.info(f"Combined predictions: {combined_predictions}")
     return combined_predictions
 
-def trained_model_to_json(TrainedModel, model_key):
+def trained_model_to_json(TrainedModelClass, model_key):
     """Convert TrainedModel predictions to JSON."""
-    trained_model = TrainedModel.query.filter_by(model_key=model_key).first()
+    trained_model = TrainedModelClass.query.filter_by(model_key=model_key).first()
     if not trained_model:
         return {}
 
@@ -200,9 +280,9 @@ def trained_model_to_json(TrainedModel, model_key):
             predictions_json = {}
     return predictions_json
 
-def predictions_log_to_json(PredictionsLog, model_key):
+def predictions_log_to_json(PredictionsLogClass, model_key):
     """Convert PredictionsLog records to JSON."""
-    predictions_log_records = PredictionsLog.query.filter_by(model_key=model_key).all()
+    predictions_log_records = PredictionsLogClass.query.filter_by(model_key=model_key).all()
     predictions_log_predictions = {}
 
     for record in predictions_log_records:

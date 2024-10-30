@@ -750,13 +750,14 @@ def train_classification_model(event, context):
             'last_known_price': float(original_data['close'].iloc[-1]),
             'predictions_json': predictions_json_str,
             'model_location': f's3://{s3_bucket_name}/{s3_folder}/{model_file_name}',
-            'date_created': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            'date_created': datetime.now()
         }
 
         # Log data to the database (keep this part)
         log_data = pd.DataFrame({k: [v] for k, v in output.items()})
         upsert_df(log_data, 'trained_models_binary', 'model_key', engine,
-                  json_columns=['model_parameters', 'feature_importance', 'confusion_matrix', 'predictions_json']
+                  json_columns=['model_parameters', 'feature_importance', 'confusion_matrix', 'predictions_json'],
+                  auto_match_schema='public'
                   )
         logging.info("Model saved and data logged to the database.")
 
@@ -774,7 +775,7 @@ def main():
             'model_key': 'sample_model_002',
             'stock_symbol': 'PG',
             'input_date': '2024-10-01',
-            'hyperparameter_tuning': 'HIGH',
+            'hyperparameter_tuning': 'LOW',
             'feature_set': 'basic',
             'lookback_period': 2000,
             'prediction_horizon': 30

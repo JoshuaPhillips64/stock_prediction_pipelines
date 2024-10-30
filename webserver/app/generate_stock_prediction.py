@@ -190,7 +190,6 @@ def generate_stock_prediction(
                 'predicted_amount': trained_model_data.get('predicted_amount'),
                 'predictions_json': json.dumps(trained_model_data.get('predictions_json', {})),
                 'model_location': trained_model_data.get('model_location'),
-                'date_created': trained_model_data.get('date_created')
             })
         elif model_type == 'BINARY CLASSIFICATION':
             prediction_data.append({
@@ -213,7 +212,6 @@ def generate_stock_prediction(
                 'predicted_amount': None,  # Not applicable for classification
                 'predictions_json': json.dumps(trained_model_data.get('predictions_json', {})),
                 'model_location': trained_model_data.get('model_location'),
-                'date_created': trained_model_data.get('date_created')
             })
 
         logger.info("Prediction data prepared for AI analysis.")

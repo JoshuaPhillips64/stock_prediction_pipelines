@@ -7,61 +7,141 @@
 <!-- Hero Section -->
 <section class="hero text-center py-5">
     <div class="container">
-        <h1 class="display-4">AI Powered Stock Predictions </h1>
-        <p class="lead">Create your predictive stock model in a few steps.</p>
+        <h1 class="display-4">AI Powered Stock Predictions</h1>
+        <p class="lead">Leverage pretrained models or build your own for smarter trading.</p>
     </div>
 </section>
 
-<!-- Parameter Selection Form -->
-<div class="container my-5">
-    <h2 class="mb-4">Customize Your Prediction</h2>
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-        {% for category, message in messages %}
-            <div class="alert alert-{{ category }}">
-                {{ message }}
-            </div>
-        {% endfor %}
-    {% endif %}
-    {% endwith %}
-   <form id="predictionForm" method="POST">
-    {{ form.hidden_tag() }}
-    <input type="hidden" name="recaptcha_token" id="recaptcha_token">
-        <div class="row g-3">
-            <div class="col-md-6">
-                {{ form.stock_symbol.label(class="form-label") }}
-                {{ form.stock_symbol(class="form-control") }}
-            </div>
-            <div class="col-md-6">
-                {{ form.feature_set.label(class="form-label") }}
-                {{ form.feature_set(class="form-select") }}
-            </div>
-            <div class="col-md-6">
-                {{ form.model_type.label(class="form-label") }}
-                {{ form.model_type(class="form-select") }}
-            </div>
-            <div class="col-md-6">
-                {{ form.hyperparameter_tuning.label(class="form-label") }}
-                {{ form.hyperparameter_tuning(class="form-select") }}
-            </div>
-            <div class="col-md-6">
-                {{ form.prediction_horizon.label(class="form-label") }}
-                {{ form.prediction_horizon(class="form-control") }}
-            </div>
-            <div class="col-md-6">
-                {{ form.lookback_period.label(class="form-label") }}
-                {{ form.lookback_period(class="form-control") }}
-            </div>
-            <div class="col-md-6">
-                {{ form.input_date.label(class="form-label") }}
-                {{ form.input_date(class="form-control") }}
-            </div>
-            <div class="col-12">
+<!-- Top Models Section -->
+<section class="container my-5">
+    <div class="row">
+        <!-- Top 5 Binary Classification Models -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-lg h-100">
+                <div class="card-header bg-dark text-white">
+                    <h4 class="card-title mb-0">Top Binary Classification Models</h4>
+                </div>
+                <div class="card-body p-3">
+                    <table class="table table-dark table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>Stock Ticker</th>
+                                <th>F1 Factor</th>
+                                <th>Date Created</th>
+                                <th>View Results</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for model in top_binary_models %}
+                            <tr>
+                                <td>{{ model.symbol }}</td>
+                                <td>{{ "%.2f" | format(model.prediction_f1_score) }}</td>
+                                <td>{{ model.date_created.strftime('%Y-%m-%d') }}</td>
+                                <td>
+                                    <a href="{{ url_for('main_bp.results', model_key=model.model_key, model_type='BINARY CLASSIFICATION') }}" class="btn btn-primary btn-sm">View Results</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
-       {{ form.submit_button(class="btn btn-primary btn-lg mt-3") }}
-    </form>
-</div>
+
+        <!-- Top 5 Regression Models -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-lg h-100">
+                <div class="card-header bg-dark text-white">
+                    <h4 class="card-title mb-0">Top Regression Models</h4>
+                </div>
+                <div class="card-body p-3">
+                    <table class="table table-dark table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>Stock Ticker</th>
+                                <th>MAPE</th>
+                                <th>Date Created</th>
+                                <th>View Results</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for model in top_regression_models %}
+                            <tr>
+                                <td>{{ model.symbol }}</td>
+                                <td>{{ "%.2f%%" | format(model.prediction_mape) }}</td>
+                                <td>{{ model.date_created.strftime('%Y-%m-%d') }}</td>
+                                <td>
+                                    <a href="{{ url_for('main_bp.results', model_key=model.model_key, model_type='SARIMAX') }}" class="btn btn-primary btn-sm">View Results</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Prediction Form Section -->
+<section class="container my-5">
+    <div class="card shadow-lg">
+        <div class="card-header bg-dark text-white">
+            <h4 class="card-title mb-0">Create Your Own Model</h4>
+        </div>
+        <div class="card-body p-4">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+            {% endwith %}
+            <form id="predictionForm" method="POST">
+                {{ form.hidden_tag() }}
+                <input type="hidden" name="recaptcha_token" id="recaptcha_token">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        {{ form.stock_symbol.label(class="form-label") }}
+                        {{ form.stock_symbol(class="form-control") }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.feature_set.label(class="form-label") }}
+                        {{ form.feature_set(class="form-select") }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.model_type.label(class="form-label") }}
+                        {{ form.model_type(class="form-select") }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.hyperparameter_tuning.label(class="form-label") }}
+                        {{ form.hyperparameter_tuning(class="form-select") }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.prediction_horizon.label(class="form-label") }}
+                        {{ form.prediction_horizon(class="form-control") }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.lookback_period.label(class="form-label") }}
+                        {{ form.lookback_period(class="form-control") }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.input_date.label(class="form-label") }}
+                        {{ form.input_date(class="form-control") }}
+                    </div>
+                    <div class="col-12">
+                        <!-- You can add any additional fields here -->
+                    </div>
+                </div>
+                {{ form.submit_button(class="btn btn-primary btn-lg mt-3") }}
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}
 
 {% block scripts %}
 {{ super() }}
@@ -76,5 +156,4 @@
         });
     });
 </script>
-{% endblock %}
 {% endblock %}
