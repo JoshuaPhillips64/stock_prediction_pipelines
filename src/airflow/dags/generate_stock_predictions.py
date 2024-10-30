@@ -46,7 +46,7 @@ def invoke_lambda_ingest(stock_symbol: str, start_date, end_date, feature_set: s
     # Log the exact payload
     logger.info(f"Invoking ingest_stock_data Lambda for {stock_symbol} with payload: {json.dumps(payload, indent=2)}")
 
-    response = invoke_lambda_function("ingest_stock_data", payload)
+    response = invoke_lambda_function("ingest_stock_data", payload,invocation_type='RequestResponse')
     return response
 
 def invoke_lambda_train(model_type: str, stock_symbol: str, input_date: str, hyperparameter_tuning: str, feature_set: str, lookback_period: int, prediction_horizon: int, **kwargs):
@@ -85,7 +85,7 @@ def invoke_lambda_train(model_type: str, stock_symbol: str, input_date: str, hyp
     # Log the exact payload
     logger.info(f"Invoking {lambda_name} Lambda for {stock_symbol} with payload: {json.dumps(payload, indent=2)}")
 
-    response = invoke_lambda_function(lambda_name, payload)
+    response = invoke_lambda_function(lambda_name, payload,invocation_type='RequestResponse')
     return response
 
 def invoke_lambda_predict(model_type: str, stock_symbol: str, input_date: str, hyperparameter_tuning: str, feature_set: str, lookback_period: int, prediction_horizon: int, **kwargs):
@@ -124,7 +124,7 @@ def invoke_lambda_predict(model_type: str, stock_symbol: str, input_date: str, h
     # Log the exact payload
     logger.info(f"Invoking {lambda_name} Lambda for {stock_symbol} with payload: {json.dumps(payload, indent=2)}")
 
-    response = invoke_lambda_function(lambda_name, payload)
+    response = invoke_lambda_function(lambda_name, payload,invocation_type='RequestResponse')
     return response
 
 def invoke_lambda_ai_analysis(prediction_data: list, **kwargs):
@@ -140,7 +140,7 @@ def invoke_lambda_ai_analysis(prediction_data: list, **kwargs):
     # Log the exact payload
     logger.info(f"Invoking trigger_ai_analysis Lambda with payload: {json.dumps(payload, indent=2)}")
 
-    response = invoke_lambda_function("trigger_ai_analysis", payload)
+    response = invoke_lambda_function("trigger_ai_analysis", payload,invocation_type='RequestResponse')
     return response
 
 with DAG(
@@ -162,16 +162,15 @@ with DAG(
 
             # Ingest Data
             ingest_task = PythonOperator(
-                task_id='ingest_data',
+                task_id=f'ingest_data_{stock}',
                 python_callable=invoke_lambda_ingest,
                 op_kwargs={
-                    'stock_ticker': stock,
+                    'stock_symbol': stock,
                     'start_date': (datetime.strptime('{{ ds }}', '%Y-%m-%d') - timedelta(
                         days=params['lookback_period'])).strftime('%Y-%m-%d'),
                     'end_date': '{{ yesterday_ds }}',
                     'feature_set': params['feature_set']
-                },
-                provide_context=True
+                }
             )
 
             # Train Model
@@ -187,21 +186,16 @@ with DAG(
                 )
 
             train_task = PythonOperator(
-                task_id='train_model',
-                python_callable=train_model,
-                provide_context=True
+                task_id=f'train_model_{stock}',
+                python_callable=train_model
             )
 
             # Make Prediction
             def make_prediction(**kwargs):
-                ti = kwargs['ti']
-                params = ti.xcom_pull(key='model_parameters', task_ids='prepare_parameters')
-                if not params:
-                    raise ValueError("No parameters found in XCom.")
                 return invoke_lambda_predict(
                     model_type=params['model_type'],
                     stock_symbol=stock,
-                    input_date="{{ ds }}",
+                    input_date="{{ yesterday_ds }}",
                     hyperparameter_tuning=params['hyperparameter_tuning'],
                     feature_set=params['feature_set'],
                     lookback_period=params['lookback_period'],
@@ -209,9 +203,8 @@ with DAG(
                 )
 
             predict_task = PythonOperator(
-                task_id='make_prediction',
-                python_callable=make_prediction,
-                provide_context=True
+                task_id=f'make_prediction_{stock}',
+                python_callable=make_prediction
             )
 
             # Trigger AI Analysis
@@ -221,9 +214,8 @@ with DAG(
                 return invoke_lambda_ai_analysis(prediction_data)
 
             ai_analysis_task = PythonOperator(
-                task_id='trigger_ai_analysis',
-                python_callable=trigger_ai,
-                provide_context=True
+                task_id=f'trigger_ai_analysis_{stock}',
+                python_callable=trigger_ai
             )
 
             # Define task dependencies within the stock's TaskGroup

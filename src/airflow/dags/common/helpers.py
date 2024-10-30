@@ -32,7 +32,7 @@ def generate_model_key(model_type, stock_symbol, feature_set, hyperparameter_tun
     return model_key
 
 
-def invoke_lambda_function(lambda_name: str, payload: dict):
+def invoke_lambda_function(lambda_name: str, payload: dict,invocation_type='Event'):
     """
     Invokes the specified AWS Lambda function asynchronously with the given payload.
 
@@ -61,7 +61,7 @@ def invoke_lambda_function(lambda_name: str, payload: dict):
         # Invoke the Lambda function asynchronously
         response = client.invoke(
             FunctionName=lambda_name,
-            InvocationType='Event',  # Asynchronous invocation
+            InvocationType=invocation_type,  # Defaults to Asynchronous invocation
             Payload=serialized_payload
         )
 
