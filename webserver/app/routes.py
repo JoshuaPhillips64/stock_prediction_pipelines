@@ -221,8 +221,10 @@ def _prepare_chart_data(model_type, combined_predictions):
     """Prepare chart data for visualization."""
     chart_data = {
         'x': [],
-        'actual': [],
-        'predicted': []
+        'actual_price': [],
+        'predicted_price': [],
+        'actual_movement': [],
+        'predicted_movement': []
     }
 
     today = datetime.now().date()
@@ -236,36 +238,37 @@ def _prepare_chart_data(model_type, combined_predictions):
         chart_data['x'].append(date_str)
 
         if model_type == 'BINARY CLASSIFICATION':
-            # Binary classification: 1 for 'Up', 0 for 'Down'
+            # Extract actual price if available
+            actual_price = prediction.get('actual_price')
+            chart_data['actual_price'].append(float(actual_price) if actual_price is not None else None)
+
+            # Predicted movement
             predicted_movement = prediction.get('predicted_movement')
             try:
                 predicted_value = int(predicted_movement) if predicted_movement is not None else None
             except (ValueError, TypeError):
                 predicted_value = None
-            chart_data['predicted'].append(predicted_value)
+            chart_data['predicted_movement'].append(predicted_value)
 
-            # Include actual movement only for historical dates
-            if current_date <= today:
-                actual_movement = prediction.get('actual_movement')
-                try:
-                    actual_value = int(actual_movement) if actual_movement is not None else None
-                except (ValueError, TypeError):
-                    actual_value = None
-                chart_data['actual'].append(actual_value)
-            else:
-                chart_data['actual'].append(None)
+            # Actual movement
+            actual_movement = prediction.get('actual_movement')
+            try:
+                actual_value = int(actual_movement) if actual_movement is not None else None
+            except (ValueError, TypeError):
+                actual_value = None
+            chart_data['actual_movement'].append(actual_value)
         else:
-            # SARIMAX: handle price predictions
+            # SARIMAX model: handle price predictions
             predicted_price = prediction.get('predicted_price')
-            chart_data['predicted'].append(float(predicted_price) if predicted_price is not None else None)
+            chart_data['predicted_price'].append(float(predicted_price) if predicted_price is not None else None)
 
             if current_date <= today:
                 actual_price = prediction.get('actual_price')
                 last_known_price = prediction.get('last_known_price')
                 actual_value = actual_price if actual_price is not None else last_known_price
-                chart_data['actual'].append(float(actual_value) if actual_value is not None else None)
+                chart_data['actual_price'].append(float(actual_value) if actual_value is not None else None)
             else:
-                chart_data['actual'].append(None)
+                chart_data['actual_price'].append(None)
 
     logger.info(f"Prepared chart data: {chart_data}")
     return chart_data

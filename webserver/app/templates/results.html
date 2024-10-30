@@ -116,202 +116,327 @@
 
 <!-- Chart Rendering Script -->
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // Prepare data
-        const chartData = {{ chart_data | tojson }};
-        const dates = chartData.x;
-        const actualValues = chartData.actual;
-        const predictedValues = chartData.predicted;
-        const modelType = "{{ model_type }}";
+document.addEventListener('DOMContentLoaded', function () {
+    // Prepare data
+    const chartData = {{ chart_data | tojson }};
+    const dates = chartData.x;
+    const modelType = "{{ model_type }}";
 
-        // Define layout common settings
-        const commonLayout = {
-            plot_bgcolor: '#34495e',
-            paper_bgcolor: '#2c3e50',
-            font: { color: '#ecf0f1' },
-            hovermode: 'closest',
-            autosize: true
+    // Define layout common settings
+    const commonLayout = {
+        plot_bgcolor: '#34495e',
+        paper_bgcolor: '#2c3e50',
+        font: { color: '#ecf0f1' },
+        hovermode: 'closest',
+        autosize: true,
+        margin: { l: 50, r: 30, t: 50, b: 50 }
+    };
+
+    let data = [];
+    let layout = {};
+
+    if (modelType === 'BINARY CLASSIFICATION') {
+        const actualPrices = chartData.actual_price;
+        const predictedMovements = chartData.predicted_movement;
+        const actualMovements = chartData.actual_movement;
+
+        // Plot the actual price over time
+        const priceTrace = {
+            x: dates,
+            y: actualPrices,
+            mode: 'lines',
+            name: 'Actual Price',
+            line: { color: '#1f77b4', width: 2 },
+            hovertemplate: 'Date: %{x}<br>Price: $%{y:.2f}<extra></extra>'
         };
 
-        // Initialize data array
-        let data = [];
-        let layout = {};
-
-        if (modelType === 'SARIMAX') {
-            // SARIMAX: Actual vs Predicted Price
-            data = [
-                {
-                    x: dates,
-                    y: actualValues,
-                    mode: 'lines+markers',
-                    name: 'Actual Price',
-                    line: { color: '#1f77b4' },
-                    marker: { size: 6 }
-                },
-                {
-                    x: dates,
-                    y: predictedValues,
-                    mode: 'lines+markers',
-                    name: 'Predicted Price',
-                    line: { color: '#ff7f0e', dash: 'dot' },
-                    marker: { size: 6 }
+        // Prepare predicted movement markers
+        const movementMarkers = {
+            x: [],
+            y: [],
+            mode: 'markers',
+            name: 'Predicted Movement',
+            marker: {
+                size: 16,
+                symbol: [],
+                color: [],
+                line: {
+                    width: 1,
+                    color: '#ffffff'
                 }
-            ];
+            },
+            hovertemplate:
+                'Date: %{x}<br>' +
+                'Prediction: %{text}<br>' +
+                'Actual: %{customdata.actual}<br>' +
+                'Current Price: $%{customdata.price:.2f}<br>' +
+                'Prediction Status: %{customdata.status}<extra></extra>',
+            text: [],
+            customdata: []
+        };
 
-            layout = {
-                title: '{{ stock_symbol }} Predicted vs Actual Prices',
-                xaxis: { title: 'Date' },
-                yaxis: { title: 'Price ($)' },
-                ...commonLayout
-            }
-            Plotly.newPlot('predictionChart', data, layout);
+        for (let i = 0; i < dates.length; i++) {
+            const date = dates[i];
+            const price = actualPrices[i];
+            const predictedMovement = predictedMovements[i];
+            const actualMovement = actualMovements[i];
 
-        } else if (modelType === 'BINARY CLASSIFICATION') {
-            // Convert date strings to Date objects for Plotly
-            const dateObjects = dates.map(date => new Date(date));
+            if (predictedMovement !== null && price !== null) {
+                let symbol = predictedMovement === 1 ? 'triangle-up' : 'triangle-down';
+                let color = '#0000FF'; // Default color for no actual movement data
+                let status = 'No Data';
 
-            // Convert actual and predicted values to numbers
-            const actualY = actualValues.map(value => value !== null ? Number(value) : null);
-            const predictedY = predictedValues.map(value => value !== null ? Number(value) : null);
-
-            // Create shapes for background shading based on actual movement
-            const shapes = [];
-            let currentMovement = actualY[0];
-            let shapeStart = 0;
-
-            for (let i = 1; i <= actualY.length; i++) {
-                const movement = actualY[i];
-                if (movement !== currentMovement || i === actualY.length) {
-                    shapes.push({
-                        type: 'rect',
-                        xref: 'x',
-                        yref: 'paper',
-                        x0: dates[shapeStart],
-                        x1: dates[i - 1],
-                        y0: 0,
-                        y1: 1,
-                        fillcolor: currentMovement == 1 ? 'rgba(0, 255, 0, 0.1)' : 'rgba(255, 0, 0, 0.1)',
-                        line: { width: 0 }
-                    });
-                    shapeStart = i;
-                    currentMovement = movement;
+                // Determine color based on whether predicted movement matches actual movement
+                if (actualMovement !== null) {
+                    if (predictedMovement === actualMovement) {
+                        color = '#28a745'; // Muted Green for correct prediction
+                        status = 'Correct';
+                    } else {
+                        color = '#e74c3c'; // Bright Red for incorrect prediction
+                        status = 'Incorrect';
+                    }
                 }
+
+                movementMarkers.x.push(date);
+                movementMarkers.y.push(price);
+                movementMarkers.marker.symbol.push(symbol);
+                movementMarkers.marker.color.push(color);
+                movementMarkers.text.push(predictedMovement === 1 ? 'Up' : 'Down');
+                movementMarkers.customdata.push({
+                    actual: actualMovement === 1 ? 'Up' : 'Down',
+                    price: price,
+                    status: status
+                });
             }
+        }
 
-            // Prepare predicted movement markers
-            const predictedTrace = {
-                x: dates,
-                y: predictedY,
-                mode: 'markers',
-                name: 'Predicted Movement',
-                marker: {
-                    size: 8,
-                    color: predictedY.map(value => value === 1 ? '#00FF00' : '#FF0000'),
-                    symbol: 'triangle-up'
-                },
-                hovertemplate: 'Date: %{x}<br>Predicted Movement: %{text}<extra></extra>',
-                text: predictedY.map(value => value === 1 ? 'Up' : 'Down')
-            };
+        data = [priceTrace, movementMarkers];
 
-            layout = {
-                title: '{{ stock_symbol }} Predicted Movements Over Time',
-                xaxis: { title: 'Date' },
-                yaxis: { visible: false },
-                shapes: shapes,
-                ...commonLayout
-            };
-
-            data = [predictedTrace];
-
-        // Render Prediction Chart
-        Plotly.newPlot('predictionChart', data, layout);
-
-         // Confusion Matrix Data
-        {% if performance_metrics.confusion_matrix %}
-        const confusionMatrix = {{ performance_metrics.confusion_matrix | tojson }};
-        const cmData = [
-            {
-                x: ['Predicted Down', 'Predicted Up'],
-                y: ['Actual Down', 'Actual Up'],
-                z: confusionMatrix,
-                type: 'heatmap',
-                colorscale: 'Blues',
-                hovertemplate: 'Actual: %{y}<br>Predicted: %{x}<br>Count: %{z}<extra></extra>'
-            }
-        ];
-
-        const cmLayout = {
-            title: 'Confusion Matrix',
-            xaxis: { title: 'Predicted Label' },
-            yaxis: { title: 'Actual Label' },
+        layout = {
+            // Removed the chart title
+            xaxis: {
+                // Removed title
+                tickformat: '%Y-%m-%d',
+                tickangle: -30, // Adjusted tick angle
+                nticks: 10,
+                showgrid: false,
+                tickfont: { size: 10 }
+            },
+            yaxis: {
+                // Removed title
+                showgrid: false,
+                tickfont: { size: 10 }
+            },
+            legend: { orientation: 'h', x: 0.5, xanchor: 'center', y: -0.2 },
             ...commonLayout
         };
 
-        Plotly.newPlot('confusionMatrixChart', cmData, cmLayout);
-        {% endif %}
+        // Render the chart
+        Plotly.newPlot('predictionChart', data, layout);
+
+    } else if (modelType === 'SARIMAX') {
+        const actualPrices = chartData.actual_price;
+        const predictedPrices = chartData.predicted_price;
+
+        data = [
+            {
+                x: dates,
+                y: actualPrices,
+                mode: 'lines+markers',
+                name: 'Actual Price',
+                line: { color: '#1f77b4' },
+                marker: { size: 6 },
+                hovertemplate: 'Date: %{x}<br>Actual Price: $%{y:.2f}<extra></extra>'
+            },
+            {
+                x: dates,
+                y: predictedPrices,
+                mode: 'lines+markers',
+                name: 'Predicted Price',
+                line: { color: '#ff7f0e', dash: 'dot' },
+                marker: { size: 6 },
+                hovertemplate: 'Date: %{x}<br>Predicted Price: $%{y:.2f}<extra></extra>'
+            }
+        ];
+
+        layout = {
+            title: '{{ stock_symbol }} Predicted vs Actual Prices',
+            xaxis: { title: 'Date' },
+            yaxis: { title: 'Price ($)' },
+            ...commonLayout
+        };
+
+        // Render the chart
+        Plotly.newPlot('predictionChart', data, layout);
     }
 
-        <!-- Feature Importance Chart -->
-        {% if feature_importance %}
-        const features = {{ feature_importance.feature | tojson }};
-        const importances = {{ feature_importance.importance | tojson }};
+     // Confusion Matrix Chart (if applicable)
+    {% if performance_metrics.confusion_matrix %}
+    const confusionMatrix = {{ performance_metrics.confusion_matrix | tojson }};
+    const cmLabels = ['Predicted Down', 'Predicted Up'];
+    const cmActual = ['Actual Down', 'Actual Up'];
 
-        // Combine features with their importances
-        const featureImportancePairs = features.map((feature, index) => ({
-            feature: feature,
-            importance: importances[index]
-        }));
+    // Calculate total predictions for percentage calculation
+    const totalPredictions = confusionMatrix.flat().reduce((a, b) => a + b, 0);
 
-        // Sort the pairs in descending order of importance
-        featureImportancePairs.sort((a, b) => a.importance - b.importance);
+    // Create a colorZ matrix: 2 for correct predictions, 1 for incorrect
+    const colorZ = confusionMatrix.map((row, i) => row.map((cell, j) => (i === j) ? 2 : 1));
 
-        // Select the top N features, e.g., top 6
-        const topN = 6;
-        const topFeatureImportance = featureImportancePairs.slice(0, topN);
+    // Define colorscale: 1 -> Red (#e74c3c), 2 -> Muted Green (#28a745)
+    const colorscale = [
+        [0, '#e74c3c'], // Incorrect Predictions
+        [0.5, '#e74c3c'],
+        [0.5, '#28a745'], // Correct Predictions
+        [1, '#28a745']
+    ];
 
-        // Separate the sorted features and importances
-        const sortedFeatures = topFeatureImportance.map(item => item.feature);
-        const sortedImportances = topFeatureImportance.map(item => item.importance);
+    const cmData = [
+        {
+            x: cmLabels,
+            y: cmActual,
+            z: colorZ,
+            type: 'heatmap',
+            colorscale: colorscale,
+            showscale: false,
+            hoverinfo: 'text',
+            text: []
+        }
+    ];
 
-        // Normalize importances for consistent scaling
-        const maxImportance = Math.max(...sortedImportances);
-        const normalizedImportances = sortedImportances.map(imp => imp / maxImportance);
+    // Populate hover text with count and percentage
+    for (let i = 0; i < cmActual.length; i++) {
+        cmData[0].text[i] = [];
+        for (let j = 0; j < cmLabels.length; j++) {
+            const count = confusionMatrix[i][j];
+            const percentage = ((count / totalPredictions) * 100).toFixed(2);
+            let predictionType = '';
 
-        const featureTrace = {
-            x: normalizedImportances.map(val => parseFloat(val.toFixed(4))), // Ensure numerical precision
-            y: sortedFeatures, // Sorted in descending order
-            type: 'bar',
-            orientation: 'h',
-            marker: { color: '#3498db' },
-            hovertemplate: '<b>%{y}</b><br>Importance: %{x:.2%}<br>%{customdata}<extra></extra>',
-            customdata: sortedFeatures.map(feature => featureDefinitions[feature.toLowerCase()] || "No definition available")
-        };
-
-        const featureLayout = {
-            title: 'Top 6 Feature Importances',
-            xaxis: {
-                title: 'Normalized Importance',
-                tickformat: '.0%',
-                color: '#ecf0f1'
-            },
-            yaxis: {
-                automargin: true,
-                color: '#ecf0f1',
-                categoryorder: 'total descending' // Ensures highest importance at the top
-            },
-            ...commonLayout,
-            margin: { l: 200, r: 50, t: 50, b: 50 },
-            hoverlabel: {
-                bgcolor: '#2c3e50',
-                font: { color: '#ecf0f1', size: 14 },
-                bordercolor: '#3498db'
+            if (i === j) {
+                predictionType = 'Correct';
+            } else {
+                predictionType = 'Incorrect';
             }
-        };
 
-        // Render Feature Importance Chart
-        Plotly.newPlot('featureImportanceChart', [featureTrace], featureLayout);
-        {% endif %}
-    });
+            cmData[0].text[i][j] = `${predictionType} Prediction<br>Count: ${count}<br>Percentage: ${percentage}%`;
+        }
+    }
+
+    // Prepare annotations with descriptive text
+    const annotations = [];
+    for (let i = 0; i < cmActual.length; i++) {
+        for (let j = 0; j < cmLabels.length; j++) {
+            const value = confusionMatrix[i][j];
+            let text = '';
+            if (i === j) {
+                if (i === 0) {
+                    text = `${value} Correctly Predicted Down`;
+                } else {
+                    text = `${value} Correctly Predicted Up`;
+                }
+            } else {
+                if (j === 0) {
+                    text = `${value} Incorrectly Predicted Down`;
+                } else {
+                    text = `${value} Incorrectly Predicted Up`;
+                }
+            }
+            annotations.push({
+                x: cmLabels[j],
+                y: cmActual[i],
+                text: text,
+                font: {
+                    family: 'Arial',
+                    size: 12,
+                    color: '#ecf0f1'
+                },
+                showarrow: false,
+                align: 'center',
+                valign: 'middle'
+            });
+        }
+    }
+
+    const cmLayout = {
+        // Removed the chart title
+        xaxis: {
+            showticklabels: false,
+            zeroline: false,
+            showgrid: false
+        },
+        yaxis: {
+            showticklabels: false,
+            zeroline: false,
+            showgrid: false
+        },
+        annotations: annotations,
+        margin: { l: 50, r: 50, t: 50, b: 50 },
+        ...commonLayout
+    };
+
+    Plotly.newPlot('confusionMatrixChart', cmData, cmLayout);
+    {% endif %}
+
+    // Feature Importance Chart
+    {% if feature_importance %}
+    const features = {{ feature_importance.feature | tojson }};
+    const importances = {{ feature_importance.importance | tojson }};
+
+    // Combine features with their importances
+    const featureImportancePairs = features.map((feature, index) => ({
+        feature: feature,
+        importance: importances[index]
+    }));
+
+    // Sort the pairs in descending order of importance
+    featureImportancePairs.sort((a, b) => b.importance - a.importance);
+
+    // Select the top N features, e.g., top 6
+    const topN = 6;
+    const topFeatureImportance = featureImportancePairs.slice(0, topN);
+
+    // Separate the sorted features and importances
+    const sortedFeatures = topFeatureImportance.map(item => item.feature);
+    const sortedImportances = topFeatureImportance.map(item => item.importance);
+
+    // Normalize importances for consistent scaling
+    const maxImportance = Math.max(...sortedImportances);
+    const normalizedImportances = sortedImportances.map(imp => imp / maxImportance);
+
+    const featureTrace = {
+        x: normalizedImportances.map(val => parseFloat(val.toFixed(4))), // Ensure numerical precision
+        y: sortedFeatures, // Sorted in descending order
+        type: 'bar',
+        orientation: 'h',
+        marker: { color: '#3498db' },
+        hovertemplate: '<b>%{y}</b><br>Importance: %{x:.2%}<br>%{customdata}<extra></extra>',
+        customdata: sortedFeatures.map(feature => featureDefinitions[feature.toLowerCase()] || "No definition available")
+    };
+
+    const featureLayout = {
+        title: 'Top 6 Feature Importances',
+        xaxis: {
+            title: 'Normalized Importance',
+            tickformat: '.0%',
+            color: '#ecf0f1'
+        },
+        yaxis: {
+            automargin: true,
+            color: '#ecf0f1',
+            categoryorder: 'total ascending' // Highest importance at the top
+        },
+        ...commonLayout,
+        margin: { l: 200, r: 50, t: 50, b: 50 },
+        hoverlabel: {
+            bgcolor: '#2c3e50',
+            font: { color: '#ecf0f1', size: 14 },
+            bordercolor: '#3498db'
+        }
+    };
+
+    // Render Feature Importance Chart
+    Plotly.newPlot('featureImportanceChart', [featureTrace], featureLayout);
+    {% endif %}
+});
 </script>
 
 <!-- Stylesheet -->
@@ -438,6 +563,22 @@
         .chart {
             height: 400px;
         }
+    }
+    /* Adjusted chart container for better spacing */
+    .chart-container {
+        margin-bottom: 2rem;
+    }
+
+    /* Improved hover labels */
+    .hovertemplate {
+        background-color: #2c3e50;
+        color: #ecf0f1;
+    }
+
+    /* Adjusted marker styles */
+    .plotly-graph-div .scatter .points path {
+        stroke-width: 1px;
+        stroke: #ffffff;
     }
 </style>
 {% endblock %}

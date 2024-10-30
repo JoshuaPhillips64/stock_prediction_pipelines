@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def invoke_lambda_function(payload):
+def invoke_lambda_function(stock_ticker, start_date, end_date, feature_set):
     # Fetching AWS credentials from Airflow 'aws_default' connection
     connection = BaseHook.get_connection('aws_default')
 
@@ -23,7 +23,14 @@ def invoke_lambda_function(payload):
         region_name='us-east-1'
     )
 
-    payload = payload
+    payload = {
+        'body': json.dumps({
+            'stocks': [stock_ticker],
+            'start_date': start_date,
+            'end_date': end_date,
+            'feature_set': feature_set
+        })
+    }
 
     try:
         # Invoke the Lambda function asynchronously
