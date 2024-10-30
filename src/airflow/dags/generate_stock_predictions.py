@@ -221,8 +221,5 @@ with DAG(
             # Define task dependencies within the stock's TaskGroup
             ingest_task >> train_task >> predict_task >> ai_analysis_task
 
-            # Add the stock's TaskGroup to the main TaskGroup
-            process_stocks_group >> stock_task_group
-
     # Define DAG dependencies
     process_stocks_group
