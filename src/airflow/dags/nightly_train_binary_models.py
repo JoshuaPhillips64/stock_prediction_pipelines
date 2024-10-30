@@ -9,6 +9,7 @@ from common.helpers import (
     monitor_lambdas_completion,
     get_random_parameters
 )
+import json
 
 default_args = {
     'owner': 'airflow',
@@ -75,6 +76,7 @@ def invoke_binary_classification_lambda(stock_ticker: str, input_date: str, **kw
     )
 
     payload = {
+        "body": json.dumps({
         "model_key": model_key,
         "stock_symbol": stock_ticker,
         "input_date": input_date,
@@ -82,6 +84,7 @@ def invoke_binary_classification_lambda(stock_ticker: str, input_date: str, **kw
         "feature_set": params['feature_set'],
         "lookback_period": params['lookback_period'],
         "prediction_horizon": params['prediction_horizon']
+    })
     }
 
     return invoke_lambda_function("train_binary_classification_model", payload)

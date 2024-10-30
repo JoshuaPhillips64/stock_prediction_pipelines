@@ -9,6 +9,7 @@ from common.helpers import (
     monitor_lambdas_completion,
     get_random_parameters
 )
+import json
 
 default_args = {
     'owner': 'airflow',
