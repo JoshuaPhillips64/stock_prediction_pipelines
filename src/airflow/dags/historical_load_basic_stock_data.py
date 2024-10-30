@@ -5,11 +5,6 @@ from datetime import datetime, timedelta
 from common.config import TOP_50_TICKERS, LAMBDA_FUNCTION_NAME
 from common.helpers import invoke_lambda_function, monitor_lambdas_completion
 import json
-import logging
-
-# Set up logging
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 default_args = {
     'owner': 'airflow',
@@ -42,13 +37,13 @@ def invoke_lambda_task_wrapper(stock_ticker, feature_set, **kwargs):
     }
 
     # Log the exact payload being sent
-    logger.info(f"Payload being sent to Lambda for stock {stock_ticker}: {json.dumps(payload, indent=2)}")
+    print(f"Payload being sent to Lambda for stock {stock_ticker}: {json.dumps(payload, indent=2)}")
 
     # Invoke the Lambda function
     lambda_response = invoke_lambda_function("ingest_stock_data", payload)
 
     # Optionally, log the response from Lambda
-    logger.info(f"Response from Lambda for stock {stock_ticker}: {lambda_response}")
+    print(f"Response from Lambda for stock {stock_ticker}: {lambda_response}")
 
     return lambda_response
 
