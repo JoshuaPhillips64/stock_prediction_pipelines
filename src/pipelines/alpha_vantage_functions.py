@@ -562,6 +562,7 @@ def get_sector_performance(sector: str, date: datetime, sector_etf_data_cache: D
         'MANUFACTURING': 'XLI',  # Mapped to Industrials
         'LIFE SCIENCES': 'XLP',  # Mapped to Consumer Staples for PG
         'ENERGY & TRANSPORTATION': 'XLE',  # Mapped to Energy
+        'FINANCE': 'XLF',  # Mapped to Financials
 
     }
 
@@ -636,6 +637,7 @@ def generate_enriched_stock_data(start_date: datetime, end_date: datetime, stock
         'UTILITIES': 'XLU',
         'LIFE SCIENCES': 'XLP',  # Mapped to Consumer Staples for PG
         'ENERGY & TRANSPORTATION': 'XLE',  # Mapped to Energy
+        'FINANCE': 'XLF',
     }
 
     sector_etf_data_cache = {}

@@ -66,6 +66,10 @@ def lambda_handler(event, context):
         # Determine upsert table based on feature set
         upsert_table = 'basic_stock_data' if feature_set == 'basic' else 'enriched_stock_data'
 
+        if upsert_table == 'enriched_stock_data':
+            # Convert reported_eps to numeric, setting invalid values to NaN
+            df['reported_eps'] = pd.to_numeric(df['reported_eps'], errors='coerce')
+
         # Upsert data into the database
         upsert_df(
             df=df,
