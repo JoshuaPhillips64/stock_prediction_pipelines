@@ -43,7 +43,7 @@ def invoke_lambda_task_wrapper(stock_ticker, feature_set, **kwargs):
     lambda_response = invoke_lambda_function("ingest_stock_data", payload)
 
     # Optionally, log the response from Lambda
-    print(f"Response from Lambda for stock {stock_ticker}: {lambda_response}")
+    print(f"Response from Lambda for stock {stock_ticker}:{lambda_response}")
 
     return lambda_response
 
