@@ -34,11 +34,11 @@ schedule = '0 6 * * *'  # 5 AM CST is 11 AM UTC  # Adjust schedule as needed
 start_date = days_ago(1)
 catchup = False
 
-# Pre-generate and store parameters statically per stock
-PARAMS_DICT = {
-    stock: get_random_parameters(random.choice(['SARIMAX', 'BINARY CLASSIFICATION']))
-    for stock in TOP_50_TICKERS
-}
+# Function to generate and push parameters to XCom
+def generate_params(stock, **kwargs):
+    choose_model_type = random.choice(['SARIMAX', 'BINARY CLASSIFICATION'])
+    params = get_random_parameters(choose_model_type)
+    kwargs['ti'].xcom_push(key='params', value=params)
 
 with DAG(
     dag_name,
@@ -54,26 +54,37 @@ with DAG(
         previous_task_group = None
         for stock in TOP_50_TICKERS:
             stock_task_group = TaskGroup(group_id=f'generate_full_pipeline_{stock}')
-
-            params = PARAMS_DICT[stock]
-
             yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
 
-            # Ingest Data
+            # Task to generate parameters and save to XCom
+            generate_params_task = PythonOperator(
+                task_id=f'generate_params_{stock}',
+                python_callable=generate_params,
+                op_kwargs={'stock': stock}
+            )
+
+
+            # Ingest Data Task
+            def ingest_data(**kwargs):
+                params = kwargs['ti'].xcom_pull(key='params',
+                                                task_ids=f'process_stocks.generate_full_pipeline_{stock}.generate_params_{stock}')
+                invoke_lambda_ingest(
+                    stock_symbol=stock,
+                    start_date=(datetime.now() - timedelta(days=params['lookback_period'])).strftime('%Y-%m-%d'),
+                    end_date=yesterday,
+                    feature_set=params['feature_set']
+                )
+
+
             ingest_task = PythonOperator(
                 task_id=f'ingest_data_{stock}',
-                python_callable=invoke_lambda_ingest,
-                op_kwargs={
-                    'stock_symbol': stock,
-                    'start_date': (datetime.now() - timedelta(
-                        days=params['lookback_period'])).strftime('%Y-%m-%d'),
-                    'end_date': yesterday,
-                    'feature_set': params['feature_set']
-                }
+                python_callable=ingest_data
             )
 
             # Train Model
             def train_model(**kwargs):
+                params = kwargs['ti'].xcom_pull(key='params',
+                                                task_ids=f'process_stocks.generate_full_pipeline_{stock}.generate_params_{stock}')
                 return invoke_lambda_train(
                     model_type=params['model_type'],
                     stock_symbol=stock,
@@ -91,6 +102,8 @@ with DAG(
 
             # Make Prediction
             def make_prediction(**kwargs):
+                params = kwargs['ti'].xcom_pull(key='params',
+                                                task_ids=f'process_stocks.generate_full_pipeline_{stock}.generate_params_{stock}')
                 return invoke_lambda_predict(
                     model_type=params['model_type'],
                     stock_symbol=stock,
@@ -109,6 +122,8 @@ with DAG(
 
             # Trigger AI Analysis with Data Preparation
             def trigger_ai_analysis_task_callable(**kwargs):
+                params = kwargs['ti'].xcom_pull(key='params',
+                                                task_ids=f'process_stocks.generate_full_pipeline_{stock}.generate_params_{stock}')
                 return invoke_lambda_ai_analysis(
                     stock_symbol=stock,
                     model_type=params['model_type'],
@@ -126,12 +141,10 @@ with DAG(
             )
 
             # Define task dependencies within the stock's TaskGroup
-            ingest_task >> train_task >> predict_task >> ai_analysis_task
+            generate_params_task >> ingest_task >> train_task >> predict_task >> ai_analysis_task
 
-            # Set cross-task-group dependencies (ensuring sequential stock execution)
             if previous_task_group:
                 previous_task_group >> stock_task_group
             previous_task_group = stock_task_group
 
-    # Define DAG dependencies
-    process_stocks_group
+        process_stocks_group
