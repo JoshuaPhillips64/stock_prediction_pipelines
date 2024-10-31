@@ -52,6 +52,8 @@ with DAG(
             choose_model_type = random.choice(['SARIMAX','BINARY CLASSIFICATION'])
             params = get_random_parameters(choose_model_type)
 
+            yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+
             # Ingest Data
             ingest_task = PythonOperator(
                 task_id=f'ingest_data_{stock}',
@@ -60,7 +62,7 @@ with DAG(
                     'stock_symbol': stock,
                     'start_date': (datetime.now() - timedelta(
                         days=params['lookback_period'])).strftime('%Y-%m-%d'),
-                    'end_date': '{{ yesterday_ds }}',
+                    'end_date': yesterday,
                     'feature_set': params['feature_set']
                 }
             )
@@ -70,7 +72,7 @@ with DAG(
                 return invoke_lambda_train(
                     model_type=params['model_type'],
                     stock_symbol=stock,
-                    input_date="{{ yesterday_ds }}",
+                    input_date=yesterday,
                     hyperparameter_tuning=params['hyperparameter_tuning'],
                     feature_set=params['feature_set'],
                     lookback_period=params['lookback_period'],
@@ -87,7 +89,7 @@ with DAG(
                 return invoke_lambda_predict(
                     model_type=params['model_type'],
                     stock_symbol=stock,
-                    input_date="{{ yesterday_ds }}",
+                    input_date=yesterday,
                     hyperparameter_tuning=params['hyperparameter_tuning'],
                     feature_set=params['feature_set'],
                     lookback_period=params['lookback_period'],
@@ -105,7 +107,7 @@ with DAG(
                 return invoke_lambda_ai_analysis(
                     stock_symbol=stock,
                     model_type=params['model_type'],
-                    input_date="{{ yesterday_ds }}",
+                    input_date=yesterday,
                     feature_set=params['feature_set'],
                     hyperparameter_tuning=params['hyperparameter_tuning'],
                     lookback_period=params['lookback_period'],
