@@ -124,7 +124,7 @@ def monitor_lambdas_completion(feature_set, **kwargs):
 # New Helper Functions for Random Parameter Selection
 
 def get_random_hyperparameter_tuning():
-    return random.choice(['LOW', 'MEDIUM', 'HIGH'])
+    return random.choice(['LOW', 'MEDIUM'])
 
 def get_random_feature_set():
     return random.choice(['basic', 'advanced'])
