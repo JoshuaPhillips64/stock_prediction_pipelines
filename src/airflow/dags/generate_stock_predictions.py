@@ -150,11 +150,8 @@ with DAG(
                 generate_params_task >> ingest_task >> train_task >> predict_task >> ai_analysis_task
 
     # If you want all stock TaskGroups to run in parallel, you don't need to set dependencies between them.
-    # The current implementation sets them to run sequentially, which might not be ideal.
-    # To enable parallelism, remove any dependencies between TaskGroups.
-
-    # Example: Remove dependencies for parallel execution
-    # process_stocks_group
+    # The current implementation sets them to run sequentially, which is not ideal.
+    # Switch the executor to CeleryExecutor and set concurrency to a higher value to run them in parallel.
 
     # If you have downstream tasks after all stocks are processed, define them here
     # For example:
