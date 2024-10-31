@@ -296,8 +296,7 @@ def get_model_data(stock_symbol: str, model_type: str, input_date: str, feature_
                     predicted_amount,
                     predictions_json,
                     model_location,
-                    date_created,
-                    prediction_horizon
+                    date_created
                 FROM {table_name}
                 WHERE model_key = %s
                 LIMIT 1;
@@ -320,8 +319,7 @@ def get_model_data(stock_symbol: str, model_type: str, input_date: str, feature_
                 predicted_amount,
                 predictions_json,
                 model_location,
-                date_created,
-                prediction_horizon_db
+                date_created
             ) = result
 
             # Calculate prediction_date
@@ -369,8 +367,7 @@ def get_model_data(stock_symbol: str, model_type: str, input_date: str, feature_
                     last_known_price,
                     predictions_json,
                     model_location,
-                    date_created,
-                    prediction_horizon
+                    date_created
                 FROM {table_name}
                 WHERE model_key = %s
                 LIMIT 1;
@@ -397,8 +394,7 @@ def get_model_data(stock_symbol: str, model_type: str, input_date: str, feature_
                 last_known_price,
                 predictions_json,
                 model_location,
-                date_created,
-                prediction_horizon_db
+                date_created
             ) = result
 
             # Calculate prediction_date
