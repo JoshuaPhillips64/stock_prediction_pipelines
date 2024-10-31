@@ -459,7 +459,7 @@ def invoke_lambda_ai_analysis(stock_symbol: str, model_type: str, input_date: st
         # Log the exact payload
         logger.info(f"Invoking trigger_ai_analysis Lambda for {stock_symbol} with payload: {json.dumps(payload, indent=2)}")
 
-        response = invoke_lambda_function("trigger_ai_analysis", payload, invocation_type='RequestResponse')
+        response = invoke_lambda_function("ai_analysis", payload, invocation_type='RequestResponse')
         logger.info(f"AI Analysis response for {stock_symbol}: {response}")
         return response
 
