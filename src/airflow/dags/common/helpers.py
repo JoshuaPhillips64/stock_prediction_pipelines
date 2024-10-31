@@ -323,7 +323,7 @@ def get_model_data(stock_symbol: str, model_type: str, input_date: str, feature_
             ) = result
 
             # Calculate prediction_date
-            prediction_date = (datetime.strptime(input_date, '%Y-%m-%d') + timedelta(days=prediction_horizon_db)).strftime('%Y-%m-%d')
+            prediction_date = (datetime.strptime(input_date, '%Y-%m-%d') + timedelta(days=prediction_horizon)).strftime('%Y-%m-%d')
 
             prediction_data.append({
                 'model_key': db_model_key,
@@ -398,7 +398,7 @@ def get_model_data(stock_symbol: str, model_type: str, input_date: str, feature_
             ) = result
 
             # Calculate prediction_date
-            prediction_date = (datetime.strptime(input_date, '%Y-%m-%d') + timedelta(days=prediction_horizon_db)).strftime('%Y-%m-%d')
+            prediction_date = (datetime.strptime(input_date, '%Y-%m-%d') + timedelta(days=prediction_horizon)).strftime('%Y-%m-%d')
 
             prediction_data.append({
                 'model_key': db_model_key,
