@@ -229,7 +229,7 @@ def invoke_lambda_predict(model_type: str, stock_symbol: str, input_date: str, h
     if model_type == 'SARIMAX':
         lambda_name = "make_sarimax_prediction"
     elif model_type == 'BINARY CLASSIFICATION':
-        lambda_name = "make_binary_prediction"
+        lambda_name = "make_binary_classification_prediction"
     else:
         raise ValueError(f"Unsupported model type: {model_type}")
 

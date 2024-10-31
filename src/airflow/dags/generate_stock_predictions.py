@@ -34,6 +34,12 @@ schedule = '0 6 * * *'  # 5 AM CST is 11 AM UTC  # Adjust schedule as needed
 start_date = days_ago(1)
 catchup = False
 
+# Pre-generate and store parameters statically per stock
+PARAMS_DICT = {
+    stock: get_random_parameters(random.choice(['SARIMAX', 'BINARY CLASSIFICATION']))
+    for stock in TOP_50_TICKERS
+}
+
 with DAG(
     dag_name,
     default_args=default_args,
@@ -49,8 +55,7 @@ with DAG(
         for stock in TOP_50_TICKERS:
             stock_task_group = TaskGroup(group_id=f'generate_full_pipeline_{stock}')
 
-            choose_model_type = random.choice(['SARIMAX','BINARY CLASSIFICATION'])
-            params = get_random_parameters(choose_model_type)
+            params = PARAMS_DICT[stock]
 
             yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
 
