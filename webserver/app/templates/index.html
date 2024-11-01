@@ -35,7 +35,7 @@
                                                 <th>Stock Ticker</th>
                                                 <th>F1 Factor</th>
                                                 <th>Date Created</th>
-                                                <th>View Results</th>
+                                                <th>Results</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -45,7 +45,7 @@
                                                 <td>{{ "%.2f" | format(model.prediction_f1_score) }}</td>
                                                 <td>{{ model.date_created.strftime('%Y-%m-%d') }}</td>
                                                 <td>
-                                                    <a href="{{ url_for('main_bp.results', model_key=model.model_key, model_type='BINARY CLASSIFICATION') }}" class="btn btn-primary btn-sm">View Results</a>
+                                                    <a href="{{ url_for('main_bp.results', model_key=model.model_key, model_type='BINARY CLASSIFICATION') }}" class="btn btn-primary btn-sm">Show</a>
                                                 </td>
                                             </tr>
                                             {% endfor %}
@@ -79,7 +79,7 @@
                                                 <th>Stock Ticker</th>
                                                 <th>MAPE</th>
                                                 <th>Date Created</th>
-                                                <th>View Results</th>
+                                                <th>Results</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -89,7 +89,7 @@
                                                 <td>{{ "%.2f%%" | format(model.prediction_mape) }}</td>
                                                 <td>{{ model.date_created.strftime('%Y-%m-%d') }}</td>
                                                 <td>
-                                                    <a href="{{ url_for('main_bp.results', model_key=model.model_key, model_type='SARIMAX') }}" class="btn btn-primary btn-sm">View Results</a>
+                                                    <a href="{{ url_for('main_bp.results', model_key=model.model_key, model_type='SARIMAX') }}" class="btn btn-primary btn-sm">Show</a>
                                                 </td>
                                             </tr>
                                             {% endfor %}

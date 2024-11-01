@@ -25,6 +25,7 @@ default_args = {
     'email_on_retry': False,
     'retries': 0,
     'retry_delay': timedelta(minutes=5),
+    'trigger_rule': 'all_done'  # THIS MEANS IT WILL KEEP RUNNING UNTIL ALL TASKS ARE DONE REGARDLESS OF FAILURE
 }
 
 # Define task-specific timeout
