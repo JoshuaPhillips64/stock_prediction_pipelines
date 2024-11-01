@@ -1,7 +1,7 @@
 # Smartstockpredictor.com
 
 A stock prediction system that ingests stock data, enriches it with various features including AI generated market sentiment,
-trains predictive models (Regression and Binary Classification), generates AI-powered analysis, and serves predictions through a web application.
+trains predictive models, generates AI-powered analysis, and serves predictions through a web application.
 
 ## Architecture
 
