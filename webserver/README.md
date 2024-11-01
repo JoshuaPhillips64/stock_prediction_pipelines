@@ -16,17 +16,7 @@ Note: ACM certificates cannot be directly used with Nginx on EC2 instances. We w
 
 ### 1. Configure Security Groups (Optional)
 
-Ensure that your EC2 instance's security group allows inbound traffic on:
-
-- SSH | TCP	22 | Your IP	
-- HTTP | TCP 80 | 0.0.0.0/0	
-- HTTPS	TCP	443	0.0.0.0/0	
-- Custom TCP | TCP	7237 | 172.17.0.0/16	Internal Docker network
-- Redis	TCP	6379	172.17.0.0/16	Internal Docker network
-
-To configure the security group:
-1. Go to the EC2 dashboard in the AWS Console.
-2. Find your instance and open its security group settings.
+Ensure that your EC2 instance's security group allows inbound traffic.
 
 ### 2. Update EC2 and Install Docker
 
@@ -134,7 +124,7 @@ docker-compose ps
 ### Deployment Commands:
 
 ```bash
-#Connect to Airflow container
+#Connect to Webserver container
 ssh -i "XXX.pem" XXX.us-east-2.compute.amazonaws.com
 
 #Navigate to the folder inside the cloned repository
