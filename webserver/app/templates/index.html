@@ -128,7 +128,7 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         {{ form.stock_symbol.label(class="form-label") }}
-                        {{ form.stock_symbol(class="form-control", placeholder="e.g., AAPL") }}
+                        {{ form.stock_symbol(class="form-control") }}
                     </div>
                     <div class="col-md-6">
                         {{ form.feature_set.label(class="form-label") }}
@@ -144,11 +144,11 @@
                     </div>
                     <div class="col-md-6">
                         {{ form.prediction_horizon.label(class="form-label") }}
-                        {{ form.prediction_horizon(class="form-control", min="1", placeholder="e.g., 5") }}
+                        {{ form.prediction_horizon(class="form-control") }}
                     </div>
                     <div class="col-md-6">
                         {{ form.lookback_period.label(class="form-label") }}
-                        {{ form.lookback_period(class="form-control", min="1", placeholder="e.g., 30") }}
+                        {{ form.lookback_period(class="form-control") }}
                     </div>
                     <div class="col-md-6">
                         {{ form.input_date.label(class="form-label") }}
@@ -168,6 +168,49 @@
 {% block scripts %}
 {{ super() }}
 <script>
-    // The scripts are now handled in scripts.js
+    document.addEventListener('DOMContentLoaded', function () {
+        // Accordion Icon Toggle
+        const binaryAccordionButtons = document.querySelectorAll('#binaryModelsAccordion .accordion-button');
+        binaryAccordionButtons.forEach(button => {
+            button.addEventListener('click', function () {
+                const icon = this.querySelector('i');
+                if (this.classList.contains('collapsed')) {
+                    icon.classList.remove('fa-minus');
+                    icon.classList.add('fa-plus');
+                } else {
+                    icon.classList.remove('fa-plus');
+                    icon.classList.add('fa-minus');
+                }
+            });
+        });
+
+        const regressionAccordionButtons = document.querySelectorAll('#regressionModelsAccordion .accordion-button');
+        regressionAccordionButtons.forEach(button => {
+            button.addEventListener('click', function () {
+                const icon = this.querySelector('i');
+                if (this.classList.contains('collapsed')) {
+                    icon.classList.remove('fa-minus');
+                    icon.classList.add('fa-plus');
+                } else {
+                    icon.classList.remove('fa-plus');
+                    icon.classList.add('fa-minus');
+                }
+            });
+        });
+
+        // Prediction Form Submission with reCAPTCHA
+        const predictionForm = document.getElementById('predictionForm');
+        if (predictionForm) {
+            predictionForm.addEventListener('submit', function(event) {
+                event.preventDefault(); // Prevent form from submitting immediately
+                grecaptcha.ready(function() {
+                    grecaptcha.execute('{{ recaptcha_site_key }}', {action: 'prediction'}).then(function(token) {
+                        document.getElementById('recaptcha_token').value = token;
+                        predictionForm.submit();
+                    });
+                });
+            });
+        }
+    });
 </script>
 {% endblock %}

@@ -35,48 +35,11 @@ Before setting up the project, make sure you have the following installed:
    ```bash
    cp .env.example .env
    ```
+## **Lambda Setup and Local Development** 
+   Follow instructions in src/pipelines/README.md to setup local environment.
 
-## Docker Compose Setup
+## **Airflow Setup and Local Development**  
+   Follow instructions in src/airflow/README.md to setup local environment.
 
-Build and start services. Reminder the EMR simulator is massive and will take a while to build. 
-
-```bash
-
-```bash
-docker-compose up --build --progress=plain
-
-docker-compose exec airflow airflow db init
-```
-
-This will:
-
-- Start PostgreSQL
-- Start Airflow
-- Start the EMR Cluster Simulator
-- Start the LAMBDA Simulator 
-
-Access the Airflow UI at [http://localhost:8080](http://localhost:8080).
-
-## Local Development
-
-- **Run Tests**: Use `pytest` to run the tests:
-
-  ```bash
-  pytest
-  ```
-
-- **Linting**: Run `pylint` to ensure your code follows Python style guidelines:
-
-  ```bash
-  find . -name "*.py" -not -path "./venv/*" -exec pylint {} \;
-  ```
-
-- **Airflow DAG Testing**: To test DAGs locally, ensure that Airflow is running via Docker and execute the following:
-
-  ```bash
-  docker exec -it airflow_scheduler airflow dags trigger <dag_id>
-  ```
-
-## Conclusion
-
-By following this guide, you can set up your local environment for the Stock Prediction Pipelines project, allowing you to develop, test, and run the pipeline locally before deploying to production.
+## **Webserver Setup and Local Development** 
+   Follow instructions in webserver/README.md to to setup local environment.

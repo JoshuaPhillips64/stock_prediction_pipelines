@@ -22,16 +22,3 @@ The **Stock Prediction Pipelines** project utilizes a combination of AWS service
 
 ### Infrastructure as Code
 - **Terraform**: The entire AWS infrastructure is defined as code using Terraform, allowing for easy provisioning, updating, and tearing down of resources. Terraform modules are used to manage the different components of the architecture.
-
-## Diagram
-
-The architecture can be visualized as follows:
-
-1. **Data Ingestion**: Alpha Vantage API -> Lambda -> PostgreSQL/S3.
-2. **Orchestration**: Apache Airflow triggers DAGs that control data ingestion and model execution.
-3. **Data Processing**: AIRFLOW DAGs -> Lambda -> PostgreSQL/S3.
-4. **Data Lineage Tracking**: OpenLineage and Marquez monitor data flow between components.
-
-## Conclusion
-
-This architecture ensures a pipeline that can handle stock data ingestion, transformation, and predictive modeling in a production-grade environment.

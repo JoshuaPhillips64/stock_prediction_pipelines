@@ -4,9 +4,12 @@ This guide walks you through deploying the **Stock Prediction Pipelines** projec
 
 ## Prerequisites
 
+- [Docker](https://www.docker.com/get-started)
+- [Docker Compose](https://docs.docker.com/compose/install/)
+- [Python 3.12](https://www.python.org/downloads/)
+- [Poetry](https://python-poetry.org/docs/#installation)
 - [Terraform](https://www.terraform.io/downloads)
-- AWS CLI configured with appropriate credentials.
-- [GitHub Actions](https://docs.github.com/en/actions) configured for automated deployment.
+- AWS CLI with valid credentials
 
 ## Setup
 
@@ -28,32 +31,20 @@ This guide walks you through deploying the **Stock Prediction Pipelines** projec
    This will set up the infrastructure required to run the pipeline, including:
 
    - AWS RDS (PostgreSQL) for data storage.
-   - AWS EMR cluster for running PySpark jobs.
+   - AWS VPC and Security Groups.
    - S3 buckets for storing data and logs.
 
-   > Note: You may need to adjust the `.tfvars` files based on your environment, e.g., `terraform/environments/dev/terraform.tfvars`.
-
 3. **AWS Lambda Deployment**:  
-   AWS Lambda functions are deployed via Terraform. After running `terraform apply`, the output will include the Lambda function ARNs.
+   AWS Lambda functions are deployed via Terraform and code is loaded into ECS. Follow instructions in src/pipelines/README.md to deploy the Lambda functions.
 
-4. **Set Up GitHub Actions**:  
+4. **Airflow Deployment**:  
+   Follow instructions in src/airflow/README.md to deploy Dags to Airflow.
+
+5. **Webserver Deployment**:  
+   Follow instructions in webserver/README.md to deploy code to EC2.
+
+6. **Set Up GitHub Actions**:  
    The CI/CD pipeline is configured in `.github/workflows/ci-cd.yml`. When you push changes to the main branch, GitHub Actions will:
-
-   - Run tests.
-   - Build and deploy the Lambda functions.
-   - Apply the Terraform changes to AWS.
-
-   Ensure you have GitHub Secrets set up for your AWS credentials:
-
-   - `AWS_ACCESS_KEY_ID`
-   - `AWS_SECRET_ACCESS_KEY`
-
-5. **Deploying Changes**:  
-   Push code changes to the main branch, and the GitHub Actions pipeline will automatically deploy them to the production environment.
-
-   ```bash
-   git push origin main
-   ```
 
 ## Post-Deployment
 
