@@ -97,9 +97,9 @@ def lambda_handler(event, context):
 #%% This section demonstrates how to use the lambda function locally
 example_event = {
     'body': json.dumps({
-        'stocks': ['PG'],
-        'start_date': '2024-01-01',
-        'end_date': '2024-10-10',
+        'stocks': ['JNJ'],
+        'start_date': '2010-01-01',
+        'end_date': '2018-01-02',
         'feature_set': 'basic'
     })
 }

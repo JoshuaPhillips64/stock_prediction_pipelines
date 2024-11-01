@@ -218,3 +218,8 @@ h1, h2, h3, h4, h5, h6 {
 .btn-primary.btn-sm:hover {
     opacity: 0.9;
 }
+
+.btn-success:hover {
+    background-color: #28a745; /* Darker shade for hover */
+    border-color: #28a745;
+}

@@ -729,12 +729,12 @@ def main():
     # Sample event payload
     event = {
         'body': json.dumps({
-            'model_key': 'sample_model_001',
-            'stock_symbol': 'PG',
-            'input_date': '2024-10-01',
-            'hyperparameter_tuning': 'LOW',
-            'feature_set': 'advanced',
-            'lookback_period': 720,
+            'model_key': 'SARIMAX_JNJ_basic_MEDIUM_3500_30',
+            'stock_symbol': 'JNJ',
+            'input_date': '2024-10-31',
+            'hyperparameter_tuning': 'MEDIUM',
+            'feature_set': 'basic',
+            'lookback_period': 3500,
             'prediction_horizon': 30
         })
     }

@@ -130,10 +130,16 @@
                         {{ form.stock_symbol.label(class="form-label") }}
                         {{ form.stock_symbol(class="form-control") }}
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-6" style="display: none;">
+                        <!-- This is the feature set field, hidden by setting display: none.
+                             If you want to make this field visible again, simply remove
+                             or comment out 'style="display: none;"' from the <div>. ALSO REMOVE HIDDEN INPUT BELOW -->
                         {{ form.feature_set.label(class="form-label") }}
                         {{ form.feature_set(class="form-select") }}
                     </div>
+
+                    <!-- Hidden input to set Feature Set to 'basic' by default REMOVE TO BRING BUTTON BACK -->
+                    <input type="hidden" name="feature_set" value="basic">
                     <div class="col-md-6">
                         {{ form.model_type.label(class="form-label") }}
                         {{ form.model_type(class="form-select") }}
@@ -157,8 +163,8 @@
                     <div class="col-12">
                         <!-- Additional Fields Can Be Added Here -->
                     </div>
-                </div>
-                {{ form.submit_button(class="btn btn-primary btn-lg mt-3") }}
+                <div class="text-center">
+                {{ form.submit_button(class="btn btn-primary btn-lg mt-4 rounded-pill shadow-sm") }}
             </form>
         </div>
     </div>

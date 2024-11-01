@@ -424,15 +424,15 @@ def make_SARIMAX_prediction(model_key, stock_symbol, input_date, hyperparameter_
 # Assume necessary imports are in place, including the lambda_handler and make_SARIMAX_prediction functions
 def run_lambda_sarimax_predictions():
     # Define the model parameters
-    model_key = 'SARIMAX_JNJ_advanced_HIGH_720_30'
+    model_key = 'SARIMAX_JNJ_basic_MEDIUM_3500_30'
     stock_symbol = 'JNJ'
     hyperparameter_tuning = 'MEDIUM'
-    feature_set = 'advanced'
-    lookback_period = 720
+    feature_set = 'basic'
+    lookback_period = 3500
     prediction_horizon = 30
 
     # Define the input date (this will be the end date of our prediction range)
-    input_date_str = '2024-10-01'
+    input_date_str = '2024-10-31'
 
     # Prepare the event payload for the Lambda function
     event = {

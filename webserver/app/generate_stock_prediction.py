@@ -190,8 +190,10 @@ def generate_stock_prediction(
                 'predicted_amount': trained_model_data.get('predicted_amount'),
                 'predictions_json': json.dumps(trained_model_data.get('predictions_json', {})),
                 'model_location': trained_model_data.get('model_location'),
+                'date_created': trained_model_data.get('date_created').strftime('%Y-%m-%d %H:%M:%S')
             })
         elif model_type == 'BINARY CLASSIFICATION':
+
             prediction_data.append({
                 'model_key': model_key,
                 'symbol': stock_symbol,
@@ -212,14 +214,15 @@ def generate_stock_prediction(
                 'predicted_amount': None,  # Not applicable for classification
                 'predictions_json': json.dumps(trained_model_data.get('predictions_json', {})),
                 'model_location': trained_model_data.get('model_location'),
+                'date_created': trained_model_data.get('date_created').strftime('%Y-%m-%d %H:%M:%S')
             })
 
-        logger.info("Prediction data prepared for AI analysis.")
+        logger.info(f"Prediction data prepared for AI analysis. {prediction_data}")
 
         # Step 6: Trigger AI analysis with formatted data
         logger.info("Triggering AI analysis...")
         ai_analysis_response = trigger_ai_analysis(prediction_data)
-        logger.info("AI analysis response received.")
+        logger.info(f"AI analysis response received. printing response {ai_analysis_response}")
 
         # Check if an error occurred during AI analysis
         if ai_analysis_response is None:
