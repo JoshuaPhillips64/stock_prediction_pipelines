@@ -20,7 +20,7 @@ The system is designed with a microservices architecture using Flask, API Gatewa
 
 - [Setup Guide](docs/setup_guide.md)
 - [Deployment Guide](docs/deployment_guide.md)
-- [architecture documentation](docs/architecture.md)
+- [Architecture documentation](docs/architecture.md)
 
 ## Contributing
 
