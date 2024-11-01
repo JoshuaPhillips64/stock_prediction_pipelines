@@ -1,11 +1,11 @@
 # Smartstockpredictor.com
 
-This repository contains a stock prediction system that ingests stock data, enriches it with various features including AI generated market sentiment,
-trains predictive models (SARIMAX and XGBoost), generates AI-powered analysis, and serves predictions through a user-friendly web application.
+A stock prediction system that ingests stock data, enriches it with various features including AI generated market sentiment,
+trains predictive models (SARIMAX and XGBoost), generates AI-powered analysis, and serves predictions through a web application.
 
 ## Architecture
 
-The system is designed with a microservices architecture using Flask, API Gateway, Lambda, Airflow, PostgreSQL, and S3.
+The system is designed using Flask, API Gateway, Lambda, Airflow, PostgreSQL, and S3.
 
 ![Architecture Diagram](docs/architecture.svg)
 
