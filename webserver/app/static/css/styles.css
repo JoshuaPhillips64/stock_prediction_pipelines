@@ -123,60 +123,62 @@ h1, h2, h3, h4, h5, h6 {
     color: #ffffff;
 }
 
-/* Accordion Icon Styling */
-.accordion-button .fa-plus,
-.accordion-button .fa-minus {
-    margin-left: 10px;
-    transition: transform 0.2s;
-    font-size: 1rem;
-    color: #ffffff; /* Set icons to white */
-}
-
-/* Additional Accordion Styling */
+/* Accordion Styling */
 .accordion-button {
     background-color: #2c2c2c;
+    color: #ffffff;
+    border: none;
+}
+
+.accordion-button:not(.collapsed) {
+    background-color: #34495e;
     color: #ffffff;
 }
 
 .accordion-button:hover {
-    background-color: #34495e;
+    background-color: #3b3b3b;
+    color: #ffffff;
+}
+
+.accordion-button:focus {
+    box-shadow: none;
 }
 
 .accordion-item {
+    background-color: #2c2c2c;
     border: none;
 }
 
 .accordion-body {
-    background-color: #2c2c2c;
-    color: #ffffff; /* Ensure all text inside accordion is white */
+    background-color: #1e1e1e;
+    color: #ffffff;
 }
 
-.card-body table th,
-.card-body table td {
-    vertical-align: middle;
-    color: #ffffff; /* Ensure table text is white */
+/* Adjust icon colors */
+.accordion-button .fa-plus,
+.accordion-button .fa-minus {
+    color: #ffffff;
+    margin-left: 10px;
+    font-size: 1rem;
 }
 
-.btn-primary.btn-sm {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.875rem;
-}
-
-.table-dark th {
+/* Table Hover Effects */
+.table-dark tbody tr:hover {
     background-color: #34495e;
 }
 
-.table-dark tbody tr:nth-of-type(odd) {
-    background-color: #1e1e1e;
+/* Button Hover Effects */
+.btn-primary.btn-sm:hover {
+    opacity: 0.9;
+}
+
+.btn-success:hover {
+    background-color: #28a745; /* Darker shade for hover */
+    border-color: #28a745;
 }
 
 /* Responsive Adjustments */
 @media (max-width: 768px) {
-    .accordion-button .fa-plus,
-    .accordion-button .fa-minus {
-        font-size: 0.9rem;
-    }
-
     .btn-primary.btn-sm {
         padding: 0.2rem 0.4rem;
         font-size: 0.8rem;
@@ -203,23 +205,8 @@ h1, h2, h3, h4, h5, h6 {
     transition: background-color 0.3s ease;
 }
 
-/* Enhanced Hover Effects */
+/* Additional Hover Effects */
 .accordion-button:hover .fa-plus,
 .accordion-button:hover .fa-minus {
     color: #3498db;
-}
-
-/* Table Hover Effects */
-.table-dark tbody tr:hover {
-    background-color: #34495e;
-}
-
-/* Button Hover Effects */
-.btn-primary.btn-sm:hover {
-    opacity: 0.9;
-}
-
-.btn-success:hover {
-    background-color: #28a745; /* Darker shade for hover */
-    border-color: #28a745;
 }

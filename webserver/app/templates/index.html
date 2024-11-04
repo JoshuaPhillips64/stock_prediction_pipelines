@@ -20,12 +20,12 @@
             <div class="accordion" id="binaryModelsAccordion">
                 <div class="accordion-item">
                     <h2 class="accordion-header" id="headingBinary">
-                        <button class="accordion-button collapsed d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBinary" aria-expanded="false" aria-controls="collapseBinary" aria-label="Toggle Top Binary Classification Models">
+                        <button class="accordion-button d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBinary" aria-expanded="true" aria-controls="collapseBinary">
                             <span>Top Binary Classification Models</span>
-                            <i class="fa-solid fa-plus"></i>
+                            <i class="fa-solid fa-minus"></i>
                         </button>
                     </h2>
-                    <div id="collapseBinary" class="accordion-collapse collapse" aria-labelledby="headingBinary" data-bs-parent="#binaryModelsAccordion">
+                    <div id="collapseBinary" class="accordion-collapse collapse show" aria-labelledby="headingBinary" data-bs-parent="#binaryModelsAccordion">
                         <div class="accordion-body p-0">
                             <div class="card shadow-lg border-0 rounded-0">
                                 <div class="card-body p-3">
@@ -64,12 +64,12 @@
             <div class="accordion" id="regressionModelsAccordion">
                 <div class="accordion-item">
                     <h2 class="accordion-header" id="headingRegression">
-                        <button class="accordion-button collapsed d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRegression" aria-expanded="false" aria-controls="collapseRegression" aria-label="Toggle Top Regression Models">
+                        <button class="accordion-button d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRegression" aria-expanded="true" aria-controls="collapseRegression">
                             <span>Top Regression Models</span>
-                            <i class="fa-solid fa-plus"></i>
+                            <i class="fa-solid fa-minus"></i>
                         </button>
                     </h2>
-                    <div id="collapseRegression" class="accordion-collapse collapse" aria-labelledby="headingRegression" data-bs-parent="#regressionModelsAccordion">
+                    <div id="collapseRegression" class="accordion-collapse collapse show" aria-labelledby="headingRegression" data-bs-parent="#regressionModelsAccordion">
                         <div class="accordion-body p-0">
                             <div class="card shadow-lg border-0 rounded-0">
                                 <div class="card-body p-3">
@@ -131,14 +131,11 @@
                         {{ form.stock_symbol(class="form-control") }}
                     </div>
                     <div class="col-md-6" style="display: none;">
-                        <!-- This is the feature set field, hidden by setting display: none.
-                             If you want to make this field visible again, simply remove
-                             or comment out 'style="display: none;"' from the <div>. ALSO REMOVE HIDDEN INPUT BELOW -->
+                        <!-- Hidden feature set field -->
                         {{ form.feature_set.label(class="form-label") }}
                         {{ form.feature_set(class="form-select") }}
                     </div>
-
-                    <!-- Hidden input to set Feature Set to 'basic' by default REMOVE TO BRING BUTTON BACK -->
+                    <!-- Hidden input to set Feature Set to 'basic' by default -->
                     <input type="hidden" name="feature_set" value="basic">
                     <div class="col-md-6">
                         {{ form.model_type.label(class="form-label") }}
@@ -163,8 +160,10 @@
                     <div class="col-12">
                         <!-- Additional Fields Can Be Added Here -->
                     </div>
-                <div class="text-center">
-                {{ form.submit_button(class="btn btn-primary btn-lg rounded-pill shadow-sm") }}
+                </div> <!-- End of row -->
+                <div class="text-center mt-4">
+                    {{ form.submit_button(class="btn btn-primary btn-lg rounded-pill shadow-sm") }}
+                </div>
             </form>
         </div>
     </div>
@@ -176,31 +175,19 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         // Accordion Icon Toggle
-        const binaryAccordionButtons = document.querySelectorAll('#binaryModelsAccordion .accordion-button');
-        binaryAccordionButtons.forEach(button => {
+        const accordionButtons = document.querySelectorAll('.accordion-button');
+        accordionButtons.forEach(button => {
             button.addEventListener('click', function () {
                 const icon = this.querySelector('i');
-                if (this.classList.contains('collapsed')) {
-                    icon.classList.remove('fa-minus');
-                    icon.classList.add('fa-plus');
-                } else {
-                    icon.classList.remove('fa-plus');
-                    icon.classList.add('fa-minus');
-                }
-            });
-        });
-
-        const regressionAccordionButtons = document.querySelectorAll('#regressionModelsAccordion .accordion-button');
-        regressionAccordionButtons.forEach(button => {
-            button.addEventListener('click', function () {
-                const icon = this.querySelector('i');
-                if (this.classList.contains('collapsed')) {
-                    icon.classList.remove('fa-minus');
-                    icon.classList.add('fa-plus');
-                } else {
-                    icon.classList.remove('fa-plus');
-                    icon.classList.add('fa-minus');
-                }
+                setTimeout(() => {
+                    if (this.classList.contains('collapsed')) {
+                        icon.classList.remove('fa-minus');
+                        icon.classList.add('fa-plus');
+                    } else {
+                        icon.classList.remove('fa-plus');
+                        icon.classList.add('fa-minus');
+                    }
+                }, 150); // Delay to allow Bootstrap's collapse to process
             });
         });
 
