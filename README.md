@@ -1,7 +1,7 @@
 # Smartstockpredictor.com
 
 A stock prediction system that ingests stock data, enriches it with various features including AI generated market sentiment,
-trains predictive models (SARIMAX and XGBoost), generates AI-powered analysis, and serves predictions through a web application.
+trains predictive models, generates AI-powered analysis, and serves predictions through a web application.
 
 ## Architecture
 
@@ -11,7 +11,7 @@ The system is designed using Flask, API Gateway, Lambda, Airflow, PostgreSQL, an
 
 1. **Data Ingestion:** Lambda functions ingest historical stock data from Alpha Vantage and other sources.
 2. **Data Enrichment:** Data is enriched with technical indicators, AI generated market sentiment, economic data, and more.
-3. **Model Training:** SARIMAX and XGBoost models are trained using historical data and tuned with time series cross-validation. Airflow orchestrates daily model retraining.
+3. **Model Training:** Regression and Binary Classification models are trained using historical data and tuned with time series cross-validation. Airflow orchestrates daily model retraining.
 4. **AI Analysis:** OpenAI's GPT-4o and Anthropic's Claude generate insightful explanations for predictions, enhancing interpretability.
 5. **Web Application:** A Flask web application provides a user interface for interacting with the system and visualizing predictions.
 6. **CI/CD:** GitHub Actions automates testing, building, and deployment of Lambda functions and the web application. Terraform manages infrastructure provisioning.
