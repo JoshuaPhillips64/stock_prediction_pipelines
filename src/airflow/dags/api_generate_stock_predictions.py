@@ -60,11 +60,26 @@ with DAG(
         provide_context=True,
     )
 
-    def process_stocks(**context):
+    def extract_stocks(**context):
+        """Extract stock information from configuration"""
         settings_for_job = context['task_instance'].xcom_pull(task_ids='get_settings_for_job')
         stocks = settings_for_job.get('stocks')
         if not stocks:
             raise ValueError("No stocks provided in the configuration")
+        logger.info(f"Extracted stocks: {stocks}")
+        return stocks
+
+    extract_stocks_task = PythonOperator(
+        task_id='extract_stocks',
+        python_callable=extract_stocks,
+        provide_context=True,
+    )
+
+    # Function to create tasks for each stock
+    def create_stock_tasks(**context):
+        stocks = context['task_instance'].xcom_pull(task_ids='extract_stocks')
+        if not stocks:
+            raise ValueError("No stocks to process")
 
         previous_task_group = None
 
@@ -79,7 +94,7 @@ with DAG(
             with TaskGroup(group_id=group_id) as stock_task_group:
 
                 # Ingest Data Task
-                def ingest_data(stock, params, **context):
+                def ingest_data(**context):
                     execution_date = context['ds']
                     lookback_period = params['lookback_period']
                     start_date = (datetime.strptime(execution_date, '%Y-%m-%d') -
@@ -97,13 +112,12 @@ with DAG(
                 ingest_task = PythonOperator(
                     task_id='ingest_data',
                     python_callable=ingest_data,
-                    op_kwargs={'stock': stock, 'params': params},
                     provide_context=True,
                     execution_timeout=TASK_TIMEOUT,
                 )
 
                 # Train Model Task
-                def train_model(stock, params, **context):
+                def train_model(**context):
                     execution_date = context['ds']
 
                     logger.info(f"Training model for {stock} on {execution_date}")
@@ -120,13 +134,12 @@ with DAG(
                 train_task = PythonOperator(
                     task_id='train_model',
                     python_callable=train_model,
-                    op_kwargs={'stock': stock, 'params': params},
                     provide_context=True,
                     execution_timeout=TASK_TIMEOUT,
                 )
 
                 # Prediction Task
-                def make_prediction(stock, params, **context):
+                def make_prediction(**context):
                     execution_date = context['ds']
 
                     logger.info(f"Making prediction for {stock} on {execution_date}")
@@ -143,13 +156,12 @@ with DAG(
                 predict_task = PythonOperator(
                     task_id='make_prediction',
                     python_callable=make_prediction,
-                    op_kwargs={'stock': stock, 'params': params},
                     provide_context=True,
                     execution_timeout=TASK_TIMEOUT,
                 )
 
                 # AI Analysis Task
-                def trigger_ai_analysis(stock, params, **context):
+                def trigger_ai_analysis(**context):
                     execution_date = context['ds']
 
                     logger.info(f"Triggering AI analysis for {stock} on {execution_date}")
@@ -166,7 +178,6 @@ with DAG(
                 ai_analysis_task = PythonOperator(
                     task_id='trigger_ai_analysis',
                     python_callable=trigger_ai_analysis,
-                    op_kwargs={'stock': stock, 'params': params},
                     provide_context=True,
                     execution_timeout=TASK_TIMEOUT,
                 )
@@ -178,14 +189,16 @@ with DAG(
             if previous_task_group:
                 previous_task_group >> stock_task_group
             else:
-                get_settings_for_job_task >> stock_task_group
+                # Start after extract_stocks_task
+                extract_stocks_task >> stock_task_group
+
             previous_task_group = stock_task_group
 
-    process_stocks_task = PythonOperator(
-        task_id='process_stocks',
-        python_callable=process_stocks,
+    create_stock_tasks_task = PythonOperator(
+        task_id='create_stock_tasks',
+        python_callable=create_stock_tasks,
         provide_context=True,
     )
 
     # Define the overall DAG dependencies
-    get_settings_for_job_task >> process_stocks_task
+    get_settings_for_job_task >> extract_stocks_task >> create_stock_tasks_task
