@@ -61,7 +61,7 @@ def generate_stock_prediction_dag():
         return stocks
 
     @task
-    def process_stock(stock_info, execution_date_str):
+    def process_stock(stock_info, **context):
         """Process a single stock with provided parameters"""
         stock = stock_info.get('stock')
         params = stock_info.get('params')
@@ -69,6 +69,7 @@ def generate_stock_prediction_dag():
         if not stock or not params:
             raise ValueError(f"Stock or parameters missing for stock info: {stock_info}")
 
+        execution_date_str = context['ds']
         execution_date = datetime.strptime(execution_date_str, '%Y-%m-%d')
 
         # Ingest Data
@@ -126,13 +127,10 @@ def generate_stock_prediction_dag():
     # Extract stocks from configuration
     stocks = extract_stocks(conf)
 
-    # Define execution date string
-    execution_date_str = "{{ ds }}"
-
     # Use Dynamic Task Mapping to process each stock
     process_stock.expand(
         stock_info=stocks,
-        execution_date_str=[execution_date_str] * len(stocks)
     )
+
 
 dag = generate_stock_prediction_dag()
