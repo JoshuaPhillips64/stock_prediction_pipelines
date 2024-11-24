@@ -95,6 +95,20 @@ def chat():
         data = request.json
         messages = data.get("messages", [])
 
+        # Check if it's the first user message in the session
+        if session.get('request_count', 0) == 1:
+            # Prepend initial messages to the user's first message
+            initial_messages = [
+                {
+                    "role": "system",
+                    "content": """You are an expert AI assistant for a website called smartstockpredictor.com. Your task is to guide users step-by-step through the parameters 
+                               of the attached functions and execute them after confirmation that parameters are correct. You should approach each step as a separate message with clear 
+                               explanations for the user at a basic level. The functions are provided in the schemas doucumenations"""
+                }
+            ]
+            # Append the user's first message to the initial messages
+            messages = initial_messages + messages
+
         # Validate messages
         if not isinstance(messages, list) or not messages:
             return jsonify({"error": "Invalid messages format"}), 400

@@ -27,8 +27,8 @@ default_args = {
 # Define task-specific timeout
 TASK_TIMEOUT = timedelta(minutes=15)
 
-dag_name = 'generate_stock_prediction_dag'
-description = 'Generate stock predictions based on provided stocks and parameters'
+dag_name = 'dynamic_api_generate_stock_prediction_dag'
+description = 'Called via the airflow api with dynamic parameters to Generate stock predictions'
 schedule = None  # Set to None since it will be triggered externally
 start_date = days_ago(1)
 catchup = False
@@ -131,6 +131,5 @@ def generate_stock_prediction_dag():
     process_stock.expand(
         stock_info=stocks,
     )
-
 
 dag = generate_stock_prediction_dag()

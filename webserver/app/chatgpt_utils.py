@@ -18,38 +18,46 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 # Function schemas
 schemas = [
     {
-        "name": "ingest_stock_data",
-        "description": "Ingest stock data for specified stocks and date range.",
+        "name": "train_stock_prediction_model_airflow_api",
+        "description": "Trains a model for stock prediction based on specified parameters for any given stock.",
         "parameters": {
             "type": "object",
             "properties": {
-                "stocks": {"type": "array", "items": {"type": "string"}, "description": "List of stock symbols."},
-                "start_date": {"type": "string", "description": "Start date in YYYY-MM-DD format."},
-                "end_date": {"type": "string", "description": "End date in YYYY-MM-DD format."},
-                "feature_set": {"type": "string", "description": "Feature set to use.", "default": "basic"}
+                "stock_symbol": {
+                    "type": "string",
+                    "description": "Stock symbol to train on."
+                },
+                "model_type": {
+                    "type": "string",
+                    "description": "Type of model to train.",
+                    "enum": ["SARIMAX", "BINARY CLASSIFICATION"]
+                },
+                "feature_set": {
+                    "type": "string",
+                    "description": "Feature set to use for model training.",
+                    "enum": ["basic", "advanced"],
+                    "default": "basic"
+                },
+                "lookback_period": {
+                    "type": "integer",
+                    "description": "Number of days to look back for training data.",
+                    "default": 720
+                },
+                "prediction_horizon": {
+                    "type": "integer",
+                    "description": "Number of days to predict forward.",
+                    "default": 30
+                },
+                "hyperparameter_tuning": {
+                    "type": "boolean",
+                    "description": "Whether to apply hyperparameter tuning.",
+                    "default": False
+                }
             },
-            "required": ["stocks", "start_date", "end_date"]
+            "required": ["stock_symbol", "model_type"]
         }
-    },
-    {
-        "name": "train_binary_classification_model",
-        "description": "Train a binary classification model for stock prediction.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "model_key": {"type": "string", "description": "Unique model key."},
-                "stock_symbol": {"type": "string", "description": "Stock symbol to train on."},
-                "input_date": {"type": "string", "description": "Input date in YYYY-MM-DD format."},
-                "hyperparameter_tuning": {"type": "string", "description": "Hyperparameter tuning level.",
-                                          "enum": ["LOW", "MEDIUM", "HIGH"], "default": "MEDIUM"},
-                "feature_set": {"type": "string", "description": "Feature set to use.", "default": "basic"},
-                "lookback_period": {"type": "integer", "description": "Lookback period in days.", "default": 720},
-                "prediction_horizon": {"type": "integer", "description": "Prediction horizon in days.", "default": 30}
-            },
-            "required": ["model_key", "stock_symbol", "input_date"]
-        }
-    },
-    # Add other schemas as needed
+    }
+    # Add other schemas as needed - Will need to add make prediction and then retrieve top models
 ]
 
 # Map function names to actual functions
