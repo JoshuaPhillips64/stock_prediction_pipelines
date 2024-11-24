@@ -1,7 +1,8 @@
 from airflow import DAG
-from airflow.decorators import dag, task
-from airflow.utils.dates import days_ago
+from airflow.operators.python import PythonOperator
+from airflow.utils.task_group import TaskGroup
 from datetime import datetime, timedelta
+from airflow.utils.dates import days_ago
 import logging
 
 from common.helpers import (
@@ -20,20 +21,21 @@ default_args = {
     'depends_on_past': False,
     'email_on_failure': False,
     'email_on_retry': False,
-    'retries': 1,
+    'retries': 0,
     'retry_delay': timedelta(minutes=5),
+    'trigger_rule': 'all_done'  # Continue running even if some tasks fail
 }
 
 # Define task-specific timeout
 TASK_TIMEOUT = timedelta(minutes=15)
 
 dag_name = 'dynamic_api_generate_stock_prediction_dag'
-description = 'Called via the airflow api with dynamic parameters to Generate stock predictions'
-schedule = None  # Set to None since it will be triggered externally
+description = 'Generate stock predictions based on parameters provided via API call'
+schedule = None  # Since it will be triggered externally
 start_date = days_ago(1)
 catchup = False
 
-@dag(
+with DAG(
     dag_id=dag_name,
     default_args=default_args,
     description=description,
@@ -41,95 +43,149 @@ catchup = False
     start_date=start_date,
     catchup=catchup,
     max_active_runs=1,
-)
-def dynamic_api_generate_stock_prediction_dag():
+    concurrency=1,
+) as dag:
 
-    @task
     def get_settings_for_job(**context):
-        """Retrieve config from dag_run.settings_for_job"""
+        """Retrieve config from dag_run.conf"""
         settings_for_job = context['dag_run'].conf or {}
         if not settings_for_job:
             raise ValueError("No configuration provided in dag_run.conf")
+        logger.info(f"Received settings: {settings_for_job}")
         return settings_for_job
 
-    @task
-    def extract_stocks(settings_for_job):
-        """Extract stock information from configuration"""
+    get_settings_for_job_task = PythonOperator(
+        task_id='get_settings_for_job',
+        python_callable=get_settings_for_job,
+        provide_context=True,
+    )
+
+    def process_stocks(**context):
+        settings_for_job = context['task_instance'].xcom_pull(task_ids='get_settings_for_job')
         stocks = settings_for_job.get('stocks')
         if not stocks:
             raise ValueError("No stocks provided in the configuration")
-        return stocks
 
-    @task
-    def process_stock(stock_info, **context):
-        """Process a single stock with provided parameters"""
-        stock = stock_info.get('stock')
-        params = stock_info.get('params')
+        previous_task_group = None
 
-        if not stock or not params:
-            raise ValueError(f"Stock or parameters missing for stock info: {stock_info}")
+        for stock_info in stocks:
+            stock = stock_info.get('stock')
+            params = stock_info.get('params')
+            if not stock or not params:
+                raise ValueError(f"Stock or parameters missing for stock info: {stock_info}")
 
-        execution_date_str = context['ds']
-        execution_date = datetime.strptime(execution_date_str, '%Y-%m-%d')
+            group_id = f'process_{stock}'
 
-        # Ingest Data
-        lookback_period = params['lookback_period']
-        start_date = (execution_date - timedelta(days=lookback_period)).strftime('%Y-%m-%d')
-        end_date = execution_date_str
+            with TaskGroup(group_id=group_id) as stock_task_group:
 
-        logger.info(f"Ingesting data for {stock}: {start_date} to {end_date}")
-        invoke_lambda_ingest(
-            stock_symbol=stock,
-            start_date=start_date,
-            end_date=end_date,
-            feature_set=params['feature_set']
-        )
+                # Ingest Data Task
+                def ingest_data(stock, params, **context):
+                    execution_date = context['ds']
+                    lookback_period = params['lookback_period']
+                    start_date = (datetime.strptime(execution_date, '%Y-%m-%d') -
+                                  timedelta(days=lookback_period)).strftime('%Y-%m-%d')
+                    end_date = execution_date
 
-        # Train Model
-        logger.info(f"Training model for {stock} on {execution_date_str}")
-        invoke_lambda_train(
-            model_type=params['model_type'],
-            stock_symbol=stock,
-            input_date=execution_date_str,
-            hyperparameter_tuning=params['hyperparameter_tuning'],
-            feature_set=params['feature_set'],
-            lookback_period=params['lookback_period'],
-            prediction_horizon=params['prediction_horizon']
-        )
+                    logger.info(f"Ingesting data for {stock}: {start_date} to {end_date}")
+                    invoke_lambda_ingest(
+                        stock_symbol=stock,
+                        start_date=start_date,
+                        end_date=end_date,
+                        feature_set=params['feature_set']
+                    )
 
-        # Make Prediction
-        logger.info(f"Making prediction for {stock} on {execution_date_str}")
-        invoke_lambda_predict(
-            model_type=params['model_type'],
-            stock_symbol=stock,
-            input_date=execution_date_str,
-            hyperparameter_tuning=params['hyperparameter_tuning'],
-            feature_set=params['feature_set'],
-            lookback_period=params['lookback_period'],
-            prediction_horizon=params['prediction_horizon']
-        )
+                ingest_task = PythonOperator(
+                    task_id='ingest_data',
+                    python_callable=ingest_data,
+                    op_kwargs={'stock': stock, 'params': params},
+                    provide_context=True,
+                    execution_timeout=TASK_TIMEOUT,
+                )
 
-        # Trigger AI Analysis
-        logger.info(f"Triggering AI analysis for {stock} on {execution_date_str}")
-        invoke_lambda_ai_analysis(
-            stock_symbol=stock,
-            model_type=params['model_type'],
-            input_date=execution_date_str,
-            feature_set=params['feature_set'],
-            hyperparameter_tuning=params['hyperparameter_tuning'],
-            lookback_period=params['lookback_period'],
-            prediction_horizon=params['prediction_horizon']
-        )
+                # Train Model Task
+                def train_model(stock, params, **context):
+                    execution_date = context['ds']
 
-    # Retrieve configuration
-    settings_for_job = get_settings_for_job()
+                    logger.info(f"Training model for {stock} on {execution_date}")
+                    invoke_lambda_train(
+                        model_type=params['model_type'],
+                        stock_symbol=stock,
+                        input_date=execution_date,
+                        hyperparameter_tuning=params['hyperparameter_tuning'],
+                        feature_set=params['feature_set'],
+                        lookback_period=params['lookback_period'],
+                        prediction_horizon=params['prediction_horizon']
+                    )
 
-    # Extract stocks from configuration
-    stocks = extract_stocks(settings_for_job)
+                train_task = PythonOperator(
+                    task_id='train_model',
+                    python_callable=train_model,
+                    op_kwargs={'stock': stock, 'params': params},
+                    provide_context=True,
+                    execution_timeout=TASK_TIMEOUT,
+                )
 
-    # Use Dynamic Task Mapping to process each stock
-    process_stock.expand(
-        stock_info=stocks,
+                # Prediction Task
+                def make_prediction(stock, params, **context):
+                    execution_date = context['ds']
+
+                    logger.info(f"Making prediction for {stock} on {execution_date}")
+                    invoke_lambda_predict(
+                        model_type=params['model_type'],
+                        stock_symbol=stock,
+                        input_date=execution_date,
+                        hyperparameter_tuning=params['hyperparameter_tuning'],
+                        feature_set=params['feature_set'],
+                        lookback_period=params['lookback_period'],
+                        prediction_horizon=params['prediction_horizon']
+                    )
+
+                predict_task = PythonOperator(
+                    task_id='make_prediction',
+                    python_callable=make_prediction,
+                    op_kwargs={'stock': stock, 'params': params},
+                    provide_context=True,
+                    execution_timeout=TASK_TIMEOUT,
+                )
+
+                # AI Analysis Task
+                def trigger_ai_analysis(stock, params, **context):
+                    execution_date = context['ds']
+
+                    logger.info(f"Triggering AI analysis for {stock} on {execution_date}")
+                    invoke_lambda_ai_analysis(
+                        stock_symbol=stock,
+                        model_type=params['model_type'],
+                        input_date=execution_date,
+                        feature_set=params['feature_set'],
+                        hyperparameter_tuning=params['hyperparameter_tuning'],
+                        lookback_period=params['lookback_period'],
+                        prediction_horizon=params['prediction_horizon']
+                    )
+
+                ai_analysis_task = PythonOperator(
+                    task_id='trigger_ai_analysis',
+                    python_callable=trigger_ai_analysis,
+                    op_kwargs={'stock': stock, 'params': params},
+                    provide_context=True,
+                    execution_timeout=TASK_TIMEOUT,
+                )
+
+                # Define task dependencies within the stock's TaskGroup
+                ingest_task >> train_task >> predict_task >> ai_analysis_task
+
+            # Enforce sequential execution of stock task groups
+            if previous_task_group:
+                previous_task_group >> stock_task_group
+            else:
+                get_settings_for_job_task >> stock_task_group
+            previous_task_group = stock_task_group
+
+    process_stocks_task = PythonOperator(
+        task_id='process_stocks',
+        python_callable=process_stocks,
+        provide_context=True,
     )
 
-dag = dynamic_api_generate_stock_prediction_dag()
+    # Define the overall DAG dependencies
+    get_settings_for_job_task >> process_stocks_task
