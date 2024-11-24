@@ -49,12 +49,13 @@ schemas = [
                     "default": 30
                 },
                 "hyperparameter_tuning": {
-                    "type": "boolean",
+                    "type": "string",
                     "description": "Whether to apply hyperparameter tuning.",
-                    "default": False
+                    ["LOW", "MEDIUM", "HIGH"],
+                    "default": "LOW"
                 }
             },
-            "required": ["stock_symbol", "model_type"]
+            "required": ["stock_symbol", "model_type", "lookback_period", "prediction_horizon"]
         }
     }
     # Add other schemas as needed - Will need to add make prediction and then retrieve top models
@@ -62,12 +63,9 @@ schemas = [
 
 # Map function names to actual functions
 function_map = {
-    "ingest_stock_data": ingest_stock_data,
-    "train_binary_classification_model": train_binary_classification_model,
     "make_sarimax_prediction": make_sarimax_prediction,
     "make_binary_prediction": make_binary_prediction,
-    "train_sarimax_model": train_sarimax_model,
-    "trigger_ai_analysis": trigger_ai_analysis,
+    "train_stock_prediction_model_airflow_api": airflow_train_model
 }
 
 

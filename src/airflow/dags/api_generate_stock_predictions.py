@@ -45,17 +45,17 @@ catchup = False
 def dynamic_api_generate_stock_prediction_dag():
 
     @task
-    def get_conf(**context):
-        """Retrieve configuration from dag_run.conf"""
-        conf = context['dag_run'].conf or {}
-        if not conf:
+    def get_settings_for_job(**context):
+        """Retrieve config from dag_run.settings_for_job"""
+        settings_for_job = context['dag_run'].conf or {}
+        if not settings_for_job:
             raise ValueError("No configuration provided in dag_run.conf")
-        return conf
+        return settings_for_job
 
     @task
-    def extract_stocks(conf):
+    def extract_stocks(settings_for_job):
         """Extract stock information from configuration"""
-        stocks = conf.get('stocks')
+        stocks = settings_for_job.get('stocks')
         if not stocks:
             raise ValueError("No stocks provided in the configuration")
         return stocks
@@ -122,10 +122,10 @@ def dynamic_api_generate_stock_prediction_dag():
         )
 
     # Retrieve configuration
-    conf = get_conf()
+    settings_for_job = get_settings_for_job()
 
     # Extract stocks from configuration
-    stocks = extract_stocks(conf)
+    stocks = extract_stocks(settings_for_job)
 
     # Use Dynamic Task Mapping to process each stock
     process_stock.expand(
