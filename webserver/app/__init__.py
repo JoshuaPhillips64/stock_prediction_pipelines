@@ -1,6 +1,9 @@
+import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from flask_cors import CORS
+from datetime import timedelta
 from config import Config
 
 db = SQLAlchemy()
@@ -10,8 +13,16 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
+    app.secret_key = os.getenv('SECRET_KEY')
+
+    # Configure session lifetime
+    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)  # Adjust as needed
+
     db.init_app(app)
     migrate.init_app(app, db)
+
+    # Enable CORS
+    CORS(app)
 
     @app.context_processor
     def inject_recaptcha_site_key():

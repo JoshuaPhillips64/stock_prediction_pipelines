@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, session, current_app as app, flash
+from flask import Blueprint, render_template, request, redirect, url_for, session, current_app as app, flash, jsonify
 from .forms import PredictionForm, ContactForm
 from .generate_stock_prediction import generate_stock_prediction, generate_model_key
 from datetime import datetime, timedelta, date
@@ -8,13 +8,14 @@ import re
 import requests
 from app import db
 from sqlalchemy import desc
+from .chatgpt_utils import handle_chatgpt_response, increment_session_request_count
+from flask_cors import cross_origin
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 main_bp = Blueprint('main_bp', __name__)
-
 
 def verify_recaptcha(recaptcha_token, action):
     recaptcha_secret = app.config.get('RECAPTCHA_SECRET_KEY')
@@ -83,6 +84,33 @@ def index():
         top_binary_models=top_binary_models,
         top_regression_models=top_regression_models
     )
+
+
+@main_bp.route('/api/chat', methods=['POST'])
+@cross_origin()
+def chat():
+    try:
+        increment_session_request_count(max_requests=20)
+
+        data = request.json
+        messages = data.get("messages", [])
+
+        # Validate messages
+        if not isinstance(messages, list) or not messages:
+            return jsonify({"error": "Invalid messages format"}), 400
+
+        ai_response = handle_chatgpt_response(messages)
+        return jsonify({"response": ai_response})
+
+    except Exception as e:
+        # Handle exceptions and return appropriate HTTP status codes
+        error_message = str(e)
+        if "Session limit reached" in error_message:
+            return jsonify({"error": error_message}), 403
+        elif "Rate limit reached" in error_message:
+            return jsonify({"error": error_message}), 429
+        else:
+            return jsonify({"error": error_message}), 500
 
 
 @main_bp.route('/loading')

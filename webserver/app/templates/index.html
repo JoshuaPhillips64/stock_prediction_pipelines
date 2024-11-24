@@ -168,6 +168,57 @@
         </div>
     </div>
 </section>
+
+<!-- Chatbot UI Section -->
+<section class="container my-5">
+    <div id="chat-window" style="width: 100%; height: 600px; border: 1px solid #ddd; padding: 10px; overflow-y: auto;">
+        <!-- Chat messages will be displayed here -->
+    </div>
+    <input type="text" id="user-input" placeholder="Type your message..." style="width: 100%; padding: 10px;">
+    <button onclick="sendMessage()" style="width: 100%; padding: 10px; margin-top: 5px;">Send</button>
+</section>
+
+<script>
+    async function sendMessage() {
+        const userInput = document.getElementById('user-input').value;
+        if (!userInput.trim()) return;
+
+        // Add user message to the chat window
+        addMessageToChat('You', userInput);
+        document.getElementById('user-input').value = '';
+
+        // Send message to the server
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    messages: [{ role: 'user', content: userInput }]
+                })
+            });
+
+            const result = await response.json();
+            if (response.ok) {
+                addMessageToChat('AI', result.response);
+            } else {
+                addMessageToChat('Error', result.error || 'Something went wrong.');
+            }
+        } catch (error) {
+            addMessageToChat('Error', 'Failed to connect to the server.');
+        }
+    }
+
+    function addMessageToChat(sender, message) {
+        const chatWindow = document.getElementById('chat-window');
+        const messageDiv = document.createElement('div');
+        messageDiv.innerHTML = `<strong>${sender}:</strong> ${message}`;
+        messageDiv.style.marginBottom = '10px';
+        chatWindow.appendChild(messageDiv);
+        chatWindow.scrollTop = chatWindow.scrollHeight; // Scroll to the latest message
+    }
+</script>
 {% endblock %}
 
 {% block scripts %}
