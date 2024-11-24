@@ -42,7 +42,7 @@ catchup = False
     catchup=catchup,
     max_active_runs=1,
 )
-def generate_stock_prediction_dag():
+def dynamic_api_generate_stock_prediction_dag():
 
     @task
     def get_conf(**context):
@@ -132,4 +132,4 @@ def generate_stock_prediction_dag():
         stock_info=stocks,
     )
 
-dag = generate_stock_prediction_dag()
+dag = dynamic_api_generate_stock_prediction_dag()
