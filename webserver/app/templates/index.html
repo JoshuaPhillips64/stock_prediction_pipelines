@@ -196,10 +196,7 @@
                   {{ form.model_type.label(class="form-label") }}
                   {{ form.model_type(class="form-select") }}
                 </div>
-                <div class="col-md-6">
-                  {{ form.hyperparameter_tuning.label(class="form-label") }}
-                  {{ form.hyperparameter_tuning(class="form-select") }}
-                </div>
+
               </div>
               <div class="d-flex justify-content-center gap-3 mt-4">
                 <button
@@ -216,6 +213,10 @@
               <h5 class="text-center">Step 2: Advanced Parameters</h5>
               <div class="row g-3 mt-3">
                 <div class="col-md-6">
+                  {{ form.input_date.label(class="form-label") }}
+                  {{ form.input_date(class="form-control") }}
+                </div>
+                  <div class="col-md-6">
                   {{ form.prediction_horizon.label(class="form-label") }}
                   {{ form.prediction_horizon(class="form-control") }}
                 </div>
@@ -224,8 +225,8 @@
                   {{ form.lookback_period(class="form-control") }}
                 </div>
                 <div class="col-md-6">
-                  {{ form.input_date.label(class="form-label") }}
-                  {{ form.input_date(class="form-control") }}
+                  {{ form.hyperparameter_tuning.label(class="form-label") }}
+                  {{ form.hyperparameter_tuning(class="form-select") }}
                 </div>
               </div>
               <div class="d-flex justify-content-center gap-3 mt-4">
@@ -246,7 +247,7 @@
 
             <!-- Step 3: Finalize & Submit -->
             <div id="form-step-3" class="form-step" style="display: none;">
-              <h5 class="text-center">Step 3: Finalize & Save</h5>
+              <h5 class="text-center">Step 3: Review & Create</h5>
               <p class="text-muted text-center">
                 Review your settings and click <strong>Create Model</strong>.
                 <br>
