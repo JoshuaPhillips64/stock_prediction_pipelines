@@ -1,3 +1,7 @@
+"""
+This is placeholder code for when we launch the interactive AI chat agent that will predict stocks
+"""
+
 import os
 import json
 import re
@@ -10,8 +14,9 @@ from .lambda_endpoints import (
     make_sarimax_prediction,
     make_binary_prediction,
     train_sarimax_model,
-    trigger_ai_analysis,
-)
+    trigger_ai_analysis)
+
+from .airflow_request import call_airflow_api
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
@@ -51,7 +56,7 @@ schemas = [
                 "hyperparameter_tuning": {
                     "type": "string",
                     "description": "Whether to apply hyperparameter tuning.",
-                    ["LOW", "MEDIUM", "HIGH"],
+                    "enum": ["LOW", "MEDIUM", "HIGH"],
                     "default": "LOW"
                 }
             },
@@ -65,7 +70,7 @@ schemas = [
 function_map = {
     "make_sarimax_prediction": make_sarimax_prediction,
     "make_binary_prediction": make_binary_prediction,
-    "train_stock_prediction_model_airflow_api": airflow_train_model
+    "train_stock_prediction_model_airflow_api": call_airflow_api
 }
 
 

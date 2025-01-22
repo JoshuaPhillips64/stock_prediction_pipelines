@@ -122,8 +122,8 @@ def trigger_ai_analysis(predictions: List[Dict[str, Any]]):
 
 #%%
 
-ingest_response = ingest_stock_data(["PG"], "2024-01-01", "2024-10-10")
-print("Ingest Stock Data Response:", ingest_response)
+#ingest_response = ingest_stock_data(["PG"], "2024-01-01", "2024-10-10")
+#print("Lambda Test Run - Ingest Stock Data Response:", ingest_response)
 """"
 #%%
 train_binary_response = train_binary_classification_model(

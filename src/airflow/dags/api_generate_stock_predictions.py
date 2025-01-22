@@ -89,7 +89,7 @@ def dynamic_api_generate_stock_prediction_dag():
         )
         return stock_info  # Pass stock_info to the next task
 
-    @task(timeout=900)
+    @task
     def train_model(stock_info):
         """Train model for a single stock"""
         context = get_current_context()

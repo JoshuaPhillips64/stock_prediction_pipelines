@@ -1,3 +1,7 @@
+"""
+Example code for if we want to switch the app to use the API instead of going straight to the lambda function
+"""
+
 #%%
 import json
 import requests

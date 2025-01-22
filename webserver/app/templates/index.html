@@ -6,255 +6,428 @@
 {% block content %}
 <!-- Hero Section -->
 <section class="hero text-center py-5">
-    <div class="container">
-        <h1 class="display-4">AI Powered Stock Predictions</h1>
-        <p class="lead">Leverage pretrained models or build your own for smarter trading.</p>
-    </div>
+  <div class="container">
+    <h1 class="display-4">AI Powered Stock Predictions</h1>
+    <p class="lead">Leverage pretrained models or build your own for smarter trading.</p>
+  </div>
 </section>
 
 <!-- Top Models Section -->
 <section class="container my-5">
-    <div class="row">
-        <!-- Binary Classification Models Column -->
-        <div class="col-md-6 mb-4">
-            <div class="accordion" id="binaryModelsAccordion">
-                <div class="accordion-item">
-                    <h2 class="accordion-header" id="headingBinary">
-                        <button class="accordion-button d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBinary" aria-expanded="true" aria-controls="collapseBinary">
-                            <span>Top Binary Classification Models</span>
-                            <i class="fa-solid fa-minus"></i>
-                        </button>
-                    </h2>
-                    <div id="collapseBinary" class="accordion-collapse collapse show" aria-labelledby="headingBinary" data-bs-parent="#binaryModelsAccordion">
-                        <div class="accordion-body p-0">
-                            <div class="card shadow-lg border-0 rounded-0">
-                                <div class="card-body p-3">
-                                    <table class="table table-dark table-striped mb-0">
-                                        <thead>
-                                            <tr>
-                                                <th>Stock Ticker</th>
-                                                <th>F1 Factor</th>
-                                                <th>Date Created</th>
-                                                <th>Results</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for model in top_binary_models %}
-                                            <tr>
-                                                <td>{{ model.symbol }}</td>
-                                                <td>{{ "%.2f" | format(model.prediction_f1_score) }}</td>
-                                                <td>{{ model.date_created.strftime('%Y-%m-%d') }}</td>
-                                                <td>
-                                                    <a href="{{ url_for('main_bp.results', model_key=model.model_key, model_type='BINARY CLASSIFICATION') }}" class="btn btn-primary btn-sm">Show</a>
-                                                </td>
-                                            </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div> <!-- End of Binary Models Accordion -->
-        </div> <!-- End of Column -->
+  <div class="row">
 
-        <!-- Regression Models Column -->
-        <div class="col-md-6 mb-4">
-            <div class="accordion" id="regressionModelsAccordion">
-                <div class="accordion-item">
-                    <h2 class="accordion-header" id="headingRegression">
-                        <button class="accordion-button d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRegression" aria-expanded="true" aria-controls="collapseRegression">
-                            <span>Top Regression Models</span>
-                            <i class="fa-solid fa-minus"></i>
-                        </button>
-                    </h2>
-                    <div id="collapseRegression" class="accordion-collapse collapse show" aria-labelledby="headingRegression" data-bs-parent="#regressionModelsAccordion">
-                        <div class="accordion-body p-0">
-                            <div class="card shadow-lg border-0 rounded-0">
-                                <div class="card-body p-3">
-                                    <table class="table table-dark table-striped mb-0">
-                                        <thead>
-                                            <tr>
-                                                <th>Stock Ticker</th>
-                                                <th>MAPE</th>
-                                                <th>Date Created</th>
-                                                <th>Results</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for model in top_regression_models %}
-                                            <tr>
-                                                <td>{{ model.symbol }}</td>
-                                                <td>{{ "%.2f%%" | format(model.prediction_mape) }}</td>
-                                                <td>{{ model.date_created.strftime('%Y-%m-%d') }}</td>
-                                                <td>
-                                                    <a href="{{ url_for('main_bp.results', model_key=model.model_key, model_type='SARIMAX') }}" class="btn btn-primary btn-sm">Show</a>
-                                                </td>
-                                            </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+    <!-- Binary Classification Models Column -->
+    <div class="col-md-6 mb-4">
+      <div class="accordion" id="binaryModelsAccordion">
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="headingBinary">
+            <button
+              class="accordion-button d-flex justify-content-between align-items-center"
+              type="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#collapseBinary"
+              aria-expanded="true"
+              aria-controls="collapseBinary">
+              <span>Top Binary Classification Models</span>
+              <i class="fa-solid fa-minus"></i>
+            </button>
+          </h2>
+          <div
+            id="collapseBinary"
+            class="accordion-collapse collapse show"
+            aria-labelledby="headingBinary"
+            data-bs-parent="#binaryModelsAccordion">
+            <div class="accordion-body p-0">
+              <div class="card shadow-lg border-0 rounded-0">
+                <div class="card-body p-3">
+                  <table class="table table-dark table-striped mb-0">
+                    <thead>
+                      <tr>
+                        <th>Stock Ticker</th>
+                        <th
+                          data-bs-toggle="tooltip"
+                          data-bs-placement="top"
+                          title="The F1 Factor (F1 Score) is the harmonic mean of precision and recall.">
+                          F1 Factor
+                        </th>
+                        <th>Date Created</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for model in top_binary_models %}
+                      <tr>
+                        <td>{{ model.symbol }}</td>
+                        <td>{{ "%.2f"|format(model.prediction_f1_score) }}</td>
+                        <td>{{ model.date_created.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                          <!-- Single Blue Button -->
+                          <a
+                            href="{{ url_for('main_bp.results',
+                                              model_key=model.model_key,
+                                              model_type='BINARY CLASSIFICATION') }}"
+                            class="btn btn-primary btn-sm"
+                            data-bs-toggle="tooltip"
+                            data-bs-placement="top"
+                            title="Explore detailed results for this model">
+                            Explore Results
+                          </a>
+                        </td>
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
                 </div>
-            </div> <!-- End of Regression Models Accordion -->
-        </div> <!-- End of Column -->
-    </div> <!-- End of Row -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div> <!-- End of Binary Models Accordion -->
+    </div> <!-- End of Column -->
+
+    <!-- Regression Models Column -->
+    <div class="col-md-6 mb-4">
+      <div class="accordion" id="regressionModelsAccordion">
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="headingRegression">
+            <button
+              class="accordion-button d-flex justify-content-between align-items-center"
+              type="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#collapseRegression"
+              aria-expanded="true"
+              aria-controls="collapseRegression">
+              <span>Top Regression Models</span>
+              <i class="fa-solid fa-minus"></i>
+            </button>
+          </h2>
+          <div
+            id="collapseRegression"
+            class="accordion-collapse collapse show"
+            aria-labelledby="headingRegression"
+            data-bs-parent="#regressionModelsAccordion">
+            <div class="accordion-body p-0">
+              <div class="card shadow-lg border-0 rounded-0">
+                <div class="card-body p-3">
+                  <table class="table table-dark table-striped mb-0">
+                    <thead>
+                      <tr>
+                        <th>Stock Ticker</th>
+                        <th
+                          data-bs-toggle="tooltip"
+                          data-bs-placement="top"
+                          title="MAPE (Mean Absolute Percentage Error) measures the average magnitude of errors as a percentage.">
+                          MAPE
+                        </th>
+                        <th>Date Created</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for model in top_regression_models %}
+                      <tr>
+                        <td>{{ model.symbol }}</td>
+                        <td>{{ "%.2f%%"|format(model.prediction_mape) }}</td>
+                        <td>{{ model.date_created.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                          <!-- Single Blue Button -->
+                          <a
+                            href="{{ url_for('main_bp.results',
+                                              model_key=model.model_key,
+                                              model_type='SARIMAX') }}"
+                            class="btn btn-primary btn-sm"
+                            data-bs-toggle="tooltip"
+                            data-bs-placement="top"
+                            title="Explore detailed results for this model">
+                            Explore Results
+                          </a>
+                        </td>
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div> <!-- End of Regression Models Accordion -->
+    </div> <!-- End of Column -->
+  </div> <!-- End of Row -->
 </section>
 
 <!-- Prediction Form Section -->
 <section class="container my-5">
-    <div class="card shadow-lg">
-        <div class="card-header bg-dark text-white">
-            <h4 class="card-title mb-0">Create Your Own Model</h4>
-        </div>
-        <div class="card-body p-4">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-            {% endwith %}
-            <form id="predictionForm" method="POST">
-                {{ form.hidden_tag() }}
-                <input type="hidden" name="recaptcha_token" id="recaptcha_token">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        {{ form.stock_symbol.label(class="form-label") }}
-                        {{ form.stock_symbol(class="form-control") }}
-                    </div>
-                    <div class="col-md-6" style="display: none;">
-                        <!-- Hidden feature set field -->
-                        {{ form.feature_set.label(class="form-label") }}
-                        {{ form.feature_set(class="form-select") }}
-                    </div>
-                    <!-- Hidden input to set Feature Set to 'basic' by default -->
-                    <input type="hidden" name="feature_set" value="basic">
-                    <div class="col-md-6">
-                        {{ form.model_type.label(class="form-label") }}
-                        {{ form.model_type(class="form-select") }}
-                    </div>
-                    <div class="col-md-6">
-                        {{ form.hyperparameter_tuning.label(class="form-label") }}
-                        {{ form.hyperparameter_tuning(class="form-select") }}
-                    </div>
-                    <div class="col-md-6">
-                        {{ form.prediction_horizon.label(class="form-label") }}
-                        {{ form.prediction_horizon(class="form-control") }}
-                    </div>
-                    <div class="col-md-6">
-                        {{ form.lookback_period.label(class="form-label") }}
-                        {{ form.lookback_period(class="form-control") }}
-                    </div>
-                    <div class="col-md-6">
-                        {{ form.input_date.label(class="form-label") }}
-                        {{ form.input_date(class="form-control") }}
-                    </div>
-                    <div class="col-12">
-                        <!-- Additional Fields Can Be Added Here -->
-                    </div>
-                </div> <!-- End of row -->
-                <div class="text-center mt-4">
-                    {{ form.submit_button(class="btn btn-primary btn-lg rounded-pill shadow-sm") }}
+  <div class="card shadow-lg">
+    <div class="card-header bg-dark text-white text-center">
+      <h4 class="card-title mb-0">Build Your Own Model</h4>
+    </div>
+    <div class="card-body p-4">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+      {% endwith %}
+
+      <!-- Use a row + col-based layout to control form width -->
+      <div class="row justify-content-center">
+        <div class="col-md-18 col-lg-13 col-xl-10">
+          <!-- Multi-Step Form Wizard: 3 Steps -->
+          <form id="predictionForm" method="POST">
+            {{ form.hidden_tag() }}
+            <input type="hidden" name="recaptcha_token" id="recaptcha_token">
+
+            <!-- Step 1: Basic Model Settings -->
+            <div id="form-step-1" class="form-step">
+              <h5 class="text-center">Step 1: Basic Model Settings</h5>
+              <div class="row g-3 mt-3">
+                <div class="col-md-6">
+                  {{ form.stock_symbol.label(class="form-label") }}
+                  {{ form.stock_symbol(class="form-control") }}
                 </div>
-            </form>
-        </div>
-    </div>
+                <!-- Hidden input to set Feature Set to 'basic' by default -->
+                <input type="hidden" name="feature_set" value="basic">
+                <div class="col-md-6">
+                  {{ form.model_type.label(class="form-label") }}
+                  {{ form.model_type(class="form-select") }}
+                </div>
+                <div class="col-md-6">
+                  {{ form.hyperparameter_tuning.label(class="form-label") }}
+                  {{ form.hyperparameter_tuning(class="form-select") }}
+                </div>
+              </div>
+              <div class="d-flex justify-content-center gap-3 mt-4">
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  onclick="showStep(2)">
+                  Next
+                </button>
+              </div>
+            </div>
+
+            <!-- Step 2: Advanced Parameters -->
+            <div id="form-step-2" class="form-step" style="display: none;">
+              <h5 class="text-center">Step 2: Advanced Parameters</h5>
+              <div class="row g-3 mt-3">
+                <div class="col-md-6">
+                  {{ form.prediction_horizon.label(class="form-label") }}
+                  {{ form.prediction_horizon(class="form-control") }}
+                </div>
+                <div class="col-md-6">
+                  {{ form.lookback_period.label(class="form-label") }}
+                  {{ form.lookback_period(class="form-control") }}
+                </div>
+                <div class="col-md-6">
+                  {{ form.input_date.label(class="form-label") }}
+                  {{ form.input_date(class="form-control") }}
+                </div>
+              </div>
+              <div class="d-flex justify-content-center gap-3 mt-4">
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  onclick="showStep(1)">
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  onclick="showStep(3)">
+                  Next
+                </button>
+              </div>
+            </div>
+
+            <!-- Step 3: Finalize & Submit -->
+            <div id="form-step-3" class="form-step" style="display: none;">
+              <h5 class="text-center">Step 3: Finalize & Save</h5>
+              <p class="text-muted text-center">
+                Review your settings and click <strong>Create Model</strong>.
+                <br>
+                Please be patient, the model-building process may take a few minutes.
+              </p>
+
+              <!-- Summary Card -->
+              <div class="card mt-4">
+                <div class="card-header">Your Selections</div>
+                <div class="card-body">
+                  <p>
+                    <strong>Stock Symbol:</strong>
+                    <span id="summary-stock-symbol" class="ms-2"></span>
+                  </p>
+                  <p>
+                    <strong>Model Type:</strong>
+                    <span id="summary-model-type" class="ms-2"></span>
+                  </p>
+                  <p>
+                    <strong>Hyperparameter Tuning:</strong>
+                    <span id="summary-hyperparam" class="ms-2"></span>
+                  </p>
+                  <p>
+                    <strong>Prediction Horizon:</strong>
+                    <span id="summary-horizon" class="ms-2"></span>
+                  </p>
+                  <p>
+                    <strong>Lookback Period:</strong>
+                    <span id="summary-lookback" class="ms-2"></span>
+                  </p>
+                  <p>
+                    <strong>Input Date:</strong>
+                    <span id="summary-date" class="ms-2"></span>
+                  </p>
+                </div>
+              </div>
+
+              <div class="d-flex justify-content-center gap-3 mt-4">
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  onclick="showStep(2)">
+                  Previous
+                </button>
+                {{ form.submit_button(class="btn btn-success") }}
+              </div>
+            </div>
+          </form> <!-- End Form -->
+        </div> <!-- End Col -->
+      </div> <!-- End Row -->
+
+    </div> <!-- End Card Body -->
+  </div> <!-- End Card -->
 </section>
-
-<!-- Chatbot UI Section -->
-<section class="container my-5">
-    <div id="chat-window" style="width: 100%; height: 600px; border: 1px solid #ddd; padding: 10px; overflow-y: auto;">
-        <!-- Chat messages will be displayed here -->
-    </div>
-    <input type="text" id="user-input" placeholder="Type your message..." style="width: 100%; padding: 10px;">
-    <button onclick="sendMessage()" style="width: 100%; padding: 10px; margin-top: 5px;">Send</button>
-</section>
-
-<script>
-    async function sendMessage() {
-        const userInput = document.getElementById('user-input').value;
-        if (!userInput.trim()) return;
-
-        // Add user message to the chat window
-        addMessageToChat('You', userInput);
-        document.getElementById('user-input').value = '';
-
-        // Send message to the server
-        try {
-            const response = await fetch('/api/chat', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    messages: [{ role: 'user', content: userInput }]
-                })
-            });
-
-            const result = await response.json();
-            if (response.ok) {
-                addMessageToChat('AI', result.response);
-            } else {
-                addMessageToChat('Error', result.error || 'Something went wrong.');
-            }
-        } catch (error) {
-            addMessageToChat('Error', 'Failed to connect to the server.');
-        }
-    }
-
-    function addMessageToChat(sender, message) {
-        const chatWindow = document.getElementById('chat-window');
-        const messageDiv = document.createElement('div');
-        messageDiv.innerHTML = `<strong>${sender}:</strong> ${message}`;
-        messageDiv.style.marginBottom = '10px';
-        chatWindow.appendChild(messageDiv);
-        chatWindow.scrollTop = chatWindow.scrollHeight; // Scroll to the latest message
-    }
-</script>
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // Accordion Icon Toggle
-        const accordionButtons = document.querySelectorAll('.accordion-button');
-        accordionButtons.forEach(button => {
-            button.addEventListener('click', function () {
-                const icon = this.querySelector('i');
-                setTimeout(() => {
-                    if (this.classList.contains('collapsed')) {
-                        icon.classList.remove('fa-minus');
-                        icon.classList.add('fa-plus');
-                    } else {
-                        icon.classList.remove('fa-plus');
-                        icon.classList.add('fa-minus');
-                    }
-                }, 150); // Delay to allow Bootstrap's collapse to process
-            });
-        });
+  // Initialize Bootstrap Tooltips (if used elsewhere)
+  var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+  var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
+  });
 
-        // Prediction Form Submission with reCAPTCHA
-        const predictionForm = document.getElementById('predictionForm');
-        if (predictionForm) {
-            predictionForm.addEventListener('submit', function(event) {
-                event.preventDefault(); // Prevent form from submitting immediately
-                grecaptcha.ready(function() {
-                    grecaptcha.execute('{{ recaptcha_site_key }}', {action: 'prediction'}).then(function(token) {
-                        document.getElementById('recaptcha_token').value = token;
-                        predictionForm.submit();
-                    });
-                });
-            });
-        }
+  // Accordion Icon Toggle
+  document.addEventListener('DOMContentLoaded', function () {
+    const accordionButtons = document.querySelectorAll('.accordion-button');
+    accordionButtons.forEach(button => {
+      button.addEventListener('click', function () {
+        const icon = this.querySelector('i');
+        setTimeout(() => {
+          if (this.classList.contains('collapsed')) {
+            icon.classList.remove('fa-minus');
+            icon.classList.add('fa-plus');
+          } else {
+            icon.classList.remove('fa-plus');
+            icon.classList.add('fa-minus');
+          }
+        }, 150); // Delay for Bootstrap's collapse
+      });
     });
+
+    // Prediction Form Submission with reCAPTCHA
+    const predictionForm = document.getElementById('predictionForm');
+    if (predictionForm) {
+      predictionForm.addEventListener('submit', function(event) {
+        event.preventDefault(); // Prevent immediate submit
+        grecaptcha.ready(function() {
+          grecaptcha.execute('{{ recaptcha_site_key }}', {action: 'prediction'}).then(function(token) {
+            document.getElementById('recaptcha_token').value = token;
+            predictionForm.submit();
+          });
+        });
+      });
+    }
+  });
+
+  // Multi-Step Form Navigation (3 steps)
+  function showStep(stepNumber) {
+    const totalSteps = 3;
+    for (let i = 1; i <= totalSteps; i++) {
+      document.getElementById('form-step-' + i).style.display = 'none';
+    }
+    document.getElementById('form-step-' + stepNumber).style.display = 'block';
+
+    // When transitioning to Step 3, populate summary
+    if (stepNumber === 3) {
+      document.getElementById('summary-stock-symbol').textContent =
+        document.getElementById('{{ form.stock_symbol.id }}').value || 'N/A';
+
+      document.getElementById('summary-model-type').textContent =
+        document.getElementById('{{ form.model_type.id }}').value || 'N/A';
+
+      document.getElementById('summary-hyperparam').textContent =
+        document.getElementById('{{ form.hyperparameter_tuning.id }}').value || 'N/A';
+
+      document.getElementById('summary-horizon').textContent =
+        document.getElementById('{{ form.prediction_horizon.id }}').value || 'N/A';
+
+      document.getElementById('summary-lookback').textContent =
+        document.getElementById('{{ form.lookback_period.id }}').value || 'N/A';
+
+      document.getElementById('summary-date').textContent =
+        document.getElementById('{{ form.input_date.id }}').value || 'N/A';
+    }
+  }
 </script>
 {% endblock %}
+
+  <!-- Uncomment the below to reintroduce the AI Chatbot to the Site -->
+
+  {#
+    <!-- Chatbot UI Section -->
+    <section class="container my-5">
+        <div id="chat-window" style="width: 100%; height: 600px; border: 1px solid #ddd; padding: 10px; overflow-y: auto;">
+            <!-- Chat messages will be displayed here -->
+        </div>
+        <input type="text" id="user-input" placeholder="Type your message..." style="width: 100%; padding: 10px;">
+        <button onclick="sendMessage()" style="width: 100%; padding: 10px; margin-top: 5px;">Send</button>
+    </section>
+
+    <script>
+        async function sendMessage() {
+            const userInput = document.getElementById('user-input').value;
+            if (!userInput.trim()) return;
+
+            // Add user message to the chat window
+            addMessageToChat('You', userInput);
+            document.getElementById('user-input').value = '';
+
+            // Send message to the server
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        messages: [{ role: 'user', content: userInput }]
+                    })
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    addMessageToChat('AI', result.response);
+                } else {
+                    addMessageToChat('Error', result.error || 'Something went wrong.');
+                }
+            } catch (error) {
+                addMessageToChat('Error', 'Failed to connect to the server.');
+            }
+        }
+
+        function addMessageToChat(sender, message) {
+            const chatWindow = document.getElementById('chat-window');
+            const messageDiv = document.createElement('div');
+            messageDiv.innerHTML = `<strong>${sender}:</strong> ${message}`;
+            messageDiv.style.marginBottom = '10px';
+            chatWindow.appendChild(messageDiv);
+            chatWindow.scrollTop = chatWindow.scrollHeight; // Scroll to the latest message
+        }
+    </script>
+  #}
