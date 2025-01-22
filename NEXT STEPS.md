@@ -3,7 +3,7 @@
 ## User Experience Enhancements
 
 1. **Interactive Chat Interface**
-   - **Action**: Replace the existing form with an interactive chat interface to enhance user engagement.
+   - **Action**: Replace the existing form with an interactive AI chat interface.
      - **Steps to Complete**:
        1. DONE - Develop a CHATGPT function to handle API interactions asynchronously.
        2. DONE - Update the API to initiate background processes and provide immediate user feedback.
