@@ -188,7 +188,7 @@
               <div class="row g-3 mt-3">
                 <div class="col-md-6">
                   {{ form.stock_symbol.label(class="form-label") }}
-                  {{ form.stock_symbol(class="form-control") }}
+                    {{ form.stock_symbol(class="form-control", id="stock_symbol") }}
                 </div>
                 <!-- Hidden input to set Feature Set to 'basic' by default -->
                 <input type="hidden" name="feature_set" value="basic">
@@ -202,15 +202,15 @@
                 <button
                   type="button"
                   class="btn btn-primary"
-                  onclick="showStep(2)">
-                  Next
+                  onclick="validateStep1()">
+                  Proceed to Next Step
                 </button>
               </div>
             </div>
 
             <!-- Step 2: Advanced Parameters -->
             <div id="form-step-2" class="form-step" style="display: none;">
-              <h5 class="text-center">Step 2: Advanced Parameters</h5>
+              <h5 class="text-center">Step 2: Modify Advanced Parameters</h5>
               <div class="row g-3 mt-3">
                 <div class="col-md-6">
                   {{ form.input_date.label(class="form-label") }}
@@ -345,7 +345,21 @@
       });
     }
   });
+    //Ensure step 1 is completed
+   function validateStep1() {
+    // Get the stock symbol input
+    const symbolInput = document.getElementById('stock_symbol');
 
+    // Simple check: ensure it's not blank
+    if (!symbolInput.value.trim()) {
+      alert("Please enter a valid stock symbol before proceeding.");
+      symbolInput.focus();
+      return; // Stop here; don't go to the next step
+    }
+
+    // If it's valid (not empty), proceed to Step 2
+    showStep(2);
+  }
   // Multi-Step Form Navigation (3 steps)
   function showStep(stepNumber) {
     const totalSteps = 3;

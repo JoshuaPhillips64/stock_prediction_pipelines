@@ -8,6 +8,8 @@ import requests
 
 airflow_ip = "10.10.10.10"
 airflow_url = f"http://{airflow_ip}:8080/api/v1/dags/dynamic_api_generate_stock_prediction_dag/dagRuns"
+airflow_user = ""
+airflow_pass = ""
 
 def call_airflow_api():
     url = airflow_url
@@ -33,7 +35,8 @@ def call_airflow_api():
     "Content-Type": "application/json"
     }
 
-    auth = ('josh', 'airflow123')
+
+    auth = (airflow_user, airflow_pass)
 
     try:
         response = requests.post(url, json=data, headers=headers, auth=auth)

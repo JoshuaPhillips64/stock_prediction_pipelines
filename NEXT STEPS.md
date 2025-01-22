@@ -1,15 +1,43 @@
-#Next Steps
+# Next Steps for Smart Stock Predictor
 
-# 10 Make a high score list of the best predictions, rank off $ made (% return) if followed during test period. Put a button that willt ake to quick results
-Regression should rank off MAPE - Mean Absolute Percentage Error and Binary Classification should rank off F1 score
+## User Experience Enhancements
 
-#13 add Flask Limiter to imports
+1. **Interactive Chat Interface**
+   - **Action**: Replace the existing form with an interactive chat interface to enhance user engagement.
+     - **Steps to Complete**:
+       1. DONE - Develop a CHATGPT function to handle API interactions asynchronously.
+       2. DONE - Update the API to initiate background processes and provide immediate user feedback.
+       3. Create an endpoint for querying existing models in the database.
+       4. Implement functionality to generate direct links to specific model results, e.g., https://smartstockpredictor.com/results?model_key=....
 
-#15 create a generate random predictions button that will generate a random prediction 
+2. **Random Predictions Feature**
+   - **Action**: Introduce a "Generate Random Predictions" button.
+     - **Purpose**: Allow users to explore random stock predictions, increasing engagement and discovery.
+     - **Placement**: Prominently display on the homepage or dashboard.
 
-## 16 Finish Creating a Chat Window to replace the form.
-#Steps to Complete: 
-#0.5 Create a working function approach with api.
-#1 update the api with new functions that async kick off the lambdas and immediately return a response.
-#2 Create an api endpoint for asking questions about models in the database
-#3 Create a new function that generates a link to the trained model with the model key in the parameter like https://smartstockpredictor.com/results?model_key=BINARY+CLASSIFICATION_IBM_basic_MEDIUM_744_21_2024-11-12&model_type=BINARY+CLASSIFICATION
+3. **User Account Management**
+   - **Action**: Implement user account functionality.
+     - **Features**:
+       - User registration and login.
+       - User-specific model history and results.
+       - Personalized recommendations based on user activity.
+       - Ability to get API keys for programmatic access.
+     
+
+## Technical Improvements
+
+5. **Implement Flask Limiter**
+   - **Action**: Integrate Flask-Limiter to manage API rate limiting.
+     - **Steps to Complete**:
+       1. Add Flask-Limiter to the project dependencies.
+       2. Configure rate limits per user or IP address to prevent abuse and ensure fair usage.
+
+6. **Optimize API to be Asynchronous**
+   - **Action**: Enhance the API to support new features
+     - **Implementation**:
+       - Refactor endpoints to handle asynchronous tasks.
+
+7. Web Analytics Integration
+   - **Action**: Integrate web analytics tools to track user interactions and improve user experience.
+     - **Tools**: Google Analytics, Mixpanel, or custom analytics solution.
+     - **Implementation**: Add tracking code to the website and set up event tracking for key user actions.
