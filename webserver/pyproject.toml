@@ -5,7 +5,7 @@ description = "Lambda functions to ingest and enrich data"
 authors = ["Josh Phillips <Josh.L.Phillips@me.com>"]
 
 [tool.poetry.dependencies]
-python = "3.12.7"
+python = "3.12.8"
 python-dotenv = "^0.19.1"
 requests = "2.31.0"
 psycopg2-binary = "2.9.9"
