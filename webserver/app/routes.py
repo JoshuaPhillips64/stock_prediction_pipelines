@@ -133,12 +133,15 @@ def loading():
 
 @main_bp.route('/results')
 def results():
-    # Check if model_key and model_type are provided as query parameters
+    # ---------------------------
+    # BRANCH 1: model_key & model_type provided in URL
+    # ---------------------------
     model_key = request.args.get('model_key')
     model_type = request.args.get('model_type')
 
     if model_key and model_type:
         try:
+            # Pick correct model table
             if model_type == 'BINARY CLASSIFICATION':
                 TrainedModel = app.TrainedModelsBinary
             elif model_type == 'SARIMAX':
@@ -147,37 +150,37 @@ def results():
                 flash('Invalid model type provided.', 'danger')
                 return redirect(url_for('main_bp.index'))
 
-            # Fetch the trained model from the database
+            # Query the model from DB
             trained_model = TrainedModel.query.filter_by(model_key=model_key).first()
             if not trained_model:
                 flash('Model not found.', 'danger')
                 return redirect(url_for('main_bp.index'))
 
             trained_model_data = trained_model.to_dict()
+            # Here we grab the nested JSONB dict:
+            model_parameters = trained_model_data.get('model_parameters', {})
 
-            # Fetch combined predictions from the trained model data and PredictionsLog
+            # Prepare combined predictions
             combined_predictions = _get_combined_predictions(model_type, model_key, trained_model)
-
             # Prepare chart data
             chart_data = _prepare_chart_data(model_type, combined_predictions)
-
             # Fetch AI analysis
             ai_analysis = _fetch_ai_analysis(model_key)
-
             # Extract performance metrics
             performance_metrics = _extract_performance_metrics(model_type, trained_model_data)
-
             # Fetch feature importance
             feature_importance = _fetch_feature_importance(trained_model_data)
 
+            # Render template using JSONB fields
             return render_template(
                 'results.html',
                 stock_symbol=trained_model.symbol,
                 model_type=model_type,
-                hyperparameter_tuning=trained_model_data.get('hyperparameter_tuning'),
-                feature_set=trained_model_data.get('feature_set'),
-                lookback_period=trained_model_data.get('lookback_period'),
-                prediction_horizon=trained_model_data.get('prediction_horizon'),
+                hyperparameter_tuning=model_parameters.get('hyperparameter_tuning'),
+                feature_set=model_parameters.get('feature_set'),
+                lookback_period=model_parameters.get('lookback_period'),
+                prediction_horizon=model_parameters.get('prediction_horizon'),
+                input_date=model_parameters.get('input_date'),
                 chart_data=chart_data,
                 ai_analysis=ai_analysis,
                 performance_metrics=performance_metrics,
@@ -189,7 +192,9 @@ def results():
             flash('An error occurred while fetching the results.', 'danger')
             return redirect(url_for('main_bp.index'))
 
-    # Existing /results route logic
+    # ---------------------------
+    # BRANCH 2: No model_key/model_type in the URL, so use session form_data
+    # ---------------------------
     form_data = session.get('form_data', {})
     if not form_data:
         logger.error("No form data found in session.")
@@ -197,7 +202,7 @@ def results():
 
     logger.info(f"Form data retrieved from session: {form_data}")
 
-    # Extract form data with default values and type casting
+    # Extract form data
     model_type = form_data.get('model_type')
     stock_symbol = form_data.get('stock_symbol', '').upper()
     feature_set = form_data.get('feature_set')
@@ -206,10 +211,11 @@ def results():
     prediction_horizon = int(form_data.get('prediction_horizon', 0))
     input_date_str = form_data.get('input_date')
 
-    # Change input_date_str string to be in the format of 'YYYY-MM-DD'
+    # Convert input_date_str => 'YYYY-MM-DD'
     input_date_str_updated = datetime.strptime(input_date_str, '%Y-%m-%d').strftime('%Y-%m-%d')
 
-    if not all([model_type, stock_symbol, feature_set, hyperparameter_tuning, lookback_period, prediction_horizon, input_date_str]):
+    if not all([model_type, stock_symbol, feature_set, hyperparameter_tuning,
+                lookback_period, prediction_horizon, input_date_str]):
         logger.error("Incomplete form data provided.")
         return render_template('error.html', error_message='Incomplete form data provided.')
 
@@ -247,9 +253,8 @@ def results():
         logger.error(f"Error in result: {error_message}")
         return render_template('error.html', error_message=error_message)
 
-    # Determine the appropriate TrainedModel based on model_type
+    # Determine the appropriate TrainedModel class
     TrainedModel = app.TrainedModelsBinary if model_type == 'BINARY CLASSIFICATION' else app.TrainedModels
-
     trained_model = TrainedModel.query.filter_by(model_key=model_key).first()
 
     if not trained_model:
@@ -260,29 +265,38 @@ def results():
     trained_model_data = trained_model.to_dict()
     logger.info(f"Trained model data retrieved: {trained_model_data}")
 
-    # Fetch combined predictions from the trained model data and PredictionsLog
-    combined_predictions = _get_combined_predictions(model_type, model_key, trained_model)
+    # Extract the JSONB sub-dict from the DB record
+    model_parameters = trained_model_data.get('model_parameters', {})
 
+    logger.info(f"[FORM Branch] model_parameters = {model_parameters}")
+    logger.info(f"[FORM Branch] hyperparameter_tuning = {model_parameters.get('hyperparameter_tuning')}")
+    logger.info(f"[FORM Branch] feature_set = {model_parameters.get('feature_set')}")
+    logger.info(f"[FORM Branch] lookback_period = {model_parameters.get('lookback_period')}")
+    logger.info(f"[FORM Branch] prediction_horizon = {model_parameters.get('prediction_horizon')}")
+    logger.info(f"[FORM Branch] input_date = {model_parameters.get('input_date')}")
+
+    # Prepare combined predictions
+    combined_predictions = _get_combined_predictions(model_type, model_key, trained_model)
     # Prepare chart data
     chart_data = _prepare_chart_data(model_type, combined_predictions)
-
     # Fetch AI analysis
     ai_analysis = _fetch_ai_analysis(model_key)
-
     # Extract performance metrics
     performance_metrics = _extract_performance_metrics(model_type, trained_model_data)
-
     # Fetch feature importance
     feature_importance = _fetch_feature_importance(trained_model_data)
 
+    # Render the template
     return render_template(
         'results.html',
         stock_symbol=stock_symbol,
         model_type=model_type,
-        hyperparameter_tuning=hyperparameter_tuning,
-        feature_set=feature_set,
-        lookback_period=lookback_period,
-        prediction_horizon=prediction_horizon,
+        # Pull from JSONB field:
+        hyperparameter_tuning=model_parameters.get('hyperparameter_tuning'),
+        feature_set=model_parameters.get('feature_set'),
+        lookback_period=model_parameters.get('lookback_period'),
+        prediction_horizon=model_parameters.get('prediction_horizon'),
+        input_date=model_parameters.get('input_date'),
         chart_data=chart_data,
         ai_analysis=ai_analysis,
         performance_metrics=performance_metrics,

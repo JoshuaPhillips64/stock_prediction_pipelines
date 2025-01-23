@@ -2,8 +2,8 @@
 
 {% block title %}Prediction Results{% endblock %}
 
-{% block content %}
-<div class="container my-5">
+    {% block content %}
+    <div class="container my-5">
     <!-- AI Analysis Section -->
     {% if ai_analysis %}
     <section class="ai-analysis mb-5">
@@ -73,7 +73,44 @@
         <div id="confusionMatrixChart" class="chart"></div>
     </section>
     {% endif %}
-</div>
+
+    <!-- Model Parameters Section -->
+    <section class="model-params mb-5">
+        <h2 class="section-title">Model Parameters</h2>
+        <div class="analysis-section">
+            <div class="params-grid">
+                <div class="param-card">
+                    <h5>Stock Symbol</h5>
+                    <p class="param-value">{{ stock_symbol or "N/A" }}</p>
+                </div>
+                <div class="param-card">
+                    <h5>Model Type</h5>
+                    <p class="param-value">{{ model_type or "N/A" }}</p>
+                </div>
+                <div class="param-card">
+                    <h5>Hyperparameter Tuning</h5>
+                    <p class="param-value">{{ hyperparameter_tuning or "N/A" }}</p>
+                </div>
+                <div class="param-card">
+                    <h5>Feature Set</h5>
+                    <p class="param-value">{{ feature_set or "N/A" }}</p>
+                </div>
+                <div class="param-card">
+                    <h5>Lookback Period</h5>
+                    <p class="param-value">{{ lookback_period or "N/A" }}</p>
+                </div>
+                <div class="param-card">
+                    <h5>Prediction Horizon</h5>
+                    <p class="param-value">{{ prediction_horizon or "N/A" }}</p>
+                </div>
+                <div class="param-card">
+                    <h5>Input Date</h5>
+                    <p class="param-value">{{ input_date or "N/A" }}</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    </div>
 
 <!-- Include Plotly JS -->
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
@@ -189,10 +226,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 // Determine color based on whether predicted movement matches actual movement
                 if (actualMovement !== null) {
                     if (predictedMovement === actualMovement) {
-                        color = '#28a745'; // Muted Green for correct prediction
+                        color = '#28a745'; // Correct
                         status = 'Correct';
                     } else {
-                        color = '#e74c3c'; // Bright Red for incorrect prediction
+                        color = '#e74c3c'; // Incorrect
                         status = 'Incorrect';
                     }
                 }
@@ -213,17 +250,14 @@ document.addEventListener('DOMContentLoaded', function () {
         data = [priceTrace, movementMarkers];
 
         layout = {
-            // Removed the chart title
             xaxis: {
-                // Removed title
                 tickformat: '%Y-%m-%d',
-                tickangle: -30, // Adjusted tick angle
+                tickangle: -30,
                 nticks: 10,
                 showgrid: false,
                 tickfont: { size: 10 }
             },
             yaxis: {
-                // Removed title
                 showgrid: false,
                 tickfont: { size: 10 }
             },
@@ -231,7 +265,6 @@ document.addEventListener('DOMContentLoaded', function () {
             ...commonLayout
         };
 
-        // Render the chart
         Plotly.newPlot('predictionChart', data, layout);
 
     } else if (modelType === 'SARIMAX') {
@@ -266,11 +299,10 @@ document.addEventListener('DOMContentLoaded', function () {
             ...commonLayout
         };
 
-        // Render the chart
         Plotly.newPlot('predictionChart', data, layout);
     }
 
-     // Confusion Matrix Chart (if applicable)
+    // Confusion Matrix Chart (if applicable)
     {% if performance_metrics.confusion_matrix %}
     const confusionMatrix = {{ performance_metrics.confusion_matrix | tojson }};
     const cmLabels = ['Predicted Down', 'Predicted Up'];
@@ -279,14 +311,16 @@ document.addEventListener('DOMContentLoaded', function () {
     // Calculate total predictions for percentage calculation
     const totalPredictions = confusionMatrix.flat().reduce((a, b) => a + b, 0);
 
-    // Create a colorZ matrix: 2 for correct predictions, 1 for incorrect
-    const colorZ = confusionMatrix.map((row, i) => row.map((cell, j) => (i === j) ? 2 : 1));
+    // Create a colorZ matrix: 2 for correct, 1 for incorrect
+    const colorZ = confusionMatrix.map((row, i) =>
+        row.map((cell, j) => (i === j) ? 2 : 1)
+    );
 
-    // Define colorscale: 1 -> Red (#e74c3c), 2 -> Muted Green (#28a745)
+    // Define colorscale: 1 -> Red (#e74c3c), 2 -> Green (#28a745)
     const colorscale = [
-        [0, '#e74c3c'], // Incorrect Predictions
+        [0, '#e74c3c'],
         [0.5, '#e74c3c'],
-        [0.5, '#28a745'], // Correct Predictions
+        [0.5, '#28a745'],
         [1, '#28a745']
     ];
 
@@ -309,14 +343,7 @@ document.addEventListener('DOMContentLoaded', function () {
         for (let j = 0; j < cmLabels.length; j++) {
             const count = confusionMatrix[i][j];
             const percentage = ((count / totalPredictions) * 100).toFixed(2);
-            let predictionType = '';
-
-            if (i === j) {
-                predictionType = 'Correct';
-            } else {
-                predictionType = 'Incorrect';
-            }
-
+            const predictionType = (i === j) ? 'Correct' : 'Incorrect';
             cmData[0].text[i][j] = `${predictionType} Prediction<br>Count: ${count}<br>Percentage: ${percentage}%`;
         }
     }
@@ -328,17 +355,13 @@ document.addEventListener('DOMContentLoaded', function () {
             const value = confusionMatrix[i][j];
             let text = '';
             if (i === j) {
-                if (i === 0) {
-                    text = `${value} Correctly Predicted Down`;
-                } else {
-                    text = `${value} Correctly Predicted Up`;
-                }
+                text = (i === 0)
+                    ? `${value} Correctly Predicted Down`
+                    : `${value} Correctly Predicted Up`;
             } else {
-                if (j === 0) {
-                    text = `${value} Incorrectly Predicted Down`;
-                } else {
-                    text = `${value} Incorrectly Predicted Up`;
-                }
+                text = (j === 0)
+                    ? `${value} Incorrectly Predicted Down`
+                    : `${value} Incorrectly Predicted Up`;
             }
             annotations.push({
                 x: cmLabels[j],
@@ -357,7 +380,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     const cmLayout = {
-        // Removed the chart title
         xaxis: {
             showticklabels: false,
             zeroline: false,
@@ -387,29 +409,33 @@ document.addEventListener('DOMContentLoaded', function () {
         importance: importances[index]
     }));
 
-    // Sort the pairs in descending order of importance
+    // Sort in descending order of importance
     featureImportancePairs.sort((a, b) => b.importance - a.importance);
 
-    // Select the top N features, e.g., top 6
+    // Select the top 6
     const topN = 6;
     const topFeatureImportance = featureImportancePairs.slice(0, topN);
 
-    // Separate the sorted features and importances
+    // Separate features and importances
     const sortedFeatures = topFeatureImportance.map(item => item.feature);
     const sortedImportances = topFeatureImportance.map(item => item.importance);
 
     // Normalize importances for consistent scaling
     const maxImportance = Math.max(...sortedImportances);
-    const normalizedImportances = sortedImportances.map(imp => imp / maxImportance);
+    const normalizedImportances = sortedImportances.map(
+        imp => imp / maxImportance
+    );
 
     const featureTrace = {
-        x: normalizedImportances.map(val => parseFloat(val.toFixed(4))), // Ensure numerical precision
-        y: sortedFeatures, // Sorted in descending order
+        x: normalizedImportances.map(val => parseFloat(val.toFixed(4))),
+        y: sortedFeatures,
         type: 'bar',
         orientation: 'h',
         marker: { color: '#3498db' },
         hovertemplate: '<b>%{y}</b><br>Importance: %{x:.2%}<br>%{customdata}<extra></extra>',
-        customdata: sortedFeatures.map(feature => featureDefinitions[feature.toLowerCase()] || "No definition available")
+        customdata: sortedFeatures.map(
+            feature => featureDefinitions[feature.toLowerCase()] || "No definition available"
+        )
     };
 
     const featureLayout = {
@@ -422,7 +448,7 @@ document.addEventListener('DOMContentLoaded', function () {
         yaxis: {
             automargin: true,
             color: '#ecf0f1',
-            categoryorder: 'total ascending' // Highest importance at the top
+            categoryorder: 'total ascending'
         },
         ...commonLayout,
         margin: { l: 200, r: 50, t: 50, b: 50 },
@@ -433,7 +459,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     };
 
-    // Render Feature Importance Chart
     Plotly.newPlot('featureImportanceChart', [featureTrace], featureLayout);
     {% endif %}
 });
@@ -522,9 +547,11 @@ document.addEventListener('DOMContentLoaded', function () {
         line-height: 1.4;
     }
 
-    /* Chart Styling */
+    /* Chart Containers */
     .chart-container,
-    .feature-importance {
+    .feature-importance,
+    .confusion-matrix,
+    .model-params {
         margin-bottom: 2rem;
     }
 
@@ -538,44 +565,33 @@ document.addEventListener('DOMContentLoaded', function () {
         .container {
             padding: 20px 15px;
         }
-
         .metrics-grid,
         .features-grid,
         .params-grid {
             grid-template-columns: 1fr;
         }
-
         section {
             padding: 20px;
             margin-bottom: 20px;
         }
-
         .section-title {
             font-size: 1.5rem;
         }
-
         .metric-value,
         .feature-value,
         .param-value {
             font-size: 1.1rem;
         }
-
         .chart {
             height: 400px;
         }
     }
-    /* Adjusted chart container for better spacing */
-    .chart-container {
-        margin-bottom: 2rem;
-    }
 
-    /* Improved hover labels */
     .hovertemplate {
         background-color: #2c3e50;
         color: #ecf0f1;
     }
 
-    /* Adjusted marker styles */
     .plotly-graph-div .scatter .points path {
         stroke-width: 1px;
         stroke: #ffffff;
