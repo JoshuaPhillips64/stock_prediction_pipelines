@@ -146,6 +146,25 @@ docker-compose up -d
 docker-compose logs -f
 ```
 
+### Renew Cert:
+
+```bash
+#Connect to Webserver container
+ssh -i "XXX.pem" XXX.us-east-2.compute.amazonaws.com
+
+#Navigate to the folder inside the cloned repository
+cd stock_prediction_pipelines/webserver
+
+docker-compose down
+
+sudo certbot renew
+
+docker run --rm -v letsencrypt-certs:/data -v /etc/letsencrypt:/source alpine sh -c "cp -r /source/* /data/"
+
+docker-compose up -d
+```
+
+
 
 
 
