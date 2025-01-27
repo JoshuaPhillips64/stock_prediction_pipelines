@@ -146,7 +146,7 @@ docker-compose up -d
 docker-compose logs -f
 ```
 
-### Renew Cert:
+### Renew SSL Cert:
 
 ```bash
 #Connect to Webserver container
