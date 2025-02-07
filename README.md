@@ -26,10 +26,6 @@ The system is designed using Flask, API Gateway, Lambda, Airflow, PostgreSQL, an
 
 Please read the [contributing guidelines](docs/contributing.md) before making any changes.
 
-## License
-
-This project is licensed under the MIT License.
-
 ## Internal Tech Notes
 
 If getting python 3.9 error then run after installing python to C drive
