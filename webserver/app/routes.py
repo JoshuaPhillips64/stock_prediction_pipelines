@@ -613,3 +613,7 @@ def contact():
 @main_bp.route('/api-docs')
 def api_docs():
     return render_template('api_docs.html')
+
+@main_bp.route('/meta-analysis')
+def meta_analysis():
+    return render_template('meta-analysis.html')

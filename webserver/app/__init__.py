@@ -18,6 +18,14 @@ def create_app(config_class=Config):
     # Configure session lifetime
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)  # Adjust as needed
 
+    # Configure SQLAlchemy Connection Pooling
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_size': 10,  # Increase default pool size
+        'max_overflow': 20,  # Allow more temporary connections
+        'pool_timeout': 60,  # Increase timeout before failure
+        'pool_recycle': 1800,  # Close idle connections after 30 min
+    }
+
     db.init_app(app)
     migrate.init_app(app, db)
 

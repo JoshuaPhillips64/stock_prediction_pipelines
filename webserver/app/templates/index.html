@@ -12,6 +12,24 @@
   </div>
 </section>
 
+<!-- Eye-Catching Banner () -->
+<div class="container my-5 d-flex justify-content-center">
+  <div class="px-4 py-3 text-center text-white"
+       style="
+         background: #2c3e50;
+         border-radius: 50px;
+         max-width: 800px;
+         width: 100%;
+       ">
+    <p class="mb-0 fw text-white">
+      <strong> Curious about our process? </strong> Check out our
+      <a href="/about" class="text-white text-decoration-underline fw-bold">Approach</a>
+      and
+      <a href="/meta-analysis" class="text-white text-decoration-underline fw-bold">Meta-Analysis</a>
+    </p>
+  </div>
+</div>
+
 <!-- Top Models Section -->
 <section class="container my-5">
   <div class="row">
@@ -188,7 +206,7 @@
               <div class="row g-3 mt-3">
                 <div class="col-md-6">
                   {{ form.stock_symbol.label(class="form-label") }}
-                    {{ form.stock_symbol(class="form-control", id="stock_symbol") }}
+                  {{ form.stock_symbol(class="form-control", id="stock_symbol") }}
                 </div>
                 <!-- Hidden input to set Feature Set to 'basic' by default -->
                 <input type="hidden" name="feature_set" value="basic">
@@ -196,7 +214,6 @@
                   {{ form.model_type.label(class="form-label") }}
                   {{ form.model_type(class="form-select") }}
                 </div>
-
               </div>
               <div class="d-flex justify-content-center gap-3 mt-4">
                 <button
@@ -216,7 +233,7 @@
                   {{ form.input_date.label(class="form-label") }}
                   {{ form.input_date(class="form-control") }}
                 </div>
-                  <div class="col-md-6">
+                <div class="col-md-6">
                   {{ form.prediction_horizon.label(class="form-label") }}
                   {{ form.prediction_horizon(class="form-control") }}
                 </div>
@@ -239,7 +256,7 @@
                 <button
                   type="button"
                   class="btn btn-primary"
-                  onclick="showStep(3)">
+                  onclick="if(validateStep2()) showStep(3)">
                   Next
                 </button>
               </div>
@@ -298,7 +315,6 @@
           </form> <!-- End Form -->
         </div> <!-- End Col -->
       </div> <!-- End Row -->
-
     </div> <!-- End Card Body -->
   </div> <!-- End Card -->
 </section>
@@ -345,8 +361,9 @@
       });
     }
   });
-    //Ensure step 1 is completed
-   function validateStep1() {
+
+  // Ensure step 1 is completed
+  function validateStep1() {
     // Get the stock symbol input
     const symbolInput = document.getElementById('stock_symbol');
 
@@ -360,6 +377,32 @@
     // If it's valid (not empty), proceed to Step 2
     showStep(2);
   }
+
+  // Validate fields in Step 2
+  function validateStep2() {
+    const horizonInput = document.getElementById('{{ form.prediction_horizon.id }}');
+    const lookbackInput = document.getElementById('{{ form.lookback_period.id }}');
+
+    const horizonValue = parseInt(horizonInput.value, 10);
+    const lookbackValue = parseInt(lookbackInput.value, 10);
+
+    // Check Prediction Horizon
+    if (isNaN(horizonValue) || horizonValue < 7 || horizonValue > 60) {
+      alert("Prediction horizon must be between 7 and 60.");
+      horizonInput.focus();
+      return false;
+    }
+
+    // Check Lookback Period
+    if (isNaN(lookbackValue) || lookbackValue < 365 || lookbackValue > 2000) {
+      alert("Lookback period must be between 365 and 2000.");
+      lookbackInput.focus();
+      return false;
+    }
+
+    return true;
+  }
+
   // Multi-Step Form Navigation (3 steps)
   function showStep(stepNumber) {
     const totalSteps = 3;
