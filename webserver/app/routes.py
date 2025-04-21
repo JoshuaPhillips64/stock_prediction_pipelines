@@ -52,7 +52,7 @@ def index():
 
     # Calculate the date three days ago from today
     today = datetime.today()
-    three_days_ago = today - timedelta(days=3)
+    three_days_ago = today - timedelta(days=800)
 
     # Query top 5 Binary Classification models from the last 3 days, sorted by F1 Factor descending
     top_binary_models = app.TrainedModelsBinary.query.filter(

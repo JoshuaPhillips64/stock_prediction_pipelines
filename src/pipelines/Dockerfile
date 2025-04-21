@@ -10,7 +10,7 @@ RUN dnf update -y && \
     dnf clean all
 
 # Install Poetry
-RUN pip install poetry
+RUN pip install poetry==1.5.0
 
 # Copy only requirements to cache them in docker layer
 COPY pyproject.toml poetry.lock* ${LAMBDA_TASK_ROOT}/

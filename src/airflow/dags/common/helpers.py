@@ -127,7 +127,7 @@ def get_random_hyperparameter_tuning():
     return random.choice(['LOW', 'MEDIUM'])
 
 def get_random_feature_set():
-    return random.choice(['basic', 'advanced'])
+    return random.choice(['basic'])
 
 def get_random_lookback_period():
     return random.randint(720,1200)

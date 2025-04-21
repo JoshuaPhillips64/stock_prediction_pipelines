@@ -6,9 +6,8 @@ POSTGRES_CONN_ID = 'postgres_default'
 
 # Top 50 stock tickers
 TOP_50_TICKERS = [
-    'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'META', 'NVDA', 'JPM', 'V', 'UNH',
-    'HD', 'PG', 'BAC', 'MA', 'DIS', 'VZ', 'CMCSA', 'INTC', 'PFE', 'CSCO',
-    'KO', 'ADBE', 'NFLX', 'PEP', 'CRM', 'ABT', 'JNJ', 'ORCL', 'ABBV', 'MRK',
-    'MCD', 'COST', 'WMT', 'TMO', 'ACN', 'NKE', 'DHR', 'QCOM', 'MDT', 'LLY',
-    'IBM', 'AMGN', 'TXN', 'NEE', 'AVGO', 'PM', 'UNP', 'HON', 'LIN', 'LOW', 'XOM', 'GIS', 'CL', 'MMM', 'SPY'
+    'PG', 'BAC', 'MA', 'DIS', 'CSCO',
+    'KO', 'ADBE', 'NFLX', 'PEP', 'CRM', 'ABT', 'JNJ',
+    'MCD', 'COST', 'WMT', 'TMO', 'ACN', 'NKE', 'DHR', 'MDT', 'LLY',
+    'IBM', 'AMGN', 'TXN', 'HON', 'LIN', 'LOW', 'XOM', 'GIS', 'CL', 'MMM', 'SPY'
 ]
